@@ -1809,7 +1809,7 @@ const JobApplicationForm = () => {
           ? remappedCustomResponses
           : englishCustomResponses,
         jobSpecsResponses: jobSpecsResponsesArray,
-        isDuplicated: hasPreviousApplication,
+        // isDuplicated: hasPreviousApplication,
       };
 
       const response = await submitApplicant(payload);
