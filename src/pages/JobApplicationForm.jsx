@@ -1809,7 +1809,6 @@ const JobApplicationForm = () => {
           ? remappedCustomResponses
           : englishCustomResponses,
         jobSpecsResponses: jobSpecsResponsesArray,
-        // isDuplicated: hasPreviousApplication,
       };
 
       const response = await submitApplicant(payload);
@@ -1890,6 +1889,8 @@ const JobApplicationForm = () => {
           <button onClick={() => navigate('/join-us')} className="btn-primary">
             {t('joinUs:backToJobs') || 'Back to Job Positions'}
           </button>
+
+  
         </div>
       </section>
     );
