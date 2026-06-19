@@ -114,12 +114,6 @@ const JoinUs = () => {
       <div className="container relative mx-auto px-4 md:px-6">
         {/* Section Header */}
         <div className={`max-w-4xl mx-auto text-center mb-16 ${isArabic ? 'rtl' : ''}`}>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6">
-            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-            <span className="text-sm font-semibold text-primary-500">
-              {t('joinUs:tagline') || 'Career Opportunities'}
-            </span>
-          </div>
 
           <h1 className="text-4xl md:text-5xl font-bold text-light-900 dark:text-white mb-6">
             {t('joinUs:title') || `Join the ${SITE_NAME} Team`}

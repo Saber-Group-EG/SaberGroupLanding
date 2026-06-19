@@ -301,69 +301,10 @@ const CheckPreviousApplication: React.FC = () => {
 			setIsCheckingApplicant(false);
 		}
 	};
-
-	const pageUrl = getFullUrl('/join-us/check-application');
-	const ogImage = getDefaultOgImage();
 	const companyName = getLocalizedText(companyMeta.companyName);
 
 	return (
 		<>
-			<Helmet>
-				<link
-					rel="stylesheet"
-					href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap"
-				/>
-				<title>{`${t('joinUs:checkApplicationStatus') || 'Check Application Status'} - ${SITE_NAME}`}</title>
-				<meta
-					name="description"
-					content={
-						t('joinUs:checkStatusSubtitle') ||
-						`Check whether you have already applied for jobs at ${SITE_NAME}.`
-					}
-				/>
-				<meta property="og:type" content="website" />
-				<meta property="og:site_name" content={SITE_NAME} />
-				<meta property="og:url" content={pageUrl} />
-				<meta
-					property="og:title"
-					content={`${t('joinUs:checkApplicationStatus') || 'Check Application Status'} - ${SITE_NAME}`}
-				/>
-				<meta
-					property="og:description"
-					content={
-						t('joinUs:checkStatusSubtitle') ||
-						`Check whether you have already applied for jobs at ${SITE_NAME}.`
-					}
-				/>
-				{ogImage && (
-					<>
-						<meta property="og:image" content={ogImage} />
-						<meta property="og:image:url" content={ogImage} />
-						<meta property="og:image:secure_url" content={ogImage} />
-						<meta property="og:image:type" content="image/png" />
-						<meta property="og:image:width" content="1200" />
-						<meta property="og:image:height" content="630" />
-						<meta
-							property="og:image:alt"
-							content={`${t('joinUs:checkApplicationStatus') || 'Check Application Status'} - ${SITE_NAME}`}
-						/>
-					</>
-				)}
-				<meta name="twitter:card" content="summary_large_image" />
-				<meta
-					name="twitter:title"
-					content={`${t('joinUs:checkApplicationStatus') || 'Check Application Status'} - ${SITE_NAME}`}
-				/>
-				<meta
-					name="twitter:description"
-					content={
-						t('joinUs:checkStatusSubtitle') ||
-						`Check whether you have already applied for jobs at ${SITE_NAME}.`
-					}
-				/>
-				{ogImage && <meta name="twitter:image" content={ogImage} />}
-			</Helmet>
-
 			<section
 				style={{ fontFamily: "'Cairo', sans-serif" }}
 				className="py-20 md:py-32 relative overflow-hidden min-h-screen"
@@ -386,13 +327,6 @@ const CheckPreviousApplication: React.FC = () => {
 
 					<div className="glass rounded-2xl p-8 md:p-10 shadow-xl border border-white/40 dark:border-dark-700">
 						<div className={`mb-8 ${isArabic ? 'text-right' : 'text-left'}`}>
-							<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-5">
-								<span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-								<span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
-									{t('joinUs:checkApplicationStatus') || 'Check Application Status'}
-								</span>
-							</div>
-
 							<h1 className="text-3xl md:text-4xl font-bold text-light-900 dark:text-white mb-3">
 								{t('joinUs:checkApplicationStatus') || 'Check Application Status'}
 							</h1>
@@ -468,15 +402,6 @@ const CheckPreviousApplication: React.FC = () => {
 								</p>
 
 								<div className={`flex flex-wrap gap-3 ${isArabic ? 'justify-start' : 'justify-end'}`}>
-									<button
-										type="button"
-										onClick={() => navigate('/join-us')}
-										disabled={isCheckingApplicant}
-										className="btn-outline disabled:opacity-60"
-									>
-										{t('joinUs:backToJobs') || 'Back to Job Positions'}
-									</button>
-
 									<button
 										type="button"
 										onClick={handleCheckApplicant}

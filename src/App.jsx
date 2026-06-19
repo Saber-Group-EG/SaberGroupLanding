@@ -1,32 +1,42 @@
-import React from "react";
-import { HelmetProvider } from "react-helmet-async";
-import { I18nextProvider } from "react-i18next";
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import i18n from "./i18n";
-import Home from "./pages/Home";
-import JoinUs from "./pages/JoinUs";
-import JobApplicationForm from "./pages/JobApplicationForm";
-import Contact from "./pages/Contact";
-import ComingSoon from "./pages/ComingSoon";
-import CheckPreviousApplication from "./pages/checkjob";
-import Navbar from "./components/Navbar";
-import "./index.css";
+import MainLayout from './layouts/MainLayout';
+
+// Pages
+import Home from './pages/Home';
+import JoinUs from './pages/JoinUs';
+import JobApplicationForm from './pages/JobApplicationForm';
+import CheckPreviousApplication from './pages/checkjob';
+import ComingSoon from './pages/ComingSoon';
+import ServicesPage from './pages/Services';
+import AboutUs from './pages/AboutUs';
+import AddressPage from './pages/Address';
+import ContactPage from './pages/Contact';
+import PoliciesPage from './pages/Policies';
+import TermsAndConditions from './pages/TermsAndConditions';
+
+import './index.css';
 
 function App() {
   return (
-    <HelmetProvider>
-      <I18nextProvider i18n={i18n}>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/join-us" element={<JoinUs />} />
-          <Route path="/join-us/:slug" element={<JobApplicationForm />} />
-          <Route path="/join-us/check-application" element={<CheckPreviousApplication />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/coming-soon" element={<ComingSoon />} />
-        </Routes>
-      </I18nextProvider>
-    </HelmetProvider>
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/address" element={<AddressPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/policies" element={<PoliciesPage />} />
+        <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/join-us" element={<JoinUs />} />
+        <Route path="/join-us/:slug" element={<JobApplicationForm />} />
+        <Route
+          path="/join-us/check-application"
+          element={<CheckPreviousApplication />}
+        />
+        <Route path="/coming-soon" element={<ComingSoon />} />
+      </Route>
+    </Routes>
   );
 }
 
