@@ -6,6 +6,7 @@ import servicesContent, {
   tiers as tiersByProduct,
 } from '../content/ServicesContent.js';
 
+
 const ServicesPage = () => {
   const { isArabic } = useTranslation();
   const lang = isArabic ? 'ar' : 'en';
