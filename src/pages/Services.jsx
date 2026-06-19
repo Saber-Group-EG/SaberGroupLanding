@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import Swal from 'sweetalert2';
 import { addLead } from '../api';
