@@ -2,67 +2,35 @@ import React from 'react';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const AddressPage = () => {
-  const { isArabic } = useTranslation();
+  const { t, isArabic } = useTranslation();
 
-  const offices = isArabic
-    ? [
-        {
-          type: 'المقر الرئيسي',
-          name: 'مكتب طنطا',
-          address:
-            'شارع النادي، الغربية طنطا، أمام بوابة نادي طنطا، فوق Waffle Art',
-          city: 'طنطا، الغربية',
-          country: 'مصر',
-          phone: '01080099757',
-          email: 'info@sabergroup-eg.com',
-          hours: 'السبت – الخميس، 9 ص – 6 م',
-          mapsUrl: 'https://maps.app.goo.gl/hVv4h1Bg21cPXynv7',
-          embedSrc:
-            'https://www.google.com/maps?q=El-gharbia%20Tanta%2C%20El-nady%20St&z=15&output=embed',
-        },
-        {
-          type: 'الاستوديو',
-          name: 'استوديو القاهرة',
-          address: 'فيلا 191، البنفسج 5، التجمع الأول',
-          city: 'القاهرة',
-          country: 'مصر',
-          phone: '01080099757',
-          email: 'info@sabergroup-eg.com',
-          hours: 'بموعد مسبق',
-          mapsUrl: 'https://maps.app.goo.gl/KPBKkoMiNB6qEcpS6',
-          embedSrc:
-            'https://www.google.com/maps?q=Al-Banafseg+5%2C+1st+Settlement+Cairo&z=14&output=embed',
-        },
-      ]
-    : [
-        {
-          type: 'Headquarters',
-          name: 'Tanta Office',
-          address:
-            'El-Nady St, El-Gharbia Tanta, in front of Tanta Club Gate, Above Waffle Art',
-          city: 'Tanta, Al Gharbia',
-          country: 'Egypt',
-          phone: '01080099757',
-          email: 'info@sabergroup-eg.com',
-          hours: 'Saturday – Thursday, 9 AM – 6 PM',
-          mapsUrl: 'https://maps.app.goo.gl/hVv4h1Bg21cPXynv7',
-          embedSrc:
-            'https://www.google.com/maps?q=El-gharbia%20Tanta%2C%20El-nady%20St&z=15&output=embed',
-        },
-        {
-          type: 'Studio',
-          name: 'Cairo Studio',
-          address: 'Villa 191, Al-Banafseg 5, 1st Settlement',
-          city: 'Cairo',
-          country: 'Egypt',
-          phone: '01080099757',
-          email: 'info@sabergroup-eg.com',
-          hours: 'By appointment',
-          mapsUrl: 'https://maps.app.goo.gl/KPBKkoMiNB6qEcpS6',
-          embedSrc:
-            'https://www.google.com/maps?q=Al-Banafseg+5%2C+1st+Settlement+Cairo&z=14&output=embed',
-        },
-      ];
+  const rawPhone = t('contact:phoneNumber') || '01080099757';
+  const rawEmail = t('contact:emailAddress') || 'info@sabergroup-eg.com';
+
+  const offices = [
+    {
+      type: isArabic ? 'المقر الرئيسي' : 'Headquarters',
+      name: t('contact:addressTitle') || 'Tanta Office',
+      address: t('contact:address') || 'El-Stad St - Tanta - Egypt',
+      phone: rawPhone,
+      email: rawEmail,
+      hours: isArabic ? 'السبت – الخميس، 9 ص – 6 م' : 'Saturday – Thursday, 9 AM – 6 PM',
+      mapsUrl: 'https://maps.app.goo.gl/U8b1DJxKdUVosnwV8',
+      embedSrc:
+        'https://www.google.com/maps?q=30.810011,30.998228&z=17&output=embed',
+    },
+    {
+      type: isArabic ? 'الاستوديو' : 'Studio',
+      name: t('contact:secondaryAddressTitle') || 'Cairo Studio',
+      address: t('contact:secondaryAddress') || 'Villa 191, Al-Banafseg 5, 1st Settlement',
+      phone: rawPhone,
+      email: rawEmail,
+      hours: isArabic ? 'بموعد مسبق' : 'By appointment',
+      mapsUrl: 'https://www.google.com/maps/place/articka/@30.7958747,30.9888239,16z/data=!3m1!4b1!4m6!3m5!1s0x14f7c94d9d544d5b:0xabf04ad58406b6c1!8m2!3d30.7958747!4d30.9888239!16s%2Fg%2F11h5w69h6d',
+      embedSrc:
+        'https://www.google.com/maps?q=30.7958747,30.9888239&z=16&output=embed',
+    },
+  ];
 
   return (
     <section
@@ -123,7 +91,7 @@ const AddressPage = () => {
                         />
                       ),
                       label: isArabic ? 'العنوان' : 'Address',
-                      value: `${office.address}، ${office.city}، ${office.country}`,
+                      value: office.address,
                       href: office.mapsUrl,
                       dir: 'auto',
                     },

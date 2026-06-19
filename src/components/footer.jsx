@@ -311,7 +311,7 @@ const Footer = () => {
                       {t('contact:addressTitle') || 'Headquarters'}
                     </p>
                     <a
-                      href="https://maps.app.goo.gl/hVv4h1Bg21cPXynv7"
+                      href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-light-300 leading-relaxed hover:text-primary-300 transition-colors duration-200 inline-block text-sm"
@@ -323,13 +323,12 @@ const Footer = () => {
                       {t('contact:secondaryAddressTitle') || 'Studio'}
                     </p>
                     <a
-                      href="https://maps.app.goo.gl/KPBKkoMiNB6qEcpS6"
+                      href="https://www.google.com/maps/place/articka/@30.7958747,30.9888239,16z/data=!3m1!4b1!4m6!3m5!1s0x14f7c94d9d544d5b:0xabf04ad58406b6c1!8m2!3d30.7958747!4d30.9888239!16s%2Fg%2F11h5w69h6d"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-light-300 leading-relaxed hover:text-primary-300 transition-colors duration-200 inline-block text-sm"
                     >
-                      {t('contact:secondaryAddress') ||
-                        'Villa 191, El-Banafseg 5, 1st Settlement'}
+                      {t('contact:secondaryAddress')}
                     </a>
                   </div>
                 </div>
@@ -338,7 +337,7 @@ const Footer = () => {
                   <div className="w-full h-64 md:h-56 lg:h-64 bg-dark-800 relative">
                     <iframe
                       title="Saber Group Office - Tanta"
-                      src="https://www.google.com/maps?q=El-gharbia%20Tanta%2C%20El-nady%20St&z=15&output=embed"
+                      src="https://www.google.com/maps?q=30.810011,30.998228&z=17&output=embed"
                       className="w-full h-full border-0"
                       allowFullScreen=""
                       loading="lazy"
@@ -346,7 +345,7 @@ const Footer = () => {
                     />
                     <div className="absolute top-3 right-3">
                       <a
-                        href="https://maps.app.goo.gl/hVv4h1Bg21cPXynv7"
+                        href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm inline-flex items-center gap-2 px-3 py-1 bg-dark-900/60 text-white rounded-md border border-white/10 hover:bg-dark-900/80 transition-colors"
@@ -365,7 +364,7 @@ const Footer = () => {
                       </p>
                     </div>
                     <a
-                      href="https://maps.app.goo.gl/hVv4h1Bg21cPXynv7"
+                      href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-outline border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white text-sm px-4 py-2 transition-colors duration-200"

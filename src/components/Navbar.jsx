@@ -1,6 +1,7 @@
 // components/Navbar.jsx
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import LanguageSwitcher from '../i18n/components/LanguageSwitcher';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import logo from '/auth-logo.png';
 
@@ -169,6 +170,9 @@ const Navbar = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-4">
+            {/* Language Switcher */}
+            <LanguageSwitcher className="hidden lg:block" />
+
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -238,8 +242,10 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* Mobile bottom spacing */}
-            <div className="p-4 border-t border-light-200 dark:border-dark-700 bg-light-50/50 dark:bg-dark-800/50" />
+            {/* Mobile bottom — Language Switcher */}
+            <div className="p-4 border-t border-light-200 dark:border-dark-700 bg-light-50/50 dark:bg-dark-800/50">
+              <LanguageSwitcher className="w-full justify-center" />
+            </div>
           </div>
         </div>
 

@@ -875,7 +875,7 @@ const ContactUs = () => {
                   </div>
 
                   <a
-                    href="https://maps.app.goo.gl/hVv4h1Bg21cPXynv7"
+                    href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-primary-500 to-secondary-500 text-white rounded-lg hover:shadow-xl transition-all w-full justify-center group"
@@ -921,7 +921,7 @@ const ContactUs = () => {
               <div className="md:col-span-2 h-96 relative">
                 <iframe
                   title="Saber Group Office - Tanta"
-                  src="https://www.google.com/maps?q=El-gharbia%20Tanta%2C%20El-nady%20St&z=15&output=embed"
+                  src="https://www.google.com/maps?q=30.810011,30.998228&z=17&output=embed"
                   className="w-full h-full border-0"
                   allowFullScreen=""
                   loading="lazy"
@@ -930,7 +930,7 @@ const ContactUs = () => {
 
                 <div className="absolute top-4 right-4">
                   <a
-                    href="https://maps.app.goo.gl/hVv4h1Bg21cPXynv7"
+                    href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 text-white rounded-lg border border-white/10 hover:bg-white/20 transition-colors text-sm"
