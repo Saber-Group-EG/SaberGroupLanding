@@ -6,6 +6,20 @@ import servicesContent, {
   tiers as tiersByProduct,
 } from '../content/ServicesContent.js';
 
+// At the top of ServicesPage, define the ID maps
+const PRODUCT_IDS = {
+  crm: '6a365a92ee51c7709f157156',
+  ats: '6a365a92ee51c7709f157158',
+  both: ['6a365a92ee51c7709f157156', '6a365a92ee51c7709f157158'], // both products
+};
+
+const TIER_IDS = {
+  Starter: '6a3659caee51c7709f1563f6',
+  Growth: '6a3659caee51c7709f156477',
+  Enterprise: '6a3659caee51c7709f156453',
+};
+
+const QUOTE_CHANNEL_ID = '6a365b1fee51c7709f1585fc';
 
 const ServicesPage = () => {
   const { isArabic } = useTranslation();
@@ -73,28 +87,28 @@ const ServicesPage = () => {
     }
 
     setIsSubmitting(true);
+
     try {
-      // TODO: confirm payload shape against the real addLead/CRM schema —
-      // this mirrors ContactUs.jsx's lead payload but adds product/tier/teamSize
-      // inside `message` since the CRM lead model doesn't have dedicated fields
-      // for those yet. Revisit once the quote flow's backend is finalized.
+      const productIds = Array.isArray(PRODUCT_IDS[formData.product])
+        ? PRODUCT_IDS[formData.product]
+        : PRODUCT_IDS[formData.product]
+          ? [PRODUCT_IDS[formData.product]]
+          : [];
+
+      const subCategories = [
+        ...productIds,
+        formData.tier ? TIER_IDS[formData.tier] : null,
+      ].filter(Boolean);
+      
       const payload = {
         name: formData.name,
         phone: formData.phone,
-        otherPhones: [],
         status: 'Pending',
-        addresses: [{ area: '', landmark: '', street: '', deleted: false }],
-        subCategories: [],
-        campaigns: [],
-        channels: [],
-        files: [],
-        prevOrders: [],
-        sales: [],
+        subCategories,
+        channels: [QUOTE_CHANNEL_ID],
         message: {
           message: [
-            `[Quote request] Company: ${formData.company}`,
-            `Product: ${formData.product}`,
-            formData.tier ? `Plan interest: ${formData.tier}` : null,
+            `Company: ${formData.company}`,
             formData.teamSize ? `Team size: ${formData.teamSize}` : null,
             formData.notes ? `Notes: ${formData.notes}` : null,
           ]
@@ -102,9 +116,6 @@ const ServicesPage = () => {
             .join('\n'),
         },
         company: import.meta.env.VITE_CRM_COMPANY_ID,
-        branch: import.meta.env.VITE_CRM_BRANCH_ID,
-        deleted: false,
-        isWhatsapp: false,
       };
 
       await addLead(payload);
