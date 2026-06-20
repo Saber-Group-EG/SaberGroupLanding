@@ -7,10 +7,12 @@ const LanguageSwitcher = ({ className = "" }) => {
   return (
     <button
       onClick={toggleLanguage}
-      className={`px-4 py-2 rounded-lg border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 ${className}`}
-      aria-label={`Switch to ${
-        currentLanguage === "en" ? "Arabic" : "English"
-      }`}
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-300
+        border-light-200 dark:border-dark-700
+        text-light-700 dark:text-light-300
+        hover:border-primary-500 hover:text-primary-500
+        focus:outline-none ${className}`}
+      aria-label={`Switch to ${currentLanguage === "en" ? "Arabic" : "English"}`}
     >
       {currentLanguage === "en" ? "عربي" : "EN"}
     </button>
