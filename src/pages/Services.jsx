@@ -269,6 +269,14 @@ const ServicesPage = () => {
                       <div className="text-xs text-light-500 dark:text-light-400 font-normal mt-1">
                         {tier.blurb}
                       </div>
+                      {tier.price && (
+                        <div className="text-lg font-bold text-light-900 dark:text-white mt-2">
+                          {tier.price.toLocaleString()}{' '}
+                          <span className="text-xs font-normal text-light-500">
+                            EGP / mo
+                          </span>
+                        </div>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -302,7 +310,7 @@ const ServicesPage = () => {
                       className={`p-4 rounded-b-xl ${tier.highlighted ? 'bg-primary-500/10' : ''}`}
                     >
                       <button
-                        onClick={() => selectTierFromTable(tier.name)}
+                        // onClick={() => selectTierFromTable(tier.name)}
                         className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
                           tier.highlighted
                             ? 'bg-primary-500 text-white hover:bg-primary-600'
