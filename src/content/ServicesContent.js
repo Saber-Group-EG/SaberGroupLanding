@@ -242,6 +242,7 @@ export const tiers = {
       plans: [
         {
           name: 'Starter',
+          price: 3000,
           blurb: 'One team, getting off spreadsheets',
           rows: {
             users: 'Up to 5',
@@ -254,6 +255,7 @@ export const tiers = {
         },
         {
           name: 'Growth',
+          price: 5000,
           blurb: 'A real sales team, with real routing',
           highlighted: true,
           rows: {
@@ -292,6 +294,7 @@ export const tiers = {
       plans: [
         {
           name: 'المبدئية',
+          price: 3000,
           blurb: 'فريق واحد، بادئ يترك الإكسل',
           rows: {
             users: 'حتى 5',
@@ -304,6 +307,7 @@ export const tiers = {
         },
         {
           name: 'النمو',
+          price: 5000,
           blurb: 'فريق مبيعات حقيقي، بتوزيع حقيقي',
           highlighted: true,
           rows: {
@@ -358,6 +362,7 @@ export const tiers = {
       plans: [
         {
           name: 'Starter',
+          price: 3000,
           blurb: 'Post a job, collect applicants, hire',
           rows: {
             companies: '1',
@@ -373,6 +378,7 @@ export const tiers = {
         },
         {
           name: 'Growth',
+          price: 5000,
           blurb: 'Run hiring like an HR team',
           highlighted: true,
           rows: {
@@ -419,6 +425,7 @@ export const tiers = {
       plans: [
         {
           name: 'المبدئية',
+          price: 3000,
           blurb: 'نشر وظيفة، استقبال متقدمين، توظيف',
           rows: {
             companies: '1',
@@ -434,6 +441,7 @@ export const tiers = {
         },
         {
           name: 'النمو',
+          price: 5000,
           blurb: 'إدارة التوظيف بطريقة فريق HR حقيقي',
           highlighted: true,
           rows: {
