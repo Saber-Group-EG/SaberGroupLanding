@@ -79,7 +79,7 @@ const servicesContent = {
       title: 'Plans',
       subtitle:
         "How we tier each product, based on team size and how much automation you need. Exact pricing is set per client for now — tell us your team size and we'll tell you which one fits.",
-      ctaLabel: 'proceed',
+      ctaLabel: 'Proceed',
     },
     quoteForm: {
       title: 'Get a quote',
