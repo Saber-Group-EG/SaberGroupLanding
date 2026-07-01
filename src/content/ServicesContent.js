@@ -79,7 +79,7 @@ const servicesContent = {
       title: 'Plans',
       subtitle:
         "How we tier each product, based on team size and how much automation you need. Exact pricing is set per client for now — tell us your team size and we'll tell you which one fits.",
-      ctaLabel: 'Get a quote',
+      ctaLabel: 'proceed',
     },
     quoteForm: {
       title: 'Get a quote',
@@ -184,7 +184,7 @@ const servicesContent = {
       title: 'الباقات',
       subtitle:
         'طريقة تقسيم الباقات لكل منتج، حسب حجم الفريق ومستوى الأتمتة المطلوب. الأسعار الدقيقة بتتحدد حسب كل عميل دلوقتي — قولنا حجم فريقك وهنقولك أنسب باقة.',
-      ctaLabel: 'اطلب عرض سعر',
+      ctaLabel: 'استمرار',
     },
     quoteForm: {
       title: 'اطلب عرض سعر',

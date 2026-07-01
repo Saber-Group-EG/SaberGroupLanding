@@ -16,6 +16,7 @@ import PoliciesPage from './pages/Policies';
 import TermsAndConditions from './pages/TermsAndConditions';
 
 import './index.css';
+import Checkout from './pages/Checkout';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           path="/join-us/check-application"
           element={<CheckPreviousApplication />}
         />
+        <Route path="/checkout" element={<Checkout />} />
         <Route path="/coming-soon" element={<ComingSoon />} />
       </Route>
     </Routes>

@@ -5,6 +5,7 @@ import { addLead } from '../api';
 import servicesContent, {
   tiers as tiersByProduct,
 } from '../content/ServicesContent.js';
+import { useNavigate } from 'react-router-dom';
 
 // At the top of ServicesPage, define the ID maps
 const PRODUCT_IDS = {
@@ -23,6 +24,7 @@ const QUOTE_CHANNEL_ID = '6a365b1fee51c7709f1585fc';
 
 const ServicesPage = () => {
   const { isArabic } = useTranslation();
+  const navigate = useNavigate();
   const lang = isArabic ? 'ar' : 'en';
   const { hero, tabs, products, tiersSection, quoteForm } =
     servicesContent[lang];
@@ -310,14 +312,29 @@ const ServicesPage = () => {
                       className={`p-4 rounded-b-xl ${tier.highlighted ? 'bg-primary-500/10' : ''}`}
                     >
                       <button
-                        // onClick={() => selectTierFromTable(tier.name)}
+                        onClick={() => {
+                          if (
+                            tier.name === 'Enterprise' ||
+                            tier.name === 'المؤسسات'
+                          ) {
+                            selectTierFromTable(tier.name);
+                          } else {
+                            navigate(
+                              `/checkout?product=${activeProduct}&tier=${encodeURIComponent(tier.name)}`
+                            );
+                          }
+                        }}
                         className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
                           tier.highlighted
                             ? 'bg-primary-500 text-white hover:bg-primary-600'
                             : 'bg-white dark:bg-dark-800 border border-light-200 dark:border-dark-700 text-light-800 dark:text-light-200 hover:border-primary-500'
                         }`}
                       >
-                        {tiersSection.ctaLabel}
+                        {tier.name === 'Enterprise' || tier.name === 'المؤسسات'
+                          ? isArabic
+                            ? 'اطلب عرض سعر'
+                            : 'Get a quote'
+                          : tiersSection.ctaLabel}
                       </button>
                     </td>
                   ))}
