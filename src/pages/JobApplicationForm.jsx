@@ -1727,18 +1727,60 @@ const JobApplicationForm = () => {
       console.debug('Error submitting application:', error);
       console.debug('Error response:', error.response?.data);
 
-      const axiosJson = typeof error?.toJSON === 'function' ? error.toJSON() : {};
-      const detailedError = {
-        ...axiosJson,
-        ...(error?.response?.data && { response: error.response.data }),
-      };
-      const errorDisplay = stringifyForDisplay(detailedError);
-
       Swal.close();
+
+      const isNetworkError = !error.response;
+      const errorCode = error.code || '';
+
+      let title = t('joinUs:error') || 'Error';
+      let displayHtml = '';
+
+      if (isNetworkError) {
+        title =
+          errorCode === 'ECONNABORTED'
+            ? t('joinUs:timeoutError') || 'Request Timeout'
+            : t('joinUs:networkError') || 'Connection Error';
+
+        const failedUrl = error.config?.url || '';
+        const failedMethod = error.config?.method || '';
+        const errorMessage = error.message || 'Network Error';
+
+        const infoLines = [errorMessage];
+        if (errorCode) infoLines.push(`Code: ${errorCode}`);
+        if (failedUrl)
+          infoLines.push(`URL: ${failedMethod.toUpperCase()} ${failedUrl}`);
+
+        displayHtml = `<p style="margin-bottom:8px;font-weight:600;">${escapeHtml(infoLines.join('<br>'))}</p>`;
+
+        if (error.stack) {
+          const stackPreview = error.stack
+            .split('\n')
+            .slice(0, 4)
+            .join('\n');
+          displayHtml += `<details><summary style="cursor:pointer;font-size:12px;color:#94a3b8;user-select:none;">${t('common:technicalDetails') || 'Technical details'}</summary><pre style="max-height:160px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:8px;border-radius:6px;margin-top:4px;font-size:11px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(stackPreview)}</pre></details>`;
+        }
+      } else {
+        const serverMessage = getApiErrorMessage(
+          error,
+          t('joinUs:serverError') || 'Server error'
+        );
+        const responseStatus = error.response?.status || '';
+        const statusLabel = responseStatus
+          ? `Status ${responseStatus}`
+          : '';
+
+        displayHtml = `<p style="margin-bottom:8px;font-weight:600;">${escapeHtml(statusLabel ? `${statusLabel}: ` : '')}${escapeHtml(serverMessage)}</p>`;
+
+        const responseData = error.response?.data;
+        if (responseData) {
+          displayHtml += `<pre style="max-height:200px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:8px;border-radius:6px;margin-top:4px;font-size:12px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(stringifyForDisplay(responseData))}</pre>`;
+        }
+      }
+
       await Swal.fire({
         icon: 'error',
-        title: t('joinUs:error') || 'Error',
-        html: `<pre style="max-height:260px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:8px;text-align:${isArabic ? 'right' : 'left'};white-space:pre-wrap;word-break:break-word;">${escapeHtml(errorDisplay)}</pre>`,
+        title,
+        html: displayHtml,
         confirmButtonText: t('common:ok') || 'OK',
         confirmButtonColor: '#ef4444',
       });
