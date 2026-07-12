@@ -1726,30 +1726,19 @@ const JobApplicationForm = () => {
     } catch (error) {
       console.debug('Error submitting application:', error);
       console.debug('Error response:', error.response?.data);
-      const exactErrorMessage = getApiErrorMessage(
-        error,
-        t('joinUs:submissionError') || 'Failed to submit application'
-      );
 
-      const backendPayload = error?.response?.data;
-      const backendFullError =
-        typeof backendPayload === 'string' && backendPayload.trim()
-          ? backendPayload
-          : backendPayload !== undefined
-            ? stringifyForDisplay(backendPayload)
-            : exactErrorMessage;
-
-      const useHtmlErrorBody =
-        backendPayload !== undefined && typeof backendPayload !== 'string';
+      const axiosJson = typeof error?.toJSON === 'function' ? error.toJSON() : {};
+      const detailedError = {
+        ...axiosJson,
+        ...(error?.response?.data && { response: error.response.data }),
+      };
+      const errorDisplay = stringifyForDisplay(detailedError);
 
       Swal.close();
       await Swal.fire({
         icon: 'error',
         title: t('joinUs:error') || 'Error',
-        text: useHtmlErrorBody ? undefined : backendFullError,
-        html: useHtmlErrorBody
-          ? `<pre style="max-height:260px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:8px;text-align:${isArabic ? 'right' : 'left'};white-space:pre-wrap;word-break:break-word;">${escapeHtml(backendFullError)}</pre>`
-          : undefined,
+        html: `<pre style="max-height:260px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:8px;text-align:${isArabic ? 'right' : 'left'};white-space:pre-wrap;word-break:break-word;">${escapeHtml(errorDisplay)}</pre>`,
         confirmButtonText: t('common:ok') || 'OK',
         confirmButtonColor: '#ef4444',
       });
