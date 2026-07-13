@@ -381,8 +381,6 @@ const JobApplicationForm = () => {
     return sha1FallbackHex(input);
   };
 
-
-
   const createTrimmedStringSchema = () =>
     Yup.string().transform((value, originalValue) => {
       if (typeof originalValue !== 'string') return value;
@@ -903,13 +901,18 @@ const JobApplicationForm = () => {
           'image-only',
           t('joinUs:invalidPhotoType') ||
             'Only JPG, JPEG, and PNG files are allowed',
-          (file) => !file || isAllowedFileType(file, ALLOWED_PHOTO_TYPES, ALLOWED_PHOTO_EXTENSIONS)
+          (file) =>
+            !file ||
+            isAllowedFileType(
+              file,
+              ALLOWED_PHOTO_TYPES,
+              ALLOWED_PHOTO_EXTENSIONS
+            )
         )
         .test(
           'photo-size',
           t('joinUs:photoTooLarge') || 'Photo file size must be 5 MB or less',
-          (file) =>
-            !file || isFileWithinSizeLimit(file, MAX_PHOTO_SIZE)
+          (file) => !file || isFileWithinSizeLimit(file, MAX_PHOTO_SIZE)
         );
 
       if (isBaseFieldRequired('profilePhoto')) {
@@ -930,7 +933,9 @@ const JobApplicationForm = () => {
         .test(
           'pdf-only',
           t('joinUs:invalidCVType') || 'Only PDF files are allowed',
-          (file) => !file || isAllowedFileType(file, ALLOWED_CV_TYPES, ALLOWED_CV_EXTENSIONS)
+          (file) =>
+            !file ||
+            isAllowedFileType(file, ALLOWED_CV_TYPES, ALLOWED_CV_EXTENSIONS)
         )
         .test(
           'cv-size',
@@ -1490,7 +1495,10 @@ const JobApplicationForm = () => {
             Swal.showLoading();
           },
         });
-        profilePhotoUrl = await uploadToR2(values.profilePhotoFile, 'JobApplications');
+        profilePhotoUrl = await uploadToR2(
+          values.profilePhotoFile,
+          'JobApplications'
+        );
         Swal.close();
       }
 
@@ -1578,7 +1586,10 @@ const JobApplicationForm = () => {
 
         const val = englishCustomResponses[locKey];
 
-        const wrap = (inputType, value) => ({ type: inputType || 'text', answer: value });
+        const wrap = (inputType, value) => ({
+          type: inputType || 'text',
+          answer: value,
+        });
 
         if (
           field.inputType === 'groupField' &&
@@ -1599,7 +1610,8 @@ const JobApplicationForm = () => {
 
         if (field.inputType === 'repeatable_group' && Array.isArray(val)) {
           remappedCustomResponses[enKey] = val.map((item) => {
-            if (!item || typeof item !== 'object') return wrap(field.inputType, item);
+            if (!item || typeof item !== 'object')
+              return wrap(field.inputType, item);
             const mappedItem = {};
             (field.groupFields || []).forEach((sub) => {
               const subLoc = getFieldKey(sub);
@@ -1698,7 +1710,7 @@ const JobApplicationForm = () => {
         address: withVisibility('address', values.address),
         birthDate: withVisibility('birthDate', values.birthDate),
         gender: withVisibility('gender', values.gender),
-        status: "pending",
+        status: 'pending',
         expectedSalary: withVisibility('expectedSalary', values.expectedSalary),
         profilePhoto: withVisibility('profilePhoto', profilePhotoUrl),
         cvFilePath: withVisibility('cvFilePath', cvUrl),
@@ -1726,61 +1738,35 @@ const JobApplicationForm = () => {
     } catch (error) {
       console.debug('Error submitting application:', error);
       console.debug('Error response:', error.response?.data);
+      const exactErrorMessage = getApiErrorMessage(
+        error,
+        t('joinUs:submissionError') || 'Failed to submit application'
+      );
+
+      const backendPayload = error?.response?.data;
+      const isAxiosError = Boolean(error?.response);
+
+      const backendFullError = isAxiosError
+        ? typeof backendPayload === 'string' && backendPayload.trim()
+          ? backendPayload
+          : backendPayload !== undefined
+            ? stringifyForDisplay(backendPayload)
+            : exactErrorMessage
+        : error?.message || exactErrorMessage;
+
+      const useHtmlErrorBody =
+        isAxiosError &&
+        backendPayload !== undefined &&
+        typeof backendPayload !== 'string';
 
       Swal.close();
-
-      const isNetworkError = !error.response;
-      const errorCode = error.code || '';
-
-      let title = t('joinUs:error') || 'Error';
-      let displayHtml = '';
-
-      if (isNetworkError) {
-        title =
-          errorCode === 'ECONNABORTED'
-            ? t('joinUs:timeoutError') || 'Request Timeout'
-            : t('joinUs:networkError') || 'Connection Error';
-
-        const failedUrl = error.config?.url || '';
-        const failedMethod = error.config?.method || '';
-        const errorMessage = error.message || 'Network Error';
-
-        const infoLines = [errorMessage];
-        if (errorCode) infoLines.push(`Code: ${errorCode}`);
-        if (failedUrl)
-          infoLines.push(`URL: ${failedMethod.toUpperCase()} ${failedUrl}`);
-
-        displayHtml = `<p style="margin-bottom:8px;font-weight:600;">${escapeHtml(infoLines.join('<br>'))}</p>`;
-
-        if (error.stack) {
-          const stackPreview = error.stack
-            .split('\n')
-            .slice(0, 4)
-            .join('\n');
-          displayHtml += `<details><summary style="cursor:pointer;font-size:12px;color:#94a3b8;user-select:none;">${t('common:technicalDetails') || 'Technical details'}</summary><pre style="max-height:160px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:8px;border-radius:6px;margin-top:4px;font-size:11px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(stackPreview)}</pre></details>`;
-        }
-      } else {
-        const serverMessage = getApiErrorMessage(
-          error,
-          t('joinUs:serverError') || 'Server error'
-        );
-        const responseStatus = error.response?.status || '';
-        const statusLabel = responseStatus
-          ? `Status ${responseStatus}`
-          : '';
-
-        displayHtml = `<p style="margin-bottom:8px;font-weight:600;">${escapeHtml(statusLabel ? `${statusLabel}: ` : '')}${escapeHtml(serverMessage)}</p>`;
-
-        const responseData = error.response?.data;
-        if (responseData) {
-          displayHtml += `<pre style="max-height:200px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:8px;border-radius:6px;margin-top:4px;font-size:12px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(stringifyForDisplay(responseData))}</pre>`;
-        }
-      }
-
       await Swal.fire({
         icon: 'error',
-        title,
-        html: displayHtml,
+        title: t('joinUs:error') || 'Error',
+        text: useHtmlErrorBody ? undefined : backendFullError,
+        html: useHtmlErrorBody
+          ? `<pre style="max-height:260px;overflow:auto;background:#0f172a;color:#e2e8f0;padding:10px;border-radius:8px;text-align:${isArabic ? 'right' : 'left'};white-space:pre-wrap;word-break:break-word;">${escapeHtml(backendFullError)}</pre>`
+          : undefined,
         confirmButtonText: t('common:ok') || 'OK',
         confirmButtonColor: '#ef4444',
       });
@@ -1817,8 +1803,6 @@ const JobApplicationForm = () => {
           <button onClick={() => navigate('/join-us')} className="btn-primary">
             {t('joinUs:backToJobs') || 'Back to Job Positions'}
           </button>
-
-  
         </div>
       </section>
     );
@@ -2360,7 +2344,9 @@ const JobApplicationForm = () => {
                   {isBaseFieldVisible('profilePhoto') && (
                     <ProfilePhotoUpload
                       value={values.profilePhotoFile}
-                      onChange={(file) => setFieldValue('profilePhotoFile', file)}
+                      onChange={(file) =>
+                        setFieldValue('profilePhotoFile', file)
+                      }
                       error={errors.profilePhotoFile}
                       touched={touched.profilePhotoFile}
                       label={t('joinUs:photo') || 'Profile Photo'}
@@ -2725,7 +2711,10 @@ const JobApplicationForm = () => {
                       label={t('joinUs:uploadCV') || 'CV'}
                       t={t}
                       required={isBaseFieldRequired('cvFilePath')}
-                      optionalLabel={t('joinUs:optional') || (isArabic ? 'اختياري' : 'Optional')}
+                      optionalLabel={
+                        t('joinUs:optional') ||
+                        (isArabic ? 'اختياري' : 'Optional')
+                      }
                     />
                   )}
 
