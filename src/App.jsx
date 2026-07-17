@@ -17,6 +17,7 @@ import TermsAndConditions from './pages/TermsAndConditions';
 
 import './index.css';
 import Checkout from './pages/Checkout';
+import CheckoutComplete from './pages/checkoutComplete';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           element={<CheckPreviousApplication />}
         />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout/complete" element={<CheckoutComplete />} />
         <Route path="/coming-soon" element={<ComingSoon />} />
       </Route>
     </Routes>

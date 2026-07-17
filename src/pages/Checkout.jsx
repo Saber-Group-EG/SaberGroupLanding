@@ -1,113 +1,186 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import Swal from 'sweetalert2';
+import { getPlans, startCheckout, getApiErrorMessage } from '../api/formsApi';
+// ⚠️ adjust these two paths to wherever your content files actually live
+import termsContent from '../../content/termsContent';
+import { privacyContent } from '../../content/policiesContent';
 
-const PLAN_PRICES = {
-  Starter: { egp: 3000, vat: 420, total: 3420 },
-  Growth: { egp: 5000, vat: 700, total: 5700 },
-  المبدئية: { egp: 3000, vat: 420, total: 3420 },
-  النمو: { egp: 5000, vat: 700, total: 5700 },
+// index (i) in ServicesPage's tier table is language-independent:
+// 0 = Starter, 1 = Growth. Enterprise (2) never reaches this page.
+const TIER_KEYS_BY_INDEX = ['Starter', 'Growth'];
+
+// Map "<product>:<TierKey>" -> the exact `name` field on your Plan
+// documents in Mongo. Edit these once you know the real names —
+// this is deliberately explicit rather than fuzzy-matched, since a
+// wrong match here means charging the wrong amount.
+const PLAN_NAME_MAP = {
+  'ats:Starter': 'ATS Starter',
+  'ats:Growth': 'ATS Growth',
+  'crm:Starter': 'CRM Starter',
+  'crm:Growth': 'CRM Growth',
 };
 
 const PLAN_FEATURES = {
-  Starter: [
-    'Up to 5 users',
-    '1 company',
-    'Applicant history',
-    'Email confirmation',
-    'Email support',
-  ],
-  Growth: [
-    'Up to 20 users',
-    'Up to 3 companies',
-    'Interview scoring',
-    'Email tracking',
-    'Priority support',
-  ],
-  المبدئية: [
-    'حتى 5 مستخدمين',
-    'شركة واحدة',
-    'سجل المتقدمين',
-    'تأكيد بالإيميل',
-    'دعم بالإيميل',
-  ],
-  النمو: [
-    'حتى 20 مستخدم',
-    'حتى 3 شركات',
-    'تقييم المقابلات',
-    'تتبع الإيميلات',
-    'دعم ذو أولوية',
-  ],
+  Starter: {
+    en: [
+      'Up to 5 users',
+      '1 company',
+      'Applicant history',
+      'Email confirmation',
+      'Email support',
+    ],
+    ar: [
+      'حتى 5 مستخدمين',
+      'شركة واحدة',
+      'سجل المتقدمين',
+      'تأكيد بالإيميل',
+      'دعم بالإيميل',
+    ],
+  },
+  Growth: {
+    en: [
+      'Up to 20 users',
+      'Up to 3 companies',
+      'Interview scoring',
+      'Email tracking',
+      'Priority support',
+    ],
+    ar: [
+      'حتى 20 مستخدم',
+      'حتى 3 شركات',
+      'تقييم المقابلات',
+      'تتبع الإيميلات',
+      'دعم ذو أولوية',
+    ],
+  },
 };
 
 const CheckoutPage = () => {
   const [searchParams] = useSearchParams();
   const { isArabic } = useTranslation();
   const navigate = useNavigate();
+  const lang = isArabic ? 'ar' : 'en';
 
   const product = searchParams.get('product') || 'ats';
-  const tier = searchParams.get('tier') || 'Growth';
+  const tierIndex = Number(searchParams.get('tierIndex') ?? 1);
+  const tierKey = TIER_KEYS_BY_INDEX[tierIndex] || 'Growth';
+  const planLookupKey = `${product}:${tierKey}`;
+  const planName = PLAN_NAME_MAP[planLookupKey];
 
-  const pricing = PLAN_PRICES[tier] || { egp: 0, vat: 0, total: 0 };
-  const features = PLAN_FEATURES[tier] || [];
+  const [plan, setPlan] = useState(null);
+  const [planStatus, setPlanStatus] = useState('loading'); // loading | ready | not_found | error
 
   const [form, setForm] = useState({
     name: '',
     company: '',
     email: '',
     phone: '',
-    cardName: '',
-    cardNumber: '',
-    expiry: '',
-    cvv: '',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [paid, setPaid] = useState(false);
+
+  // ── Terms/Privacy agreement ────────────────────────────────────────────
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [legalModal, setLegalModal] = useState(null); // null | 'terms' | 'privacy'
+  const [canAgreeInModal, setCanAgreeInModal] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPlan = async () => {
+      if (!tierKey) {
+        setPlanStatus('not_found');
+        return;
+      }
+      setPlanStatus('loading');
+      try {
+        const plans = await getPlans();
+        if (cancelled) return;
+        const list = Array.isArray(plans) ? plans : plans?.data || [];
+        const match = list.find(
+          (p) =>
+            p.name.toLowerCase() === tierKey.toLowerCase() &&
+            p.isActive !== false
+        );
+        if (match) {
+          setPlan(match);
+          setPlanStatus('ready');
+        } else {
+          setPlanStatus('not_found');
+        }
+      } catch (err) {
+        console.debug('Failed to load plans:', err);
+        if (!cancelled) setPlanStatus('error');
+      }
+    };
+
+    loadPlan();
+    return () => {
+      cancelled = true;
+    };
+  }, [tierKey]);
+
+  const features = PLAN_FEATURES[tierKey]?.[lang] || [];
+  // Price already includes VAT — no separate VAT line/calc.
+  const egp = plan ? plan.priceCents / 100 : 0;
+  const total = egp;
 
   const t = {
     breadcrumb: isArabic ? 'الخدمات' : 'Services',
     checkout: isArabic ? 'إتمام الطلب' : 'Checkout',
-    planLabel: isArabic ? 'الباقة المختارة' : 'Selected plan',
     monthly: isArabic ? 'شهريًا' : 'per month',
     stepPlan: isArabic ? 'الباقة' : 'Plan',
-    stepPayment: isArabic ? 'الدفع' : 'Payment',
-    stepConfirm: isArabic ? 'تأكيد' : 'Confirm',
+    stepContact: isArabic ? 'بياناتك' : 'Your details',
+    stepPay: isArabic ? 'الدفع الآمن' : 'Secure payment',
     contactTitle: isArabic ? 'بيانات التواصل' : 'Contact details',
     fullName: isArabic ? 'الاسم الكامل' : 'Full name',
     companyName: isArabic ? 'اسم الشركة' : 'Company',
     workEmail: isArabic ? 'الإيميل' : 'Work email',
     phone: isArabic ? 'تليفون / واتساب' : 'Phone / WhatsApp',
-    paymentTitle: isArabic ? 'بيانات الدفع' : 'Payment method',
-    cardHolder: isArabic ? 'اسم حامل البطاقة' : 'Cardholder name',
-    cardNumber: isArabic ? 'رقم البطاقة' : 'Card number',
-    expiry: isArabic ? 'تاريخ الانتهاء' : 'Expiry',
-    cvv: 'CVV',
-    secureNote: isArabic
-      ? 'المدفوعات تتم بأمان عبر Paymob. لا نحتفظ ببيانات بطاقتك.'
-      : 'Payments processed securely via Paymob. We never store your card details.',
+    redirectNote: isArabic
+      ? 'هيتم تحويلك لصفحة الدفع الآمنة من Paymob لإدخال بيانات البطاقة. إحنا مش بنشوف أو بنخزن بيانات بطاقتك.'
+      : "You'll be redirected to Paymob's secure page to enter your card details. We never see or store your card information.",
     orderTitle: isArabic ? 'ملخص الطلب' : 'Order summary',
     setupFee: isArabic ? 'رسوم الإعداد' : 'Setup fee',
     free: isArabic ? 'مجانًا' : 'Free',
-    vat: isArabic ? 'ضريبة القيمة المضافة (14%)' : 'VAT (14%)',
+    vatIncludedNote: isArabic
+      ? 'السعر شامل ضريبة القيمة المضافة'
+      : 'Price includes VAT',
     totalDue: isArabic ? 'الإجمالي اليوم' : 'Total due today',
-    payBtn: isArabic
-      ? `دفع ${pricing.total.toLocaleString()} جنيه`
-      : `Pay ${pricing.total.toLocaleString()} EGP`,
-    processing: isArabic ? 'جاري المعالجة…' : 'Processing…',
+    continueBtn: isArabic
+      ? 'المتابعة للدفع الآمن'
+      : 'Continue to secure payment',
+    processing: isArabic ? 'جاري التحويل…' : 'Redirecting…',
     termsNote: isArabic
-      ? 'بالمتابعة، أنت توافق على شروط الخدمة وسياسة الخصوصية. الاشتراك يتجدد شهريًا ويمكن إلغاؤه في أي وقت.'
-      : 'By proceeding you agree to our Terms of Service and Privacy Policy. Subscription renews monthly. Cancel any time.',
-    successTitle: isArabic ? 'تم الدفع بنجاح!' : 'Payment confirmed!',
-    successMsg: isArabic
-      ? 'شكرًا. هنتواصل معاك خلال يوم عمل لإعداد حسابك.'
-      : "You're all set. We'll reach out within one business day to get your account ready.",
+      ? 'الاشتراك يتجدد شهريًا ويمكن إلغاؤه في أي وقت.'
+      : 'Subscription renews monthly. Cancel any time.',
     fieldRequired: isArabic ? 'هذا الحقل مطلوب' : 'Required',
-    invalidCard: isArabic ? 'رقم بطاقة غير صحيح' : 'Invalid card number',
-    invalidExpiry: isArabic ? 'تاريخ انتهاء غير صحيح' : 'Invalid expiry',
-    invalidCvv: isArabic ? 'CVV غير صحيح' : 'Invalid CVV',
+    invalidEmail: isArabic ? 'إيميل غير صحيح' : 'Invalid email',
     productLabel: product.toUpperCase(),
+    loadingPlan: isArabic ? 'جاري تحميل الباقة…' : 'Loading plan…',
+    planUnavailableTitle: isArabic ? 'الباقة غير متاحة' : 'Plan unavailable',
+    planUnavailableMsg: isArabic
+      ? 'الباقة المختارة غير متاحة حاليًا. من فضلك ارجع لصفحة الخدمات واختار باقة تانية.'
+      : "This plan isn't available right now. Please go back to Services and pick another plan.",
+    backToServices: isArabic ? 'الرجوع للخدمات' : 'Back to Services',
+    genericErrorTitle: isArabic ? 'حصل خطأ' : 'Something went wrong',
+    // Legal agreement
+    legalCheckboxPrefix: isArabic ? 'أوافق على' : 'I agree to the',
+    and: isArabic ? 'و' : 'and',
+    termsLink: isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
+    privacyLink: isArabic ? 'سياسة الخصوصية' : 'Privacy Policy',
+    termsRequired: isArabic
+      ? 'يجب الموافقة على الشروط والأحكام وسياسة الخصوصية للمتابعة'
+      : 'You must agree to the Terms & Conditions and Privacy Policy to continue',
+    modalAgreeBtn: isArabic ? 'قرأت وأوافق' : "I've read and agree",
+    modalScrollHint: isArabic
+      ? 'الرجاء التمرير للأسفل لقراءة المستند بالكامل'
+      : 'Please scroll to the bottom to read the full document',
+    modalClose: isArabic ? 'إغلاق' : 'Close',
+    termsModalTitle: isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
+    privacyModalTitle: isArabic ? 'سياسة الخصوصية' : 'Privacy Policy',
   };
 
   const inputCls = (field) =>
@@ -121,19 +194,7 @@ const CheckoutPage = () => {
     'block text-xs font-semibold text-light-500 dark:text-light-400 uppercase tracking-wide mb-1.5';
 
   const handleChange = (e) => {
-    let { name, value } = e.target;
-    if (name === 'cardNumber') {
-      value = value
-        .replace(/\D/g, '')
-        .slice(0, 16)
-        .replace(/(.{4})/g, '$1  ')
-        .trim();
-    }
-    if (name === 'expiry') {
-      value = value.replace(/\D/g, '').slice(0, 4);
-      if (value.length > 2) value = value.slice(0, 2) + ' / ' + value.slice(2);
-    }
-    if (name === 'cvv') value = value.replace(/\D/g, '').slice(0, 4);
+    const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
@@ -143,35 +204,66 @@ const CheckoutPage = () => {
     if (!form.name.trim()) e.name = t.fieldRequired;
     if (!form.company.trim()) e.company = t.fieldRequired;
     if (!form.email.trim()) e.email = t.fieldRequired;
+    else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = t.invalidEmail;
     if (!form.phone.trim()) e.phone = t.fieldRequired;
-    if (!form.cardName.trim()) e.cardName = t.fieldRequired;
-    const digits = form.cardNumber.replace(/\s/g, '');
-    if (digits.length < 16) e.cardNumber = t.invalidCard;
-    if (!/^\d{2}\s*\/\s*\d{2}$/.test(form.expiry)) e.expiry = t.invalidExpiry;
-    if (form.cvv.length < 3) e.cvv = t.invalidCvv;
+    if (!agreedToTerms) e.terms = t.termsRequired;
     return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (planStatus !== 'ready' || !plan) return;
+
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
+
     setSubmitting(true);
-    // Simulate payment gateway delay
-    await new Promise((r) => setTimeout(r, 2000));
-    setSubmitting(false);
-    setPaid(true);
-    await Swal.fire({
-      icon: 'success',
-      title: t.successTitle,
-      text: t.successMsg,
-      confirmButtonText: isArabic ? 'تمام' : 'OK',
-      confirmButtonColor: '#10b981',
-    });
-    navigate('/');
+    try {
+      const { checkoutUrl } = await startCheckout({
+        fullName: form.name,
+        companyName: form.company,
+        workEmail: form.email,
+        phone: form.phone,
+        planId: plan._id,
+      });
+
+      if (!checkoutUrl) {
+        throw new Error('No checkout URL returned');
+      }
+
+      // Full page redirect — this is an external Paymob domain, not
+      // an in-app route, so react-router's navigate() is wrong here.
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      setSubmitting(false);
+      await Swal.fire({
+        icon: 'error',
+        title: t.genericErrorTitle,
+        text: getApiErrorMessage(err, t.genericErrorTitle),
+        confirmButtonText: isArabic ? 'تمام' : 'OK',
+        confirmButtonColor: '#ef4444',
+      });
+    }
+  };
+
+  const openLegalModal = (which) => {
+    setCanAgreeInModal(false);
+    setLegalModal(which);
+  };
+
+  const handleModalScroll = (e) => {
+    const el = e.target;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    if (atBottom) setCanAgreeInModal(true);
+  };
+
+  const confirmAgreement = () => {
+    setAgreedToTerms(true);
+    setLegalModal(null);
+    if (errors.terms) setErrors((p) => ({ ...p, terms: '' }));
   };
 
   const LockIcon = () => (
@@ -198,6 +290,45 @@ const CheckoutPage = () => {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
+
+  if (planStatus === 'loading') {
+    return (
+      <section
+        dir={isArabic ? 'rtl' : 'ltr'}
+        className="min-h-screen bg-linear-to-br from-light-50 via-white to-light-100 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 py-20 px-4 md:px-6 flex items-center justify-center"
+      >
+        <p className="text-light-500 dark:text-light-400 text-sm">
+          {t.loadingPlan}
+        </p>
+      </section>
+    );
+  }
+
+  if (planStatus === 'not_found' || planStatus === 'error') {
+    return (
+      <section
+        dir={isArabic ? 'rtl' : 'ltr'}
+        className="min-h-screen bg-linear-to-br from-light-50 via-white to-light-100 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 py-20 px-4 md:px-6 flex items-center justify-center"
+      >
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-bold text-light-900 dark:text-white mb-3">
+            {t.planUnavailableTitle}
+          </h1>
+          <p className="text-light-600 dark:text-light-400 mb-6">
+            {t.planUnavailableMsg}
+          </p>
+          <button
+            onClick={() => navigate('/services')}
+            className="px-6 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors"
+          >
+            {t.backToServices}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const legalContent = legalModal === 'terms' ? termsContent : privacyContent;
 
   return (
     <section
@@ -227,7 +358,7 @@ const CheckoutPage = () => {
             </span>
             <div>
               <div className="text-sm font-semibold text-light-900 dark:text-white">
-                {tier}
+                {tierKey}
               </div>
               <div className="text-xs text-light-400 dark:text-light-500 mt-0.5">
                 {t.monthly}
@@ -236,8 +367,13 @@ const CheckoutPage = () => {
           </div>
           <div className={isArabic ? 'text-start' : 'text-end'}>
             <div className="text-xl font-bold text-light-900 dark:text-white">
-              {pricing.egp.toLocaleString()}{' '}
-              <span className="text-xs font-normal text-light-400">EGP</span>
+              {egp.toLocaleString()}{' '}
+              <span className="text-xs font-normal text-light-400">
+                {plan?.currency || 'EGP'}
+              </span>
+            </div>
+            <div className="text-[10px] text-light-400 dark:text-light-500 mt-0.5">
+              {t.vatIncludedNote}
             </div>
           </div>
         </div>
@@ -246,8 +382,8 @@ const CheckoutPage = () => {
         <div className="flex items-center mb-8">
           {[
             { label: t.stepPlan, state: 'done' },
-            { label: t.stepPayment, state: 'active' },
-            { label: t.stepConfirm, state: 'idle' },
+            { label: t.stepContact, state: 'active' },
+            { label: t.stepPay, state: 'idle' },
           ].map((step, i, arr) => (
             <div
               key={step.label}
@@ -336,103 +472,15 @@ const CheckoutPage = () => {
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Payment */}
-          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-5">
-              {t.paymentTitle}
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className={labelCls}>{t.cardHolder}</label>
-                <input
-                  name="cardName"
-                  type="text"
-                  value={form.cardName}
-                  onChange={handleChange}
-                  placeholder={isArabic ? 'الاسم على البطاقة' : 'Name on card'}
-                  className={inputCls('cardName')}
-                />
-                {errors.cardName && (
-                  <p className="mt-1 text-xs text-danger-500">
-                    {errors.cardName}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={labelCls}>{t.cardNumber}</label>
-                <div className="relative">
-                  <input
-                    name="cardNumber"
-                    type="text"
-                    value={form.cardNumber}
-                    onChange={handleChange}
-                    dir="ltr"
-                    placeholder="1234  5678  9012  3456"
-                    className={`${inputCls('cardNumber')} pr-20`}
-                  />
-                  <div className="absolute end-3 top-1/2 -translate-y-1/2 flex gap-1.5 items-center">
-                    <span className="text-[9px] font-black bg-blue-800 text-white rounded px-1.5 py-0.5 tracking-tight">
-                      VISA
-                    </span>
-                    <span className="text-[9px] font-black bg-red-600 text-white rounded px-1.5 py-0.5 tracking-tight">
-                      MC
-                    </span>
-                  </div>
-                </div>
-                {errors.cardNumber && (
-                  <p className="mt-1 text-xs text-danger-500">
-                    {errors.cardNumber}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>{t.expiry}</label>
-                  <input
-                    name="expiry"
-                    type="text"
-                    value={form.expiry}
-                    onChange={handleChange}
-                    dir="ltr"
-                    placeholder="MM / YY"
-                    className={inputCls('expiry')}
-                  />
-                  {errors.expiry && (
-                    <p className="mt-1 text-xs text-danger-500">
-                      {errors.expiry}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className={labelCls}>{t.cvv}</label>
-                  <input
-                    name="cvv"
-                    type="text"
-                    value={form.cvv}
-                    onChange={handleChange}
-                    dir="ltr"
-                    placeholder="•••"
-                    className={inputCls('cvv')}
-                  />
-                  {errors.cvv && (
-                    <p className="mt-1 text-xs text-danger-500">{errors.cvv}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 mt-4 text-xs text-light-400 dark:text-light-500">
+            <div className="flex items-center gap-2 mt-5 text-xs text-light-400 dark:text-light-500">
               <LockIcon />
-              <span>{t.secureNote}</span>
+              <span>{t.redirectNote}</span>
             </div>
           </div>
 
           {/* Order summary */}
-          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-6">
+          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-4">
               {t.orderTitle}
             </p>
@@ -440,11 +488,10 @@ const CheckoutPage = () => {
             <div className="space-y-3">
               {[
                 {
-                  label: `${t.productLabel} — ${tier}`,
-                  value: `${pricing.egp.toLocaleString()} EGP`,
+                  label: `${t.productLabel} — ${tierKey}`,
+                  value: `${egp.toLocaleString()} ${plan?.currency || 'EGP'}`,
                 },
                 { label: t.setupFee, value: t.free, green: true },
-                { label: t.vat, value: `${pricing.vat.toLocaleString()} EGP` },
               ].map(({ label, value, green }) => (
                 <div
                   key={label}
@@ -465,9 +512,12 @@ const CheckoutPage = () => {
                   {t.totalDue}
                 </span>
                 <span className="text-lg font-bold text-primary-500">
-                  {pricing.total.toLocaleString()} EGP
+                  {total.toLocaleString()} {plan?.currency || 'EGP'}
                 </span>
               </div>
+              <p className="text-[10px] text-light-400 dark:text-light-500">
+                {t.vatIncludedNote}
+              </p>
             </div>
 
             {/* Feature chips */}
@@ -483,20 +533,50 @@ const CheckoutPage = () => {
             </div>
           </div>
 
+          {/* Legal agreement */}
+          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-5 mb-6">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => {
+                  setAgreedToTerms(e.target.checked);
+                  if (errors.terms) setErrors((p) => ({ ...p, terms: '' }));
+                }}
+                className="mt-0.5 w-4 h-4 accent-primary-500 shrink-0"
+              />
+              <span className="text-xs text-light-600 dark:text-light-400 leading-relaxed">
+                {t.legalCheckboxPrefix}{' '}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('terms')}
+                  className="text-primary-500 font-semibold underline underline-offset-2"
+                >
+                  {t.termsLink}
+                </button>{' '}
+                {t.and}{' '}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('privacy')}
+                  className="text-primary-500 font-semibold underline underline-offset-2"
+                >
+                  {t.privacyLink}
+                </button>
+              </span>
+            </label>
+            {errors.terms && (
+              <p className="mt-2 text-xs text-danger-500">{errors.terms}</p>
+            )}
+          </div>
+
           {/* Submit */}
           <button
             type="submit"
-            disabled={submitting || paid}
+            disabled={submitting}
             className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-primary-500 text-white rounded-xl font-bold text-[15px] hover:bg-primary-600 transition-colors disabled:opacity-70"
           >
             <ShieldIcon />
-            {submitting
-              ? t.processing
-              : paid
-                ? isArabic
-                  ? 'تم الدفع ✓'
-                  : 'Paid ✓'
-                : t.payBtn}
+            {submitting ? t.processing : t.continueBtn}
           </button>
 
           <p className="text-[11px] text-light-400 dark:text-light-500 text-center mt-4 leading-relaxed px-4">
@@ -504,6 +584,75 @@ const CheckoutPage = () => {
           </p>
         </form>
       </div>
+
+      {/* Terms / Privacy modal */}
+      {legalModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setLegalModal(null)}
+        >
+          <div
+            dir={isArabic ? 'rtl' : 'ltr'}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-dark-800 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-xl"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-light-100 dark:border-dark-700">
+              <h2 className="font-bold text-light-900 dark:text-white">
+                {legalModal === 'terms'
+                  ? t.termsModalTitle
+                  : t.privacyModalTitle}
+              </h2>
+              <button
+                onClick={() => setLegalModal(null)}
+                className="text-light-400 hover:text-light-600 dark:hover:text-light-200 text-lg leading-none"
+                aria-label={t.modalClose}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              onScroll={handleModalScroll}
+              className="overflow-y-auto px-6 py-4 space-y-4 text-sm text-light-600 dark:text-light-300 leading-relaxed"
+            >
+              <p>{legalContent[lang].intro}</p>
+              {legalContent[lang].sections.map((s) => (
+                <div key={s.title}>
+                  <h3 className="font-semibold text-light-900 dark:text-white mb-1">
+                    {s.title}
+                  </h3>
+                  <p>{s.content}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-6 py-4 border-t border-light-100 dark:border-dark-700 flex items-center justify-between gap-3 flex-wrap">
+              {!canAgreeInModal && (
+                <span className="text-[11px] text-light-400 dark:text-light-500">
+                  {t.modalScrollHint}
+                </span>
+              )}
+              <div className="flex gap-2 ms-auto">
+                <button
+                  type="button"
+                  onClick={() => setLegalModal(null)}
+                  className="px-4 py-2 text-sm rounded-lg border border-light-200 dark:border-dark-600 text-light-600 dark:text-light-300 hover:bg-light-50 dark:hover:bg-dark-700 transition-colors"
+                >
+                  {t.modalClose}
+                </button>
+                <button
+                  type="button"
+                  disabled={!canAgreeInModal}
+                  onClick={confirmAgreement}
+                  className="px-4 py-2 text-sm rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {t.modalAgreeBtn}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

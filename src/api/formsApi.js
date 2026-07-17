@@ -1,13 +1,15 @@
 import axios from 'axios';
 
-const FORM_API_URL = import.meta.env.VITE_FORM_URL || 'https://application-maker.onrender.com/api';
+const FORM_API_URL =
+  import.meta.env.VITE_FORM_URL || 'https://application-maker.onrender.com/api';
 
 const formClient = axios.create({
   baseURL: FORM_API_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-const asTrimmedString = (value) => (typeof value === 'string' ? value.trim() : '');
+const asTrimmedString = (value) =>
+  typeof value === 'string' ? value.trim() : '';
 
 const extractMessageFromPayload = (payload) => {
   if (payload == null) return '';
@@ -59,7 +61,10 @@ const extractMessageFromPayload = (payload) => {
   return '';
 };
 
-export const getApiErrorMessage = (error, fallbackMessage = 'Request failed') => {
+export const getApiErrorMessage = (
+  error,
+  fallbackMessage = 'Request failed'
+) => {
   const backendMessage = extractMessageFromPayload(error?.response?.data);
   if (backendMessage) return backendMessage;
 
@@ -89,4 +94,39 @@ export async function checkExistingApplicant(params) {
   }
 }
 
-export default { submitApplicant, checkExistingApplicant, getApiErrorMessage };
+// --- Checkout / Plans -------------------------------------------------
+
+// GET /public/plans — returns the active Plan documents (isPublic ones,
+// presumably filtered server-side). Each plan has _id, name, priceCents,
+// currency, isActive, etc. — see the Plan model.
+export async function getPlans() {
+  try {
+    const res = await formClient.get('/public/plans');
+    console.log('getPlans response:', res.data.data);
+    return res.data.data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+// POST /checkout/start — body: { fullName, companyName, workEmail, phone, planId }
+// Returns { checkoutUrl } — a Paymob-hosted unified checkout URL. The
+// caller must do a full page redirect (window.location.href), not a
+// client-side route change, since it's an external domain.
+export async function startCheckout(payload) {
+  try {
+    const res = await formClient.post('/checkout/start', payload);
+    console.log('startCheckout response:', res.data.data);
+    return res.data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export default {
+  submitApplicant,
+  checkExistingApplicant,
+  getApiErrorMessage,
+  getPlans,
+  startCheckout,
+};
