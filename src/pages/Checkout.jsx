@@ -4,8 +4,8 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import Swal from 'sweetalert2';
 import { getPlans, startCheckout, getApiErrorMessage } from '../api/formsApi';
 // ⚠️ adjust these two paths to wherever your content files actually live
-import termsContent from '../../content/termsContent';
-import { privacyContent } from '../../content/policiesContent';
+import termsContent from '../content/TermsContent';
+import { privacyContent } from '../content/PoliciesContent';
 
 // index (i) in ServicesPage's tier table is language-independent:
 // 0 = Starter, 1 = Growth. Enterprise (2) never reaches this page.
