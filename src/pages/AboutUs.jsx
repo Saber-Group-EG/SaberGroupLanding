@@ -7,7 +7,7 @@ const content = {
   en: {
     headline: 'Saber Group',
     subheadline:
-      'An Egyptian technology and marketing agency specializing in building smart software solutions that empower businesses to manage their teams and leverage their data more efficiently.',
+      'An Egyptian agency specializing in building smart software solutions that empower businesses to manage their teams and leverage their data more efficiently.',
     stats: [
       { value: '20+', label: 'Active Clients' },
       { value: '99.5%', label: 'Platform Uptime' },
