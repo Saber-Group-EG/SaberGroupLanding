@@ -1,62 +1,62 @@
 {
   "badge": "Who We Are",
-  "title": "Saber Group — Creative Marketing, Measurable Growth",
-  "subtitle": "We design and deliver bold, creative marketing campaigns that elevate brands and drive measurable growth.",
+  "title": "Saber Group — Scalable Software, Measurable Growth",
+  "subtitle": "We design and build custom software solutions including CRMs, ATS, landing pages, and scalable systems that streamline operations and drive measurable business growth.",
 
-  "mission": "To elevate brands through strategically crafted campaigns that blend creativity, data, and meaningful customer experiences.",
+  "mission": "To empower enterprises through custom software solutions that blend robust engineering, agile development, and seamless user experiences to optimize operations and automate workflows.",
 
   "stats": {
-    "developments": "Campaigns Delivered",
-    "units": "Campaigns Executed",
+    "developments": "Systems Delivered",
+    "units": "Projects Executed",
     "years": "Years in Operation",
     "awards": "Industry Awards",
-    "cities": "Markets Served",
-    "valueGrowth": "Average Campaign ROI"
+    "cities": "Clients Served",
+    "valueGrowth": "Average Efficiency Gain"
   },
 
   "values": {
     "title": "What We Stand For",
-    "subtitle": "Our values guide everything we do—from how we work with partners to how we build communities.",
+    "subtitle": "Our values guide everything we do—from how we build software to how we partner with clients.",
     "craftsmanship": {
-      "title": "Creativity",
-      "description": "We obsess over creative detail — from concept to execution — to create memorable brand experiences."
+      "title": "Engineering Excellence",
+      "description": "We obsess over code quality and system architecture — from planning to deployment — to create robust, scalable solutions."
     },
     "sustainability": {
       "title": "Sustainability",
-      "description": "We design and build with the future in mind — reducing waste, improving efficiency, and creating healthier spaces."
+      "description": "We build with the future in mind — creating efficient, maintainable systems that reduce technical debt and scale with your business."
     },
     "community": {
-      "title": "Community",
-      "description": "We build engaged communities around brands — fostering connection, loyalty, and long-term value."
+      "title": "Partnership",
+      "description": "We build long-term partnerships with our clients — fostering collaboration, trust, and shared success."
     },
     "transparency": {
       "title": "Transparency",
-      "description": "Clear communication and straightforward contracts — so partners and buyers always know what to expect."
+      "description": "Clear communication and straightforward contracts — so clients always know what to expect throughout the development lifecycle."
     }
   },
 
   "team": {
     "title": "The Team",
-    "subtitle": "Experienced professionals delivering quality at every step.",
+    "subtitle": "Experienced engineers delivering quality at every step.",
     "ahmed": {
       "name": "Ahmed Saber",
       "role": "Founder & CEO",
-      "bio": "Founder with a vision to build creative work that drives brand growth across the region."
+      "bio": "Founder with a vision to build software solutions that drive business growth and operational efficiency across the region."
     },
     "mona": {
       "name": "Mona El-Banna",
-      "role": "Head of Development",
-      "bio": "Leads project delivery and construction excellence to ensure timelines and quality are met."
+      "role": "Head of Engineering",
+      "bio": "Leads software development and delivery excellence to ensure timelines and quality standards are met."
     },
     "samir": {
       "name": "Samir Khaled",
-      "role": "Chief Architect",
-      "bio": "Designs human-centered buildings that balance aesthetics, function, and sustainability."
+      "role": "Lead Architect",
+      "bio": "Designs scalable system architectures that balance performance, security, and maintainability."
     },
     "noha": {
       "name": "Noha Ibrahim",
-      "role": "Sales & Customer Experience",
-      "bio": "Ensures homebuyers have a smooth experience from inquiry through handover."
+      "role": "Client Success & Delivery",
+      "bio": "Ensures clients have a smooth experience from project kickoff through deployment and beyond."
     }
   },
 
@@ -64,33 +64,33 @@
     "title": "Our Journey",
     "founded": {
       "title": "Founded",
-      "description": "Saber Group started with a small team and a big ambition: craft quality developments that uplift communities."
+      "description": "Saber Group started with a small team and a big ambition: craft quality software solutions that empower businesses."
     },
     "firstProject": {
-      "title": "First Campaign",
-      "description": "Launched our first signature campaign, establishing our standard for creativity and impact."
+      "title": "First System Delivered",
+      "description": "Launched our first custom system, establishing our standard for engineering excellence and business impact."
     },
     "masterplan": {
-      "title": "Masterplan Projects",
-      "description": "Launched mixed-use masterplan projects focusing on connectivity, green spaces, and local commerce."
+      "title": "Enterprise Solutions",
+      "description": "Expanded into enterprise-grade solutions focusing on scalability, security, and seamless integration."
     },
     "recognition": {
       "title": "Industry Recognition",
-      "description": "Earned awards for design excellence and sustainable building practices."
+      "description": "Earned awards for software excellence and innovative problem-solving."
     },
     "expansion": {
       "title": "Regional Growth",
-      "description": "Expanded to new cities and increased our pipeline of developments across the region."
+      "description": "Expanded to serve clients across new markets and increased our portfolio of custom solutions."
     }
   },
 
   "partners": {
-    "title": "Selected Partners & Contractors"
+    "title": "Selected Partners & Clients"
   },
 
   "cta": {
-    "title": "Ready to Write Your Success Story?",
-    "subtitle": "Let's collaborate to create something amazing for your project.",
+    "title": "Ready to Build Your Success Story?",
+    "subtitle": "Let's collaborate to create something amazing for your business.",
     "button": "Start a Conversation"
   }
 }

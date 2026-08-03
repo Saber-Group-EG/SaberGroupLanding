@@ -13,7 +13,7 @@ import { getFullUrl, getDefaultOgImage, SITE_NAME } from '../utils/ogMeta';
 const routeMeta = {
   '/': {
     title: `${SITE_NAME} — Home`,
-    description: 'Saber Group — Premium creative marketing agency in Egypt.',
+    description: 'Saber Group — Premium creative software agency in Egypt.',
   },
   '/services': {
     title: `Our Services — ${SITE_NAME}`,
@@ -27,7 +27,7 @@ const routeMeta = {
   },
   '/contact': {
     title: `Contact Us — ${SITE_NAME}`,
-    description: `Get in touch with ${SITE_NAME}'s team to discuss your marketing and software needs.`,
+    description: `Get in touch with ${SITE_NAME}'s team to discuss your software needs.`,
   },
   '/address': {
     title: `Our Address — ${SITE_NAME}`,
@@ -56,7 +56,7 @@ const routeMeta = {
 const defaultMeta = {
   title: SITE_NAME,
   description:
-    'Saber Group — Premium marketing and software solutions in Egypt.',
+    'Saber Group — Premium software solutions in Egypt.',
 };
 // ─────────────────────────────────────────────────────────────────────────────
 

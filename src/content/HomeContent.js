@@ -1,12 +1,13 @@
 const HomeContent = {
   en: {
     hero: {
-      title: 'A software studio and marketing agency, run by the same team',
+      title:
+        'A software house that builds scalable systems for Egyptian enterprises',
       subtitle:
-        'We build the operational tools we wished existed, and we run the marketing campaigns that need them. Two different jobs, one team that does both well.',
+        'We build the operational tools we wished existed — CRMs, ATS, landing pages, and custom systems that streamline workflows and drive growth.',
     },
     software: {
-      eyebrow: 'Software',
+      eyebrow: 'Software Solutions',
       title: 'ATS and CRM, built for how Egyptian teams actually work',
       subtitle:
         "We built both because the tools on the market either cost too much or didn't speak Arabic properly.",
@@ -25,33 +26,33 @@ const HomeContent = {
       cta: 'Compare plans',
     },
     agency: {
-      eyebrow: 'Marketing & branding',
-      title: 'The agency side of Saber Group',
+      eyebrow: 'Custom Systems & Development',
+      title: 'Beyond CRM and ATS — we build what you actually need',
       subtitle:
-        'Campaigns, identity, and content for brands that need more than a logo and a posting schedule.',
+        'Landing pages, internal tools, and scalable systems that solve real operational problems.',
       items: [
         {
-          name: 'Digital Marketing',
-          desc: 'Paid and organic campaigns built around what your audience actually responds to.',
+          name: 'Landing Pages',
+          desc: 'High-performance, conversion-focused pages designed to capture leads and drive action.',
         },
         {
-          name: 'Branding',
-          desc: 'Visual identity that holds up across a storefront, a feed, and a pitch deck.',
+          name: 'Custom Systems',
+          desc: 'Bespoke solutions tailored to your specific workflows and business processes.',
         },
         {
-          name: 'Social Media',
-          desc: 'Ongoing management, not just a content calendar someone forgot to update.',
+          name: 'Scalable Architecture',
+          desc: 'Systems designed to grow with your business — secure, maintainable, and future-proof.',
         },
         {
-          name: 'Content Creation',
-          desc: "Photography, video, and copy made for the platform it's going on.",
+          name: 'Integration & APIs',
+          desc: 'Connecting your systems to work together seamlessly, from payment gateways to third-party tools.',
         },
         {
-          name: 'SEO',
-          desc: 'Getting found by the people already searching for what you do.',
+          name: 'Maintenance & Support',
+          desc: 'Ongoing support to keep your systems running smoothly, with updates and improvements as you grow.',
         },
       ],
-      cta: 'Talk to us about your brand',
+      cta: 'Talk to us about your project',
     },
     stats: {
       eyebrow: 'So far',
@@ -62,20 +63,20 @@ const HomeContent = {
       ],
     },
     closing: {
-      title: 'Whichever side brought you here, tell us what you need',
+      title: 'Tell us what you need to build',
       subtitle:
-        'Software pricing, a campaign brief, or just a question — we read everything that comes in.',
+        'Software pricing, a project brief, or just a question — we read everything that comes in.',
       cta: 'Get in touch',
     },
   },
   ar: {
     hero: {
-      title: 'استوديو برمجي ووكالة تسويق، بيشغلهم نفس الفريق',
+      title: 'بيت برمجي يبني أنظمة قابلة للتوسع للشركات المصرية',
       subtitle:
-        'بنبني الأدوات التشغيلية اللي كنا محتاجينها، وبنشغل الحملات التسويقية اللي تحتاجها. شغلتين مختلفتين، فريق واحد بيعمل الاتنين كويس.',
+        'بنبني الأدوات التشغيلية اللي كنا محتاجينها — CRM، ATS، لاندينج بيجز، وأنظمة مخصصة تنظم سير العمل وتدفع النمو.',
     },
     software: {
-      eyebrow: 'البرامج',
+      eyebrow: 'الحلول البرمجية',
       title: 'ATS و CRM، مبنيين على طريقة شغل الفرق المصرية فعلاً',
       subtitle:
         'بنينا الاتنين بعد ما لاحظنا إن الأدوات الموجودة في السوق غالية أو مش بتدعم العربي كويس.',
@@ -94,33 +95,33 @@ const HomeContent = {
       cta: 'قارن الباقات',
     },
     agency: {
-      eyebrow: 'التسويق والبراندينج',
-      title: 'الجانب التسويقي في Saber Group',
+      eyebrow: 'الأنظمة المخصصة والتطوير',
+      title: 'أكتر من CRM و ATS — بنبني اللي أنت محتاجه فعلاً',
       subtitle:
-        'حملات، هوية بصرية، ومحتوى للبراندات اللي محتاجة أكتر من لوجو وخطة نشر.',
+        'لاندينج بيجز، أدوات داخلية، وأنظمة قابلة للتوسع بتحل مشاكل تشغيلية حقيقية.',
       items: [
         {
-          name: 'التسويق الرقمي',
-          desc: 'حملات مدفوعة وعضوية مبنية على اللي جمهورك فعلاً بيتفاعل معاه.',
+          name: 'لاندينج بيجز',
+          desc: 'صفحات عالية الأداء ومصممة للتحويل بتجذب العملاء المحتملين وتدفعهم للإجراء.',
         },
         {
-          name: 'الهوية البصرية',
-          desc: 'هوية تفضل ثابتة على المحل، والفيد، وعرض التقديم.',
+          name: 'أنظمة مخصصة',
+          desc: 'حلول مصممة خصيصاً لتناسب سير العمل والعمليات التجارية الخاصة بك.',
         },
         {
-          name: 'السوشيال ميديا',
-          desc: 'إدارة مستمرة، مش جدول محتوى حد نسي يحدثه.',
+          name: 'بنية قابلة للتوسع',
+          desc: 'أنظمة مصممة للنمو مع عملك — آمنة، قابلة للصيانة، ومستقبلية.',
         },
         {
-          name: 'صنع المحتوى',
-          desc: 'تصوير وفيديو وكتابة مصممة للمنصة اللي هتنشر عليها.',
+          name: 'التكامل و APIs',
+          desc: 'ربط أنظمتك لتشتغل معاً بسلاسة، من بوابات الدفع إلى الأدوات الخارجية.',
         },
         {
-          name: 'SEO',
-          desc: 'إنك تظهر للناس اللي فعلاً بتبحث عن اللي بتقدمه.',
+          name: 'الصيانة والدعم',
+          desc: 'دعم مستمر لضمان استمرارية تشغيل أنظمتك، مع تحديثات وتحسينات مع نموك.',
         },
       ],
-      cta: 'اتكلم معنا عن براندك',
+      cta: 'تحدث معنا عن مشروعك',
     },
     stats: {
       eyebrow: 'لحد دلوقتي',
@@ -131,8 +132,8 @@ const HomeContent = {
       ],
     },
     closing: {
-      title: 'أي جانب جابك هنا، قولنا أنت محتاج إيه',
-      subtitle: 'سعر برنامج، بريف حملة، أو مجرد سؤال — بنقرا كل اللي يوصلنا.',
+      title: 'قولنا أنت محتاج تبني إيه',
+      subtitle: 'سعر برنامج، بريف مشروع، أو مجرد سؤال — بنقرا كل اللي يوصلنا.',
       cta: 'تواصل معنا',
     },
   },
