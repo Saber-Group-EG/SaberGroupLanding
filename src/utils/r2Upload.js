@@ -1,18 +1,38 @@
 import axios from 'axios';
 
-const BACKEND_URL = import.meta.env.VITE_FORM_URL || 'https://application-maker.onrender.com/api';
+const BACKEND_URL =
+  import.meta.env.VITE_FORM_URL || 'https://application-maker.onrender.com/api';
 
 export async function uploadToR2(file, folder = 'JobApplications') {
   const maxRetries = 3;
   let attempt = 0;
+  let lastError;
 
   while (attempt < maxRetries) {
     try {
-      const { data } = await axios.post(
-        `${BACKEND_URL.replace(/\/$/, '')}/upload/presign`,
-        { name: file.name, type: file.type, folder }
-      );
-      const { presignedUrl, publicUrl } = data;
+      let presignData;
+      try {
+        const { data } = await axios.post(
+          `${BACKEND_URL.replace(/\/$/, '')}/upload/presign`,
+          { name: file.name, type: file.type, folder },
+          { timeout: 30000 }
+        );
+        presignData = data;
+      } catch (err) {
+        // Surface exactly what happened at the presign step
+        const detail = err.response
+          ? `Server responded ${err.response.status}: ${JSON.stringify(err.response.data)}`
+          : err.request
+            ? `No response received from server (${err.code || 'unknown'}): ${err.message}`
+            : err.message;
+        throw new Error(`Presign step failed — ${detail}`);
+      }
+
+      const { presignedUrl, publicUrl } = presignData;
+
+      if (!presignedUrl || !presignedUrl.startsWith('https://')) {
+        throw new Error(`Invalid presigned URL received: ${presignedUrl}`);
+      }
 
       const uploadResult = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -22,10 +42,7 @@ export async function uploadToR2(file, folder = 'JobApplications') {
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            const loadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
-            const totalMB = (e.total / (1024 * 1024)).toFixed(2);
-            console.log(`${percent}% (${loadedMB}MB / ${totalMB}MB)`);
+            console.log(`${Math.round((e.loaded / e.total) * 100)}%`);
           }
         };
 
@@ -33,20 +50,42 @@ export async function uploadToR2(file, folder = 'JobApplications') {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(publicUrl);
           } else {
-            reject(new Error(`Upload failed: ${xhr.status}`));
+            reject(
+              new Error(
+                `R2 rejected upload — status ${xhr.status} ${xhr.statusText}: ${xhr.responseText || '(empty body)'}`
+              )
+            );
           }
         };
 
-        xhr.onerror = () => reject(new Error('Network error'));
-        xhr.ontimeout = () => reject(new Error('Upload timed out'));
+        xhr.onerror = () => {
+          reject(
+            new Error(
+              `Browser blocked or dropped the request before any response (readyState ${xhr.readyState}, status ${xhr.status}). ` +
+                `Common causes: ad blocker/extension, corporate/school network filtering, offline connection, or DNS failure resolving the R2 endpoint.`
+            )
+          );
+        };
+        xhr.ontimeout = () =>
+          reject(
+            new Error(
+              `Upload timed out after 180s (file size: ${(file.size / 1e6).toFixed(1)}MB) — likely a slow or unstable connection.`
+            )
+          );
         xhr.send(file);
       });
 
       return uploadResult;
     } catch (error) {
+      lastError = error;
       attempt++;
-      if (attempt >= maxRetries) throw error;
-      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+      if (attempt >= maxRetries) {
+        // This is what you show the user
+        throw new Error(
+          `Upload failed after ${maxRetries} attempts. Last error: ${lastError.message}`
+        );
+      }
+      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
     }
   }
 }

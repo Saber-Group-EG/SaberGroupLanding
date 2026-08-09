@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "../i18n/hooks/useTranslation";
 import Swal from "sweetalert2";
 import { SITE_NAME } from "../utils/ogMeta";
-import { addLead, fetchCountries as apiFetchCountries, fetchCities as apiFetchCities, fetchGovernorates as apiFetchGovernorates } from "../api";
+import { addLead, fetchCountries as apiFetchCountries, fetchCities as apiFetchCities, fetchGovernorates as apiFetchGovernorates } from "../api/generalApi";
 
 const ContactUs = () => {
   const { t, isArabic } = useTranslation();
@@ -39,23 +39,6 @@ const ContactUs = () => {
     // name may be an object like { en, ar }
     return isArabic ? (name.ar || name.en || '') : (name.en || name.ar || '');
   };
-
-  const services = [
-    { value: "all", label: t("contact:serviceAll") || "All Services" },
-    { value: "digital", label: t("contact:serviceDigital") || "Digital Marketing" },
-    { value: "branding", label: t("contact:serviceBranding") || "Branding" },
-    { value: "social", label: t("contact:serviceSocial") || "Social Media" },
-    { value: "content", label: t("contact:serviceContent") || "Content Creation" },
-    { value: "seo", label: t("contact:serviceSEO") || "SEO" },
-  ];
-
-  const budgetRanges = [
-    { value: "", label: t("contact:selectBudget") || "Select Budget Range" },
-    { value: "small", label: "$1K - $5K" },
-    { value: "medium", label: "$5K - $10K" },
-    { value: "large", label: "$10K - $25K" },
-    { value: "enterprise", label: "$25K+" },
-  ];
 
   const contactMethods = [
     {

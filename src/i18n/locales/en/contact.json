@@ -1,7 +1,7 @@
 {
-  "title": "Transform Your Brand",
-  "subtitle": "Tell us about your project and let's discuss how we can help your brand reach new heights.",
-  "tagline": "Let's Create Something Amazing",
+  "title": "Transform Your Operations",
+  "subtitle": "Tell us about your project and let's discuss how we can help your business scale with custom software solutions.",
+  "tagline": "Let's Build Something Amazing",
 
   "contactInfoTitle": "Contact Information",
   "addressTitle": "Tanta Office",
@@ -17,11 +17,11 @@
   "weekend": "Friday-Saturday: By Appointment Only",
 
   "serviceAll": "All Services",
-  "serviceDigital": "Digital Marketing",
-  "serviceBranding": "Brand Strategy",
-  "serviceSocial": "Social Media",
-  "serviceContent": "Content Creation",
-  "serviceSEO": "SEO",
+  "serviceDigital": "CRM Development",
+  "serviceBranding": "ATS Solutions",
+  "serviceSocial": "Landing Pages",
+  "serviceContent": "Custom Systems",
+  "serviceSEO": "Scalable Architecture",
 
   "selectBudget": "Select Budget Range",
   "serviceInterest": "I'm interested in",
@@ -38,7 +38,7 @@
   "phonePlaceholder": "+20 10 8009 9757",
   "budget": "Budget Range",
   "message": "Message",
-  "messagePlaceholder": "Briefly describe your goals, timeline and budget",
+  "messagePlaceholder": "Briefly describe your requirements, timeline and budget",
   "country": "Country",
   "selectCountry": "Select a country",
   "government": "Governorate",
@@ -59,7 +59,7 @@
   "error": "Error",
 
   "successTitle": "Message Sent — Thank You!",
-  "successMessage": "Thanks — we’ve received your message. A Saber Group strategist will contact you within 24 hours to discuss next steps.",
+  "successMessage": "Thanks — we've received your message. A Saber Group software consultant will contact you within 24 hours to discuss next steps.",
   "sendAnother": "Send another message",
 
   "privacyNote": "We respect your privacy — your details are used only to respond to this inquiry.",
@@ -68,7 +68,7 @@
   "socialSubtitle": "Stay updated with our latest work and insights",
 
   "visitOurStudio": "Visit Our Main Office",
-  "officeAddress": "Stop by for a coffee and let's discuss your project creatively.",
+  "officeAddress": "Stop by for a coffee and let's discuss your project technically.",
   "getDirections": "Get Directions",
   "mapRemoved": "Interactive map loaded on demand.",
   "openInMaps": "Open in Google Maps",
@@ -77,9 +77,9 @@
   "emailUs": "Email Us",
   "whatsapp": "WhatsApp",
   "findUs": "Find Us",
-  
-  "heroHeading": "Transform Your Brand into Measurable Growth",
-  "heroSubheading": "Saber Group combines growth strategy, creative branding and performance-driven campaigns to amplify your audience and deliver measurable results.",
-  "heroAbout": "Saber Group is a full-service marketing agency specializing in digital strategy, brand strategy, social media and content creation. We partner with ambitious brands to create experiences that grow awareness, leads and revenue.",
-  "heroBadge": "Award‑Winning Marketing Agency"
+
+  "heroHeading": "Transform Your Operations with Scalable Software",
+  "heroSubheading": "Saber Group combines robust engineering, agile development, and scalable architecture to build custom CRMs, ATS, landing pages, and systems that streamline workflows and drive measurable growth.",
+  "heroAbout": "Saber Group is a software development agency specializing in custom systems, CRM solutions, ATS platforms, and high-performance landing pages. We partner with ambitious enterprises to create software that optimizes operations, automates workflows, and scales with your business.",
+  "heroBadge": "Award‑Winning Software Development Agency"
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import Swal from 'sweetalert2';
-import { addLead } from '../api';
+import { addLead } from '../api/generalApi.js';
 import servicesContent, {
   tiers as tiersByProduct,
 } from '../content/ServicesContent.js';
@@ -101,7 +101,7 @@ const ServicesPage = () => {
         ...productIds,
         formData.tier ? TIER_IDS[formData.tier] : null,
       ].filter(Boolean);
-      
+
       const payload = {
         name: formData.name,
         phone: formData.phone,
@@ -306,38 +306,44 @@ const ServicesPage = () => {
                 ))}
                 <tr>
                   <td className="p-4" />
-                  {tierPlans.map((tier) => (
-                    <td
-                      key={tier.name}
-                      className={`p-4 rounded-b-xl ${tier.highlighted ? 'bg-primary-500/10' : ''}`}
-                    >
-                      <button
-                        onClick={() => {
-                          if (
-                            tier.name === 'Enterprise' ||
-                            tier.name === 'المؤسسات'
-                          ) {
-                            selectTierFromTable(tier.name);
-                          } else {
-                            navigate(
-                              `/checkout?product=${activeProduct}&tier=${encodeURIComponent(tier.name)}`
-                            );
-                          }
-                        }}
-                        className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                          tier.highlighted
-                            ? 'bg-primary-500 text-white hover:bg-primary-600'
-                            : 'bg-white dark:bg-dark-800 border border-light-200 dark:border-dark-700 text-light-800 dark:text-light-200 hover:border-primary-500'
-                        }`}
+                  {/* index (i) is the stable, language-independent tier
+                      position: 0 = Starter, 1 = Growth, 2 = Enterprise.
+                      We pass it to /checkout instead of the localized
+                      tier.name, since the backend Plan lookup needs an
+                      English-stable key, not "النمو" vs "Growth". */}
+                  {tierPlans.map((tier, i) => {
+                    const isEnterprise =
+                      tier.name === 'Enterprise' || tier.name === 'المؤسسات';
+                    return (
+                      <td
+                        key={tier.name}
+                        className={`p-4 rounded-b-xl ${tier.highlighted ? 'bg-primary-500/10' : ''}`}
                       >
-                        {tier.name === 'Enterprise' || tier.name === 'المؤسسات'
-                          ? isArabic
-                            ? 'اطلب عرض سعر'
-                            : 'Get a quote'
-                          : tiersSection.ctaLabel}
-                      </button>
-                    </td>
-                  ))}
+                        <button
+                          onClick={() => {
+                            if (isEnterprise) {
+                              selectTierFromTable(tier.name);
+                            } else {
+                              navigate(
+                                `/checkout?product=${activeProduct}&tierIndex=${i}`
+                              );
+                            }
+                          }}
+                          className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                            tier.highlighted
+                              ? 'bg-primary-500 text-white hover:bg-primary-600'
+                              : 'bg-white dark:bg-dark-800 border border-light-200 dark:border-dark-700 text-light-800 dark:text-light-200 hover:border-primary-500'
+                          }`}
+                        >
+                          {isEnterprise
+                            ? isArabic
+                              ? 'اطلب عرض سعر'
+                              : 'Get a quote'
+                            : tiersSection.ctaLabel}
+                        </button>
+                      </td>
+                    );
+                  })}
                 </tr>
               </tbody>
             </table>

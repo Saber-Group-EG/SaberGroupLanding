@@ -381,8 +381,6 @@ const JobApplicationForm = () => {
     return sha1FallbackHex(input);
   };
 
-
-
   const createTrimmedStringSchema = () =>
     Yup.string().transform((value, originalValue) => {
       if (typeof originalValue !== 'string') return value;
@@ -903,13 +901,18 @@ const JobApplicationForm = () => {
           'image-only',
           t('joinUs:invalidPhotoType') ||
             'Only JPG, JPEG, and PNG files are allowed',
-          (file) => !file || isAllowedFileType(file, ALLOWED_PHOTO_TYPES, ALLOWED_PHOTO_EXTENSIONS)
+          (file) =>
+            !file ||
+            isAllowedFileType(
+              file,
+              ALLOWED_PHOTO_TYPES,
+              ALLOWED_PHOTO_EXTENSIONS
+            )
         )
         .test(
           'photo-size',
           t('joinUs:photoTooLarge') || 'Photo file size must be 5 MB or less',
-          (file) =>
-            !file || isFileWithinSizeLimit(file, MAX_PHOTO_SIZE)
+          (file) => !file || isFileWithinSizeLimit(file, MAX_PHOTO_SIZE)
         );
 
       if (isBaseFieldRequired('profilePhoto')) {
@@ -930,7 +933,9 @@ const JobApplicationForm = () => {
         .test(
           'pdf-only',
           t('joinUs:invalidCVType') || 'Only PDF files are allowed',
-          (file) => !file || isAllowedFileType(file, ALLOWED_CV_TYPES, ALLOWED_CV_EXTENSIONS)
+          (file) =>
+            !file ||
+            isAllowedFileType(file, ALLOWED_CV_TYPES, ALLOWED_CV_EXTENSIONS)
         )
         .test(
           'cv-size',
@@ -1490,7 +1495,10 @@ const JobApplicationForm = () => {
             Swal.showLoading();
           },
         });
-        profilePhotoUrl = await uploadToR2(values.profilePhotoFile, 'JobApplications');
+        profilePhotoUrl = await uploadToR2(
+          values.profilePhotoFile,
+          'JobApplications'
+        );
         Swal.close();
       }
 
@@ -1578,7 +1586,10 @@ const JobApplicationForm = () => {
 
         const val = englishCustomResponses[locKey];
 
-        const wrap = (inputType, value) => ({ type: inputType || 'text', answer: value });
+        const wrap = (inputType, value) => ({
+          type: inputType || 'text',
+          answer: value,
+        });
 
         if (
           field.inputType === 'groupField' &&
@@ -1599,7 +1610,8 @@ const JobApplicationForm = () => {
 
         if (field.inputType === 'repeatable_group' && Array.isArray(val)) {
           remappedCustomResponses[enKey] = val.map((item) => {
-            if (!item || typeof item !== 'object') return wrap(field.inputType, item);
+            if (!item || typeof item !== 'object')
+              return wrap(field.inputType, item);
             const mappedItem = {};
             (field.groupFields || []).forEach((sub) => {
               const subLoc = getFieldKey(sub);
@@ -1698,7 +1710,7 @@ const JobApplicationForm = () => {
         address: withVisibility('address', values.address),
         birthDate: withVisibility('birthDate', values.birthDate),
         gender: withVisibility('gender', values.gender),
-        status: "pending",
+        status: 'pending',
         expectedSalary: withVisibility('expectedSalary', values.expectedSalary),
         profilePhoto: withVisibility('profilePhoto', profilePhotoUrl),
         cvFilePath: withVisibility('cvFilePath', cvUrl),
@@ -1732,15 +1744,20 @@ const JobApplicationForm = () => {
       );
 
       const backendPayload = error?.response?.data;
-      const backendFullError =
-        typeof backendPayload === 'string' && backendPayload.trim()
+      const isAxiosError = Boolean(error?.response);
+
+      const backendFullError = isAxiosError
+        ? typeof backendPayload === 'string' && backendPayload.trim()
           ? backendPayload
           : backendPayload !== undefined
             ? stringifyForDisplay(backendPayload)
-            : exactErrorMessage;
+            : exactErrorMessage
+        : error?.message || exactErrorMessage;
 
       const useHtmlErrorBody =
-        backendPayload !== undefined && typeof backendPayload !== 'string';
+        isAxiosError &&
+        backendPayload !== undefined &&
+        typeof backendPayload !== 'string';
 
       Swal.close();
       await Swal.fire({
@@ -1786,8 +1803,6 @@ const JobApplicationForm = () => {
           <button onClick={() => navigate('/join-us')} className="btn-primary">
             {t('joinUs:backToJobs') || 'Back to Job Positions'}
           </button>
-
-  
         </div>
       </section>
     );
@@ -2329,7 +2344,9 @@ const JobApplicationForm = () => {
                   {isBaseFieldVisible('profilePhoto') && (
                     <ProfilePhotoUpload
                       value={values.profilePhotoFile}
-                      onChange={(file) => setFieldValue('profilePhotoFile', file)}
+                      onChange={(file) =>
+                        setFieldValue('profilePhotoFile', file)
+                      }
                       error={errors.profilePhotoFile}
                       touched={touched.profilePhotoFile}
                       label={t('joinUs:photo') || 'Profile Photo'}
@@ -2694,7 +2711,10 @@ const JobApplicationForm = () => {
                       label={t('joinUs:uploadCV') || 'CV'}
                       t={t}
                       required={isBaseFieldRequired('cvFilePath')}
-                      optionalLabel={t('joinUs:optional') || (isArabic ? 'اختياري' : 'Optional')}
+                      optionalLabel={
+                        t('joinUs:optional') ||
+                        (isArabic ? 'اختياري' : 'Optional')
+                      }
                     />
                   )}
 

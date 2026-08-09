@@ -121,7 +121,7 @@ const JoinUs = () => {
 
           <p className="text-xl text-light-600 dark:text-light-300 leading-relaxed max-w-3xl mx-auto">
             {t('joinUs:subtitle') ||
-              'Explore exciting career opportunities and become part of our growing team. We are looking for talented individuals to help shape the future of marketing in Egypt.'}
+              'Explore exciting career opportunities and become part of our growing team. We are looking for talented individuals to help shape the future of software in Egypt.'}
           </p>
 
           <div className="mt-8 flex justify-center">
