@@ -139,36 +139,27 @@ const JobApplicationForm = () => {
         .replace(/\s+/g, '_');
     }
 
+    // fieldId is the real, stable identifier — use it verbatim, never mutate it
+    if (typeof field.fieldId === 'string' && field.fieldId.trim()) {
+      return field.fieldId.trim();
+    }
+
+    // Only reached if a field genuinely has no fieldId (shouldn't happen for a
+    // persisted job) — normalize as a last resort so the form doesn't crash
     const stableCandidate =
       field.fieldId || field.name || field.id || field._id;
     const keySource = stableCandidate || getLocalizedText(field.label);
-    if (!keySource) return '';
-
-    // Use stable ids when available; fallback to a normalized label.
     return String(keySource)
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s\u0600-\u06FF]/g, '') // Remove special chars but keep Arabic
-      .replace(/\s+/g, '_'); // Replace spaces with underscores
+      .replace(/[^\w\s\u0600-\u06FF]/g, '')
+      .replace(/\s+/g, '_');
   };
 
   // Helper to always derive the English key (use `en` label when present)
   const getFieldKeyEn = (field) => {
     if (!field) return '';
-    if (typeof field === 'string') return getFieldKey(field);
-    // field may be the full field object; prefer its `label` object
-    const labelObj = field.label || field;
-    const enLabel =
-      typeof labelObj === 'object'
-        ? labelObj.en || labelObj.ar || field.name || field.fieldId || ''
-        : '';
-    const labelText = extractStringFromRich(enLabel);
-    if (!labelText) return getFieldKey(field);
-    return labelText
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s\u0600-\u06FF]/g, '')
-      .replace(/\s+/g, '_');
+    return getFieldKey(field);
   };
 
   const extractStringFromRich = (val) => {
