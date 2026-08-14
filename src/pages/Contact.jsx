@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "../i18n/hooks/useTranslation";
 import Swal from "sweetalert2";
 import { SITE_NAME } from "../utils/ogMeta";
-import { addLead, fetchCountries as apiFetchCountries, fetchCities as apiFetchCities, fetchGovernorates as apiFetchGovernorates } from "../api";
+import { addLead, fetchCountries as apiFetchCountries, fetchCities as apiFetchCities, fetchGovernorates as apiFetchGovernorates } from "../api/generalApi";
 
 const ContactUs = () => {
   const { t, isArabic } = useTranslation();
