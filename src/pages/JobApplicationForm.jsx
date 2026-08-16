@@ -1890,7 +1890,6 @@ const JobApplicationForm = () => {
       setSubmitting(false);
     }
   };
-  console.log(jobPosition?.companyId.settings);
   if (loading) {
     return (
       <section className="py-20 md:py-32 min-h-screen flex items-center justify-center">
