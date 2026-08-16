@@ -87,8 +87,7 @@
     "ready": "Ready"
   },
   "addMore": "Add More",
-  "remove": "Remove"
-  ,
+  "remove": "Remove",
   "fixFieldTitle": "Please fix this field",
   "entry": "Entry",
   "fixHintEmail": "Enter a valid email address, for example name@example.com.",
@@ -124,5 +123,12 @@
   "company": "Company",
   "applicationDate": "Application Date",
   "check": "Check",
-  "checking": "Checking..."
+  "checking": "Checking...",
+  "autofillFromCv": "Autofill from CV",
+  "parsingCv": "Reading CV...",
+  "cvParseFailed": "Failed to read CV — please fill the form manually",
+  "cvOverwriteTitle": "Overwrite existing answers?",
+  "cvOverwriteText": "Some fields already have values. Replace them with what we found in your CV?",
+  "cvNothingFoundTitle": "Nothing found",
+  "cvNothingFoundText": "We couldn't pull anything usable from this CV — please fill the form manually."
 }
