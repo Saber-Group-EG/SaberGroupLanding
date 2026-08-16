@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import Swal from 'sweetalert2';
-import { getPlans, startCheckout, getApiErrorMessage } from '../api/formsApi';
+import { getPlans, startCheckout } from '../api/formsApi';
+import { parsePaymobCheckoutUrl } from '../api/paymobApi';
+import PaymobCardForm from '../components/PaymobCardForm';
 // ⚠️ adjust these two paths to wherever your content files actually live
 import termsContent from '../content/TermsContent';
 import { privacyContent } from '../content/PoliciesContent';
@@ -10,17 +11,6 @@ import { privacyContent } from '../content/PoliciesContent';
 // index (i) in ServicesPage's tier table is language-independent:
 // 0 = Starter, 1 = Growth. Enterprise (2) never reaches this page.
 const TIER_KEYS_BY_INDEX = ['Starter', 'Growth'];
-
-// Map "<product>:<TierKey>" -> the exact `name` field on your Plan
-// documents in Mongo. Edit these once you know the real names —
-// this is deliberately explicit rather than fuzzy-matched, since a
-// wrong match here means charging the wrong amount.
-const PLAN_NAME_MAP = {
-  'ats:Starter': 'ATS Starter',
-  'ats:Growth': 'ATS Growth',
-  'crm:Starter': 'CRM Starter',
-  'crm:Growth': 'CRM Growth',
-};
 
 const PLAN_FEATURES = {
   Starter: {
@@ -57,6 +47,119 @@ const PLAN_FEATURES = {
   },
 };
 
+// The backend returns a { checkoutUrl } (unified checkout URL) carrying
+// publicKey + clientSecret. We parse those out and render our own styled
+// card form (PaymobCardForm) instead of Paymob's hosted page.
+const createIntention = async (payload) => {
+  const res = await startCheckout(payload);
+  const parsed =
+    typeof res.checkoutUrl === 'string'
+      ? parsePaymobCheckoutUrl(res.checkoutUrl)
+      : null;
+  if (parsed) return parsed;
+  throw new Error('No payment session returned');
+};
+
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
+const CONTACT_CACHE_KEY = 'checkout_contact';
+
+const readSavedContact = () => {
+  try {
+    const raw = sessionStorage.getItem(CONTACT_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+// One cached intention per plan + payload hash, so the pre-create never
+// spams Paymob with duplicate orders — every reload (and React StrictMode
+// double-fire) used to create a brand-new order, which got us 400s.
+const INTENTION_CACHE_PREFIX = 'paymob_intention_';
+const INTENTION_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+const readIntentionCache = (planId) => {
+  try {
+    const raw = sessionStorage.getItem(INTENTION_CACHE_PREFIX + planId);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeIntentionCache = (planId, entry) => {
+  try {
+    sessionStorage.setItem(
+      INTENTION_CACHE_PREFIX + planId,
+      JSON.stringify(entry)
+    );
+  } catch {
+    // storage unavailable — the session will just be re-created
+  }
+};
+
+const clearIntentionCache = (planId) => {
+  try {
+    sessionStorage.removeItem(INTENTION_CACHE_PREFIX + planId);
+  } catch {
+    // noop
+  }
+};
+
+let intentionInFlight = null; // { hash, promise } — dedupe concurrent creates
+
+const getIntention = async (payload) => {
+  const hash = JSON.stringify(payload);
+  if (intentionInFlight && intentionInFlight.hash === hash) {
+    return intentionInFlight.promise;
+  }
+  const cached = readIntentionCache(payload.planId);
+  if (
+    cached &&
+    cached.payloadHash === hash &&
+    Date.now() - cached.createdAt < INTENTION_CACHE_TTL
+  ) {
+    return cached;
+  }
+  const promise = createIntention(payload).then((r) => {
+    const entry = { ...r, payloadHash: hash, createdAt: Date.now() };
+    writeIntentionCache(payload.planId, entry);
+    return entry;
+  });
+  intentionInFlight = { hash, promise };
+  try {
+    return await promise;
+  } finally {
+    if (intentionInFlight?.hash === hash) intentionInFlight = null;
+  }
+};
+
+const LockIcon = () => (
+  <svg
+    className="w-3.5 h-3.5 opacity-50 shrink-0"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+  >
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const ShieldIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    viewBox="0 0 24 24"
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
 const CheckoutPage = () => {
   const [searchParams] = useSearchParams();
   const { isArabic } = useTranslation();
@@ -66,20 +169,31 @@ const CheckoutPage = () => {
   const product = searchParams.get('product') || 'ats';
   const tierIndex = Number(searchParams.get('tierIndex') ?? 1);
   const tierKey = TIER_KEYS_BY_INDEX[tierIndex] || 'Growth';
-  const planLookupKey = `${product}:${tierKey}`;
-  const planName = PLAN_NAME_MAP[planLookupKey];
 
   const [plan, setPlan] = useState(null);
   const [planStatus, setPlanStatus] = useState('loading'); // loading | ready | not_found | error
 
-  const [form, setForm] = useState({
-    name: '',
-    company: '',
-    email: '',
-    phone: '',
-  });
+  const [form, setForm] = useState(
+    () =>
+      readSavedContact() || {
+        name: '',
+        company: '',
+        email: '',
+        phone: '',
+      }
+  );
   const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  const [session, setSession] = useState(null); // { publicKey, clientSecret, checkoutUrl } | null
+  const [failed, setFailed] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CONTACT_CACHE_KEY, JSON.stringify(form));
+    } catch {
+      // storage unavailable — the form just won't be restored on reload
+    }
+  }, [form]);
 
   // ── Terms/Privacy agreement ────────────────────────────────────────────
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -122,6 +236,11 @@ const CheckoutPage = () => {
     };
   }, [tierKey]);
 
+  // The payment session is only started once the user fills in the four
+  // contact fields and confirms — no placeholder billing is ever sent.
+  // `getIntention` dedupes concurrent requests and caches per payload, so
+  // reloads or double-clicks never create a duplicate Paymob order.
+
   const features = PLAN_FEATURES[tierKey]?.[lang] || [];
   // Price already includes VAT — no separate VAT line/calc.
   const egp = plan ? plan.priceCents / 100 : 0;
@@ -140,8 +259,21 @@ const CheckoutPage = () => {
     workEmail: isArabic ? 'الإيميل' : 'Work email',
     phone: isArabic ? 'تليفون / واتساب' : 'Phone / WhatsApp',
     redirectNote: isArabic
-      ? 'هيتم تحويلك لصفحة الدفع الآمنة من Paymob لإدخال بيانات البطاقة. إحنا مش بنشوف أو بنخزن بيانات بطاقتك.'
-      : "You'll be redirected to Paymob's secure page to enter your card details. We never see or store your card information.",
+      ? 'بيانات بطاقتك بتتم معالجتها بأمان عبر Paymob. إحنا مش بنشوف أو بنخزن بيانات بطاقتك.'
+      : "Your card details are processed securely by Paymob. We never see or store your card information.",
+    paymentPrompt: isArabic
+      ? 'أدخل بيانات بطاقتك بأمان لإتمام الدفع.'
+      : 'Enter your card details securely to complete payment.',
+    confirmStart: isArabic
+      ? 'تأكيد وبدء الدفع الآمن'
+      : 'Confirm & start secure payment',
+    fillDetailsFirst: isArabic
+      ? 'أكمل بياناتك الأربعة أعلاه ليظهر نموذج الدفع.'
+      : 'Fill in your details above to see the payment form.',
+    pixelLoadError: isArabic
+      ? 'تعذر تحميل نموذج الدفع. حاول مرة أخرى.'
+      : 'Unable to load the payment form. Please try again.',
+    retry: isArabic ? 'حاول مرة أخرى' : 'Try again',
     orderTitle: isArabic ? 'ملخص الطلب' : 'Order summary',
     setupFee: isArabic ? 'رسوم الإعداد' : 'Setup fee',
     free: isArabic ? 'مجانًا' : 'Free',
@@ -149,10 +281,8 @@ const CheckoutPage = () => {
       ? 'السعر شامل ضريبة القيمة المضافة'
       : 'Price includes VAT',
     totalDue: isArabic ? 'الإجمالي اليوم' : 'Total due today',
-    continueBtn: isArabic
-      ? 'المتابعة للدفع الآمن'
-      : 'Continue to secure payment',
-    processing: isArabic ? 'جاري التحويل…' : 'Redirecting…',
+    payBtn: isArabic ? 'ادفع الآن' : 'Pay now',
+    processing: isArabic ? 'جاري التجهيز…' : 'Preparing payment…',
     termsNote: isArabic
       ? 'الاشتراك يتجدد شهريًا ويمكن إلغاؤه في أي وقت.'
       : 'Subscription renews monthly. Cancel any time.',
@@ -199,55 +329,78 @@ const CheckoutPage = () => {
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
 
-  const validate = () => {
-    const e = {};
-    if (!form.name.trim()) e.name = t.fieldRequired;
-    if (!form.company.trim()) e.company = t.fieldRequired;
-    if (!form.email.trim()) e.email = t.fieldRequired;
-    else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = t.invalidEmail;
-    if (!form.phone.trim()) e.phone = t.fieldRequired;
-    if (!agreedToTerms) e.terms = t.termsRequired;
-    return e;
-  };
+  const isContactValid = useCallback(
+    () =>
+      Boolean(
+        form.name.trim() &&
+          form.company.trim() &&
+          EMAIL_RE.test(form.email.trim()) &&
+          form.phone.trim()
+      ),
+    [form]
+  );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (planStatus !== 'ready' || !plan) return;
+  const contactDone = isContactValid();
 
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+  const handleRetry = useCallback(() => {
+    if (plan) clearIntentionCache(plan._id);
+    setFailed(false);
+    setSession(null);
+  }, [plan]);
 
-    setSubmitting(true);
+  // Waits for the four contact fields, then starts the payment session
+  // with the real billing data — no placeholder billing is ever sent.
+  const handleStartPayment = useCallback(async () => {
+    if (planStatus !== 'ready' || !plan || session || starting) return;
+    if (!isContactValid()) return;
+    setStarting(true);
+    setFailed(false);
     try {
-      const { checkoutUrl } = await startCheckout({
-        fullName: form.name,
-        companyName: form.company,
-        workEmail: form.email,
-        phone: form.phone,
+      const intent = await getIntention({
+        fullName: form.name.trim(),
+        companyName: form.company.trim(),
+        workEmail: form.email.trim(),
+        phone: form.phone.trim(),
         planId: plan._id,
       });
-
-      if (!checkoutUrl) {
-        throw new Error('No checkout URL returned');
-      }
-
-      // Full page redirect — this is an external Paymob domain, not
-      // an in-app route, so react-router's navigate() is wrong here.
-      window.location.href = checkoutUrl;
-    } catch (err) {
-      setSubmitting(false);
-      await Swal.fire({
-        icon: 'error',
-        title: t.genericErrorTitle,
-        text: getApiErrorMessage(err, t.genericErrorTitle),
-        confirmButtonText: isArabic ? 'تمام' : 'OK',
-        confirmButtonColor: '#ef4444',
+      setSession({
+        publicKey: intent.publicKey,
+        clientSecret: intent.clientSecret,
+        checkoutUrl: intent.checkoutUrl,
       });
+    } catch (err) {
+      console.error('Failed to start payment session:', err);
+      setFailed(true);
+    } finally {
+      setStarting(false);
     }
-  };
+  }, [planStatus, plan, session, starting, form, isContactValid]);
+
+  const handlePaySuccess = useCallback(() => {
+    // Payment is captured, but activation is confirmed asynchronously by
+    // the backend webhook (it emails the temporary password) — so show
+    // the "waiting for confirmation" state instead of claiming success.
+    navigate('/checkout/complete?pending=true');
+  }, [navigate]);
+
+  // Bank 3DS step. Open it in a new tab so the customer returns into the
+  // app — the original tab switches to the confirmation-waiting page.
+  // If the popup is blocked, fall back to navigating the current tab.
+  const handlePayPending = useCallback(
+    (redirectUrl) => {
+      const win = window.open(redirectUrl, '_blank');
+      if (win) {
+        navigate('/checkout/complete?pending=true');
+      } else {
+        window.location.assign(redirectUrl);
+      }
+    },
+    [navigate]
+  );
+
+  const handlePayCancel = useCallback(() => {
+    navigate(-1);
+  }, [navigate]);
 
   const openLegalModal = (which) => {
     setCanAgreeInModal(false);
@@ -265,31 +418,6 @@ const CheckoutPage = () => {
     setLegalModal(null);
     if (errors.terms) setErrors((p) => ({ ...p, terms: '' }));
   };
-
-  const LockIcon = () => (
-    <svg
-      className="w-3.5 h-3.5 opacity-50 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-
-  const ShieldIcon = () => (
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      viewBox="0 0 24 24"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
 
   if (planStatus === 'loading') {
     return (
@@ -382,8 +510,8 @@ const CheckoutPage = () => {
         <div className="flex items-center mb-8">
           {[
             { label: t.stepPlan, state: 'done' },
-            { label: t.stepContact, state: 'active' },
-            { label: t.stepPay, state: 'idle' },
+            { label: t.stepContact, state: contactDone ? 'done' : 'active' },
+            { label: t.stepPay, state: session ? 'active' : 'idle' },
           ].map((step, i, arr) => (
             <div
               key={step.label}
@@ -418,7 +546,7 @@ const CheckoutPage = () => {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={(e) => e.preventDefault()} noValidate>
           {/* Contact details */}
           <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-5">
@@ -479,6 +607,149 @@ const CheckoutPage = () => {
             </div>
           </div>
 
+          {/* Legal agreement */}
+          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-5 mb-4">
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <input
+                id="terms-checkbox"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => {
+                  setAgreedToTerms(e.target.checked);
+                  if (errors.terms) setErrors((p) => ({ ...p, terms: '' }));
+                }}
+                className="mt-0.5 w-4 h-4 accent-primary-500 shrink-0"
+              />
+              <span className="text-xs text-light-600 dark:text-light-400 leading-relaxed">
+                {t.legalCheckboxPrefix}{' '}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('terms')}
+                  className="text-primary-500 font-semibold underline underline-offset-2"
+                >
+                  {t.termsLink}
+                </button>{' '}
+                {t.and}{' '}
+                <button
+                  type="button"
+                  onClick={() => openLegalModal('privacy')}
+                  className="text-primary-500 font-semibold underline underline-offset-2"
+                >
+                  {t.privacyLink}
+                </button>
+              </span>
+            </label>
+            {errors.terms && (
+              <p className="mt-2 text-xs text-danger-500">{errors.terms}</p>
+            )}
+          </div>
+
+          {/* Payment */}
+          <div
+            id="payment-section"
+            className="overflow-hidden rounded-2xl border border-light-200/50 dark:border-dark-700/50 bg-white/80 dark:bg-dark-800/80 mb-4"
+          >
+            <div className="flex items-center gap-3 border-b border-light-100 dark:border-dark-700 px-6 py-5">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500 shrink-0">
+                <ShieldIcon />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold tracking-tight text-light-900 dark:text-white">
+                  {t.stepPay}
+                </h2>
+                <p className="mt-0.5 text-sm text-light-500 dark:text-light-400">
+                  {t.paymentPrompt}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {failed && (
+                <div className="space-y-3">
+                  <p className="flex items-center gap-2 rounded-xl border border-danger-500/30 bg-danger-500/10 px-4 py-3 text-sm text-danger-500">
+                    <svg
+                      className="size-4 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 9v4m0 4h.01" />
+                      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                    </svg>
+                    {t.pixelLoadError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="w-full rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-600"
+                  >
+                    {t.retry}
+                  </button>
+                </div>
+              )}
+
+              {!failed && session && (
+                <PaymobCardForm
+                  key={session.clientSecret}
+                  publicKey={session.publicKey}
+                  clientSecret={session.clientSecret}
+                  checkoutUrl={session.checkoutUrl}
+                  payButtonLabel={t.payBtn}
+                  onSuccess={handlePaySuccess}
+                  onPending={handlePayPending}
+                  onRetry={handleRetry}
+                  onCancel={handlePayCancel}
+                />
+              )}
+
+              {!failed && !session && planStatus === 'ready' && (
+                <div>
+                  {isContactValid() ? (
+                    <button
+                      type="button"
+                      onClick={handleStartPayment}
+                      disabled={starting}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-primary-600 disabled:opacity-70"
+                    >
+                      {starting && (
+                        <svg
+                          className="size-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
+                          />
+                        </svg>
+                      )}
+                      {starting ? t.processing : t.confirmStart}
+                    </button>
+                  ) : (
+                    <p className="text-sm text-light-400 dark:text-light-500">
+                      {t.fillDetailsFirst}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 mt-5 text-xs text-light-400 dark:text-light-500">
+                <LockIcon />
+                <span>{t.redirectNote}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Order summary */}
           <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-4">
@@ -532,52 +803,6 @@ const CheckoutPage = () => {
               ))}
             </div>
           </div>
-
-          {/* Legal agreement */}
-          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-5 mb-6">
-            <label className="flex items-start gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => {
-                  setAgreedToTerms(e.target.checked);
-                  if (errors.terms) setErrors((p) => ({ ...p, terms: '' }));
-                }}
-                className="mt-0.5 w-4 h-4 accent-primary-500 shrink-0"
-              />
-              <span className="text-xs text-light-600 dark:text-light-400 leading-relaxed">
-                {t.legalCheckboxPrefix}{' '}
-                <button
-                  type="button"
-                  onClick={() => openLegalModal('terms')}
-                  className="text-primary-500 font-semibold underline underline-offset-2"
-                >
-                  {t.termsLink}
-                </button>{' '}
-                {t.and}{' '}
-                <button
-                  type="button"
-                  onClick={() => openLegalModal('privacy')}
-                  className="text-primary-500 font-semibold underline underline-offset-2"
-                >
-                  {t.privacyLink}
-                </button>
-              </span>
-            </label>
-            {errors.terms && (
-              <p className="mt-2 text-xs text-danger-500">{errors.terms}</p>
-            )}
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-primary-500 text-white rounded-xl font-bold text-[15px] hover:bg-primary-600 transition-colors disabled:opacity-70"
-          >
-            <ShieldIcon />
-            {submitting ? t.processing : t.continueBtn}
-          </button>
 
           <p className="text-[11px] text-light-400 dark:text-light-500 text-center mt-4 leading-relaxed px-4">
             {t.termsNote}

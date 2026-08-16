@@ -53,7 +53,7 @@ const extractMessageFromPayload = (payload) => {
     try {
       const serialized = JSON.stringify(payload);
       if (serialized && serialized !== '{}') return serialized;
-    } catch (serializationError) {
+    } catch {
       // Ignore serialization failures and continue fallback handling.
     }
   }
@@ -75,23 +75,13 @@ export const getApiErrorMessage = (
 };
 
 export async function submitApplicant(payload) {
-  try {
-    const res = await formClient.post('/public/applicants', payload);
-    return res.data;
-  } catch (err) {
-    // rethrow for caller to handle
-    throw err;
-  }
+  const res = await formClient.post('/public/applicants', payload);
+  return res.data;
 }
 
 export async function checkExistingApplicant(params) {
-  try {
-    const res = await formClient.get('/public/applicants', { params });
-    return res.data;
-  } catch (err) {
-    // rethrow for caller to handle
-    throw err;
-  }
+  const res = await formClient.get('/public/applicants', { params });
+  return res.data;
 }
 
 // --- Checkout / Plans -------------------------------------------------
@@ -100,27 +90,21 @@ export async function checkExistingApplicant(params) {
 // presumably filtered server-side). Each plan has _id, name, priceCents,
 // currency, isActive, etc. — see the Plan model.
 export async function getPlans() {
-  try {
-    const res = await formClient.get('/public/plans');
-    console.log('getPlans response:', res.data.data);
-    return res.data.data;
-  } catch (err) {
-    throw err;
-  }
+  const res = await formClient.get('/public/plans');
+  console.log('getPlans response:', res.data.data);
+  return res.data.data;
 }
 
 // POST /checkout/start — body: { fullName, companyName, workEmail, phone, planId }
-// Returns { checkoutUrl } — a Paymob-hosted unified checkout URL. The
-// caller must do a full page redirect (window.location.href), not a
-// client-side route change, since it's an external domain.
+// Preferred response: { paymentKey } (or payment_token) — a Paymob payment
+// key token for the embedded iframe flow.
+// Legacy response (until the backend is updated): { checkoutUrl } — a
+// Paymob-hosted unified checkout URL; the caller falls back to a full page
+// redirect in that case.
 export async function startCheckout(payload) {
-  try {
-    const res = await formClient.post('/checkout/start', payload);
-    console.log('startCheckout response:', res.data.data);
-    return res.data;
-  } catch (err) {
-    throw err;
-  }
+  const res = await formClient.post('/checkout/start', payload);
+  console.log('startCheckout response:', res.data);
+  return res.data;
 }
 
 export default {
