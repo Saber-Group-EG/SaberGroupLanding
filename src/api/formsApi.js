@@ -1,13 +1,15 @@
 import axios from 'axios';
 
-const FORM_API_URL = import.meta.env.VITE_FORM_URL || 'https://application-maker.onrender.com/api';
+const FORM_API_URL =
+  import.meta.env.VITE_FORM_URL || 'https://application-maker.onrender.com/api';
 
 const formClient = axios.create({
   baseURL: FORM_API_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-const asTrimmedString = (value) => (typeof value === 'string' ? value.trim() : '');
+const asTrimmedString = (value) =>
+  typeof value === 'string' ? value.trim() : '';
 
 const extractMessageFromPayload = (payload) => {
   if (payload == null) return '';
@@ -59,7 +61,10 @@ const extractMessageFromPayload = (payload) => {
   return '';
 };
 
-export const getApiErrorMessage = (error, fallbackMessage = 'Request failed') => {
+export const getApiErrorMessage = (
+  error,
+  fallbackMessage = 'Request failed'
+) => {
   const backendMessage = extractMessageFromPayload(error?.response?.data);
   if (backendMessage) return backendMessage;
 
@@ -89,4 +94,18 @@ export async function checkExistingApplicant(params) {
   }
 }
 
-export default { submitApplicant, checkExistingApplicant, getApiErrorMessage };
+export async function parseCv(payload) {
+  try {
+    const res = await formClient.post('/public/applicants/cv-parse', payload);
+    return res.data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export default {
+  submitApplicant,
+  checkExistingApplicant,
+  parseCv,
+  getApiErrorMessage,
+};
