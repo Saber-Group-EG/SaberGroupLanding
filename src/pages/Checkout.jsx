@@ -13,34 +13,38 @@ import { privacyContent } from '../content/PoliciesContent';
 const TIER_KEYS_BY_INDEX = ['Starter', 'Growth'];
 
 const PLAN_FEATURES = {
-  Starter: [
-    'Up to 5 users',
-    '1 company',
-    'Applicant history',
-    'Email confirmation',
-    'Email support',
-  ],
-  Growth: [
-    'Up to 20 users',
-    'Up to 3 companies',
-    'Interview scoring',
-    'Email tracking',
-    'Priority support',
-  ],
-  المبدئية: [
-    'حتى 5 مستخدمين',
-    'شركة واحدة',
-    'سجل المتقدمين',
-    'تأكيد بالإيميل',
-    'دعم بالإيميل',
-  ],
-  النمو: [
-    'حتى 20 مستخدم',
-    'حتى 3 شركات',
-    'تقييم المقابلات',
-    'تتبع الإيميلات',
-    'دعم ذو أولوية',
-  ],
+  Starter: {
+    en: [
+      'Up to 5 users',
+      '1 company',
+      'Applicant history',
+      'Email confirmation',
+      'Email support',
+    ],
+    ar: [
+      'حتى 5 مستخدمين',
+      'شركة واحدة',
+      'سجل المتقدمين',
+      'تأكيد بالإيميل',
+      'دعم بالإيميل',
+    ],
+  },
+  Growth: {
+    en: [
+      'Up to 20 users',
+      'Up to 3 companies',
+      'Interview scoring',
+      'Email tracking',
+      'Priority support',
+    ],
+    ar: [
+      'حتى 20 مستخدم',
+      'حتى 3 شركات',
+      'تقييم المقابلات',
+      'تتبع الإيميلات',
+      'دعم ذو أولوية',
+    ],
+  },
 };
 
 // The backend returns a { checkoutUrl } (unified checkout URL) carrying
@@ -160,13 +164,14 @@ const CheckoutPage = () => {
   const [searchParams] = useSearchParams();
   const { isArabic } = useTranslation();
   const navigate = useNavigate();
+  const lang = isArabic ? 'ar' : 'en';
 
   const product = searchParams.get('product') || 'ats';
   const tierIndex = Number(searchParams.get('tierIndex') ?? 1);
   const tierKey = TIER_KEYS_BY_INDEX[tierIndex] || 'Growth';
 
-  const pricing = PLAN_PRICES[tierKey] || { egp: 0, vat: 0, total: 0 };
-  const features = PLAN_FEATURES[tierKey]?.[lang] || [];
+  const [plan, setPlan] = useState(null);
+  const [planStatus, setPlanStatus] = useState('loading'); // loading | ready | not_found | error
 
   const [form, setForm] = useState(
     () =>
@@ -236,6 +241,7 @@ const CheckoutPage = () => {
   // `getIntention` dedupes concurrent requests and caches per payload, so
   // reloads or double-clicks never create a duplicate Paymob order.
 
+  const features = PLAN_FEATURES[tierKey]?.[lang] || [];
   // Price already includes VAT — no separate VAT line/calc.
   const egp = plan ? plan.priceCents / 100 : 0;
   const total = egp;
@@ -243,11 +249,10 @@ const CheckoutPage = () => {
   const t = {
     breadcrumb: isArabic ? 'الخدمات' : 'Services',
     checkout: isArabic ? 'إتمام الطلب' : 'Checkout',
-    planLabel: isArabic ? 'الباقة المختارة' : 'Selected plan',
     monthly: isArabic ? 'شهريًا' : 'per month',
     stepPlan: isArabic ? 'الباقة' : 'Plan',
-    stepPayment: isArabic ? 'الدفع' : 'Payment',
-    stepConfirm: isArabic ? 'تأكيد' : 'Confirm',
+    stepContact: isArabic ? 'بياناتك' : 'Your details',
+    stepPay: isArabic ? 'الدفع الآمن' : 'Secure payment',
     contactTitle: isArabic ? 'بيانات التواصل' : 'Contact details',
     fullName: isArabic ? 'الاسم الكامل' : 'Full name',
     companyName: isArabic ? 'اسم الشركة' : 'Company',
@@ -272,22 +277,40 @@ const CheckoutPage = () => {
     orderTitle: isArabic ? 'ملخص الطلب' : 'Order summary',
     setupFee: isArabic ? 'رسوم الإعداد' : 'Setup fee',
     free: isArabic ? 'مجانًا' : 'Free',
-    vat: isArabic ? 'ضريبة القيمة المضافة (14%)' : 'VAT (14%)',
+    vatIncludedNote: isArabic
+      ? 'السعر شامل ضريبة القيمة المضافة'
+      : 'Price includes VAT',
     totalDue: isArabic ? 'الإجمالي اليوم' : 'Total due today',
     payBtn: isArabic ? 'ادفع الآن' : 'Pay now',
     processing: isArabic ? 'جاري التجهيز…' : 'Preparing payment…',
     termsNote: isArabic
-      ? 'بالمتابعة، أنت توافق على شروط الخدمة وسياسة الخصوصية. الاشتراك يتجدد شهريًا ويمكن إلغاؤه في أي وقت.'
-      : 'By proceeding you agree to our Terms of Service and Privacy Policy. Subscription renews monthly. Cancel any time.',
-    successTitle: isArabic ? 'تم الدفع بنجاح!' : 'Payment confirmed!',
-    successMsg: isArabic
-      ? 'شكرًا. هنتواصل معاك خلال يوم عمل لإعداد حسابك.'
-      : "You're all set. We'll reach out within one business day to get your account ready.",
+      ? 'الاشتراك يتجدد شهريًا ويمكن إلغاؤه في أي وقت.'
+      : 'Subscription renews monthly. Cancel any time.',
     fieldRequired: isArabic ? 'هذا الحقل مطلوب' : 'Required',
-    invalidCard: isArabic ? 'رقم بطاقة غير صحيح' : 'Invalid card number',
-    invalidExpiry: isArabic ? 'تاريخ انتهاء غير صحيح' : 'Invalid expiry',
-    invalidCvv: isArabic ? 'CVV غير صحيح' : 'Invalid CVV',
+    invalidEmail: isArabic ? 'إيميل غير صحيح' : 'Invalid email',
     productLabel: product.toUpperCase(),
+    loadingPlan: isArabic ? 'جاري تحميل الباقة…' : 'Loading plan…',
+    planUnavailableTitle: isArabic ? 'الباقة غير متاحة' : 'Plan unavailable',
+    planUnavailableMsg: isArabic
+      ? 'الباقة المختارة غير متاحة حاليًا. من فضلك ارجع لصفحة الخدمات واختار باقة تانية.'
+      : "This plan isn't available right now. Please go back to Services and pick another plan.",
+    backToServices: isArabic ? 'الرجوع للخدمات' : 'Back to Services',
+    genericErrorTitle: isArabic ? 'حصل خطأ' : 'Something went wrong',
+    // Legal agreement
+    legalCheckboxPrefix: isArabic ? 'أوافق على' : 'I agree to the',
+    and: isArabic ? 'و' : 'and',
+    termsLink: isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
+    privacyLink: isArabic ? 'سياسة الخصوصية' : 'Privacy Policy',
+    termsRequired: isArabic
+      ? 'يجب الموافقة على الشروط والأحكام وسياسة الخصوصية للمتابعة'
+      : 'You must agree to the Terms & Conditions and Privacy Policy to continue',
+    modalAgreeBtn: isArabic ? 'قرأت وأوافق' : "I've read and agree",
+    modalScrollHint: isArabic
+      ? 'الرجاء التمرير للأسفل لقراءة المستند بالكامل'
+      : 'Please scroll to the bottom to read the full document',
+    modalClose: isArabic ? 'إغلاق' : 'Close',
+    termsModalTitle: isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
+    privacyModalTitle: isArabic ? 'سياسة الخصوصية' : 'Privacy Policy',
   };
 
   const inputCls = (field) =>
@@ -301,19 +324,7 @@ const CheckoutPage = () => {
     'block text-xs font-semibold text-light-500 dark:text-light-400 uppercase tracking-wide mb-1.5';
 
   const handleChange = (e) => {
-    let { name, value } = e.target;
-    if (name === 'cardNumber') {
-      value = value
-        .replace(/\D/g, '')
-        .slice(0, 16)
-        .replace(/(.{4})/g, '$1  ')
-        .trim();
-    }
-    if (name === 'expiry') {
-      value = value.replace(/\D/g, '').slice(0, 4);
-      if (value.length > 2) value = value.slice(0, 2) + ' / ' + value.slice(2);
-    }
-    if (name === 'cvv') value = value.replace(/\D/g, '').slice(0, 4);
+    const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
@@ -475,7 +486,7 @@ const CheckoutPage = () => {
             </span>
             <div>
               <div className="text-sm font-semibold text-light-900 dark:text-white">
-                {tier}
+                {tierKey}
               </div>
               <div className="text-xs text-light-400 dark:text-light-500 mt-0.5">
                 {t.monthly}
@@ -484,8 +495,13 @@ const CheckoutPage = () => {
           </div>
           <div className={isArabic ? 'text-start' : 'text-end'}>
             <div className="text-xl font-bold text-light-900 dark:text-white">
-              {pricing.egp.toLocaleString()}{' '}
-              <span className="text-xs font-normal text-light-400">EGP</span>
+              {egp.toLocaleString()}{' '}
+              <span className="text-xs font-normal text-light-400">
+                {plan?.currency || 'EGP'}
+              </span>
+            </div>
+            <div className="text-[10px] text-light-400 dark:text-light-500 mt-0.5">
+              {t.vatIncludedNote}
             </div>
           </div>
         </div>
@@ -584,98 +600,10 @@ const CheckoutPage = () => {
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Payment */}
-          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-5">
-              {t.paymentTitle}
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className={labelCls}>{t.cardHolder}</label>
-                <input
-                  name="cardName"
-                  type="text"
-                  value={form.cardName}
-                  onChange={handleChange}
-                  placeholder={isArabic ? 'الاسم على البطاقة' : 'Name on card'}
-                  className={inputCls('cardName')}
-                />
-                {errors.cardName && (
-                  <p className="mt-1 text-xs text-danger-500">
-                    {errors.cardName}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={labelCls}>{t.cardNumber}</label>
-                <div className="relative">
-                  <input
-                    name="cardNumber"
-                    type="text"
-                    value={form.cardNumber}
-                    onChange={handleChange}
-                    dir="ltr"
-                    placeholder="1234  5678  9012  3456"
-                    className={`${inputCls('cardNumber')} pr-20`}
-                  />
-                  <div className="absolute end-3 top-1/2 -translate-y-1/2 flex gap-1.5 items-center">
-                    <span className="text-[9px] font-black bg-blue-800 text-white rounded px-1.5 py-0.5 tracking-tight">
-                      VISA
-                    </span>
-                    <span className="text-[9px] font-black bg-red-600 text-white rounded px-1.5 py-0.5 tracking-tight">
-                      MC
-                    </span>
-                  </div>
-                </div>
-                {errors.cardNumber && (
-                  <p className="mt-1 text-xs text-danger-500">
-                    {errors.cardNumber}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>{t.expiry}</label>
-                  <input
-                    name="expiry"
-                    type="text"
-                    value={form.expiry}
-                    onChange={handleChange}
-                    dir="ltr"
-                    placeholder="MM / YY"
-                    className={inputCls('expiry')}
-                  />
-                  {errors.expiry && (
-                    <p className="mt-1 text-xs text-danger-500">
-                      {errors.expiry}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className={labelCls}>{t.cvv}</label>
-                  <input
-                    name="cvv"
-                    type="text"
-                    value={form.cvv}
-                    onChange={handleChange}
-                    dir="ltr"
-                    placeholder="•••"
-                    className={inputCls('cvv')}
-                  />
-                  {errors.cvv && (
-                    <p className="mt-1 text-xs text-danger-500">{errors.cvv}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 mt-4 text-xs text-light-400 dark:text-light-500">
+            <div className="flex items-center gap-2 mt-5 text-xs text-light-400 dark:text-light-500">
               <LockIcon />
-              <span>{t.secureNote}</span>
+              <span>{t.redirectNote}</span>
             </div>
           </div>
 
@@ -823,7 +751,7 @@ const CheckoutPage = () => {
           </div>
 
           {/* Order summary */}
-          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-6">
+          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-4">
               {t.orderTitle}
             </p>
@@ -831,11 +759,10 @@ const CheckoutPage = () => {
             <div className="space-y-3">
               {[
                 {
-                  label: `${t.productLabel} — ${tier}`,
-                  value: `${pricing.egp.toLocaleString()} EGP`,
+                  label: `${t.productLabel} — ${tierKey}`,
+                  value: `${egp.toLocaleString()} ${plan?.currency || 'EGP'}`,
                 },
                 { label: t.setupFee, value: t.free, green: true },
-                { label: t.vat, value: `${pricing.vat.toLocaleString()} EGP` },
               ].map(({ label, value, green }) => (
                 <div
                   key={label}
@@ -856,9 +783,12 @@ const CheckoutPage = () => {
                   {t.totalDue}
                 </span>
                 <span className="text-lg font-bold text-primary-500">
-                  {pricing.total.toLocaleString()} EGP
+                  {total.toLocaleString()} {plan?.currency || 'EGP'}
                 </span>
               </div>
+              <p className="text-[10px] text-light-400 dark:text-light-500">
+                {t.vatIncludedNote}
+              </p>
             </div>
 
             {/* Feature chips */}
@@ -879,6 +809,75 @@ const CheckoutPage = () => {
           </p>
         </form>
       </div>
+
+      {/* Terms / Privacy modal */}
+      {legalModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setLegalModal(null)}
+        >
+          <div
+            dir={isArabic ? 'rtl' : 'ltr'}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-dark-800 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-xl"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-light-100 dark:border-dark-700">
+              <h2 className="font-bold text-light-900 dark:text-white">
+                {legalModal === 'terms'
+                  ? t.termsModalTitle
+                  : t.privacyModalTitle}
+              </h2>
+              <button
+                onClick={() => setLegalModal(null)}
+                className="text-light-400 hover:text-light-600 dark:hover:text-light-200 text-lg leading-none"
+                aria-label={t.modalClose}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              onScroll={handleModalScroll}
+              className="overflow-y-auto px-6 py-4 space-y-4 text-sm text-light-600 dark:text-light-300 leading-relaxed"
+            >
+              <p>{legalContent[lang].intro}</p>
+              {legalContent[lang].sections.map((s) => (
+                <div key={s.title}>
+                  <h3 className="font-semibold text-light-900 dark:text-white mb-1">
+                    {s.title}
+                  </h3>
+                  <p>{s.content}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-6 py-4 border-t border-light-100 dark:border-dark-700 flex items-center justify-between gap-3 flex-wrap">
+              {!canAgreeInModal && (
+                <span className="text-[11px] text-light-400 dark:text-light-500">
+                  {t.modalScrollHint}
+                </span>
+              )}
+              <div className="flex gap-2 ms-auto">
+                <button
+                  type="button"
+                  onClick={() => setLegalModal(null)}
+                  className="px-4 py-2 text-sm rounded-lg border border-light-200 dark:border-dark-600 text-light-600 dark:text-light-300 hover:bg-light-50 dark:hover:bg-dark-700 transition-colors"
+                >
+                  {t.modalClose}
+                </button>
+                <button
+                  type="button"
+                  disabled={!canAgreeInModal}
+                  onClick={confirmAgreement}
+                  className="px-4 py-2 text-sm rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {t.modalAgreeBtn}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

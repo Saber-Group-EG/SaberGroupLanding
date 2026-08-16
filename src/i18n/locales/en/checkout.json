@@ -1,0 +1,13 @@
+{
+  "successTitle": "Payment received! ✓",
+  "successBody": "Your account is being created automatically. You'll get an email within a few minutes with a temporary password to log in.",
+  "pendingTitle": "Payment processing…",
+  "pendingBody": "Your payment is still being confirmed. Once it clears, we'll create your account and email you a temporary password.",
+  "failedTitle": "Payment didn't go through",
+  "failedBody": "The card may have been declined, or something went wrong. Please try again, or reach out if this keeps happening.",
+  "unknownTitle": "Checkout complete",
+  "unknownBody": "There's no payment info here. If you're still trying to subscribe, head back to Services.",
+  "backToSite": "Back to site",
+  "backToServices": "Back to Services",
+  "tryAgain": "Try again"
+}

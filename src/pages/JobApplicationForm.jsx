@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
@@ -9,9 +9,7 @@ import {
   submitApplicant,
   checkExistingApplicant,
   getApiErrorMessage,
-  parseCv,
 } from '../api/formsApi';
-import { Sparkles, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getJobPositions } from '../store/slices/jobPositionsSlice';
@@ -45,8 +43,7 @@ const JobApplicationForm = () => {
   const [repeatableGroups, setRepeatableGroups] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState({});
-  const [isParsingCv, setIsParsingCv] = useState(false);
-  const cvUploadedUrlRef = useRef(null);
+
   const maxExpectedSalaryValue = 100000;
 
   const jobPosition = positions.find((pos) => pos.slug === slug);
@@ -1338,125 +1335,6 @@ const JobApplicationForm = () => {
     return schema;
   };
 
-  const applyCvDraft = (draft, formikHelpers) => {
-    const { values: formikValues, setFieldValue } = formikHelpers;
-    const { reservedFields = {}, customFieldAnswers = {} } = draft;
-
-    Object.entries(reservedFields).forEach(([key, value]) => {
-      setFieldValue(key, value);
-    });
-
-    Object.entries(customFieldAnswers).forEach(([fieldId, value]) => {
-      const fieldDef = orderedCustomFields.find(
-        (f) => getFieldKey(f) === fieldId
-      );
-      setFieldValue(`customResponses.${fieldId}`, value);
-
-      if (fieldDef?.inputType === 'repeatable_group') {
-        setRepeatableGroups((prev) => ({ ...prev, [fieldId]: value }));
-      } else if (fieldDef?.inputType === 'groupField') {
-        setRepeatableGroups((prev) => ({ ...prev, [fieldId]: [value] }));
-      }
-    });
-  };
-
-  const handleAutofillFromCv = async (formikHelpers) => {
-    const { values: formikValues } = formikHelpers;
-    if (!formikValues.cvFile) return;
-
-    setIsParsingCv(true);
-    try {
-      let cvUrl;
-      if (cvUploadedUrlRef.current?.file === formikValues.cvFile) {
-        cvUrl = cvUploadedUrlRef.current.url;
-      } else {
-        cvUrl = await uploadToR2(formikValues.cvFile, 'JobApplications');
-        cvUploadedUrlRef.current = { file: formikValues.cvFile, url: cvUrl };
-      }
-
-      const rawCompanyId =
-        jobPosition?.companyId?._id ||
-        jobPosition?.companyId ||
-        jobPosition?.company?._id ||
-        jobPosition?.company ||
-        company?._id ||
-        '';
-      const companyId =
-        typeof rawCompanyId === 'string'
-          ? rawCompanyId
-          : rawCompanyId?._id || '';
-
-      const result = await parseCv({
-        companyId,
-        jobPositionId: jobPosition._id,
-        cvUrl,
-      });
-
-      const { reservedFields = {}, customFieldAnswers = {} } =
-        result?.data || {};
-
-      // Check for existing values before silently overwriting
-      const reservedConflict = Object.keys(reservedFields).some(
-        (key) => formikValues[key] && String(formikValues[key]).trim()
-      );
-      const customConflict = Object.keys(customFieldAnswers).some((fieldId) => {
-        const existing = formikValues.customResponses?.[fieldId];
-        return (
-          existing &&
-          (Array.isArray(existing) ? existing.length : String(existing).trim())
-        );
-      });
-
-      if (reservedConflict || customConflict) {
-        const confirmResult = await Swal.fire({
-          icon: 'question',
-          title: isArabic
-            ? 'استبدال البيانات الحالية؟'
-            : 'Overwrite existing answers?',
-          text: isArabic
-            ? 'بعض الحقول معبأة بالفعل. هل تريد استبدالها بالبيانات المستخرجة من السيرة الذاتية؟'
-            : 'Some fields already have values. Replace them with what we found in your CV?',
-          showCancelButton: true,
-          confirmButtonText:
-            t('common:Yes') || (isArabic ? 'نعم، استبدل' : 'Yes, replace'),
-          cancelButtonText: t('common:No') || (isArabic ? 'لا' : 'No'),
-          confirmButtonColor: '#f59e0b',
-          cancelButtonColor: '#6b7280',
-        });
-        if (!confirmResult.isConfirmed) return;
-      }
-
-      applyCvDraft({ reservedFields, customFieldAnswers }, formikHelpers);
-
-      if (
-        Object.keys(reservedFields).length === 0 &&
-        Object.keys(customFieldAnswers).length === 0
-      ) {
-        await Swal.fire({
-          icon: 'info',
-          title: isArabic ? 'لم يتم العثور على بيانات' : 'Nothing found',
-          text: isArabic
-            ? 'لم نتمكن من استخراج بيانات مفيدة من هذه السيرة الذاتية.'
-            : "We couldn't pull anything usable from this CV — please fill the form manually.",
-          confirmButtonText: t('common:ok') || 'OK',
-        });
-      }
-    } catch (error) {
-      const message = getApiErrorMessage(
-        error,
-        t('joinUs:cvParseFailed') ||
-          'Failed to read CV — please fill the form manually'
-      );
-      await Swal.fire({
-        icon: 'error',
-        title: t('joinUs:error') || 'Error',
-        text: message,
-        confirmButtonText: t('common:ok') || 'OK',
-      });
-    } finally {
-      setIsParsingCv(false);
-    }
-  };
   const handleFormSubmit = async (values, { setSubmitting }) => {
     try {
       await createValidationSchema().validate(values, { abortEarly: false });
@@ -1616,17 +1494,15 @@ const JobApplicationForm = () => {
       }
 
       if (isBaseFieldVisible('cvFilePath') && values.cvFile) {
-        if (cvUploadedUrlRef.current?.file === values.cvFile) {
-          cvUrl = cvUploadedUrlRef.current.url;
-        } else {
-          Swal.fire({
-            title: t('joinUs:uploadingCV') || 'Uploading CV...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-          });
-          cvUrl = await uploadToR2(values.cvFile, 'JobApplications');
-          Swal.close();
-        }
+        Swal.fire({
+          title: t('joinUs:uploadingCV') || 'Uploading CV...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+        cvUrl = await uploadToR2(values.cvFile, 'JobApplications');
+        Swal.close();
       }
 
       // Convert customResponses values to English labels (always send `en`)
@@ -1890,6 +1766,7 @@ const JobApplicationForm = () => {
       setSubmitting(false);
     }
   };
+
   if (loading) {
     return (
       <section className="py-20 md:py-32 min-h-screen flex items-center justify-center">
@@ -2817,51 +2694,19 @@ const JobApplicationForm = () => {
 
                   {/* CV Upload */}
                   {isBaseFieldVisible('cvFilePath') && (
-                    <>
-                      <CvUpload
-                        value={values.cvFile}
-                        onChange={(file) => setFieldValue('cvFile', file)}
-                        error={errors.cvFile}
-                        touched={touched.cvFile}
-                        label={t('joinUs:uploadCV') || 'CV'}
-                        t={t}
-                        required={isBaseFieldRequired('cvFilePath')}
-                        optionalLabel={
-                          t('joinUs:optional') ||
-                          (isArabic ? 'اختياري' : 'Optional')
-                        }
-                      />
-                      {values.cvFile &&
-                        jobPosition?.companyId?.settings?.aiSettings?.featureToggles
-                          ?.cvParser !== false && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleAutofillFromCv({ values, setFieldValue })
-                            }
-                            disabled={isParsingCv}
-                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 hover:border-amber-400 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-amber-50"
-                          >
-                            {isParsingCv ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                {t('joinUs:parsingCv') ||
-                                  (isArabic
-                                    ? 'جاري القراءة...'
-                                    : 'Reading CV...')}
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-4 w-4" />
-                                {t('joinUs:autofillFromCv') ||
-                                  (isArabic
-                                    ? 'تعبئة تلقائية من السيرة الذاتية'
-                                    : 'Autofill from CV')}
-                              </>
-                            )}
-                          </button>
-                        )}
-                    </>
+                    <CvUpload
+                      value={values.cvFile}
+                      onChange={(file) => setFieldValue('cvFile', file)}
+                      error={errors.cvFile}
+                      touched={touched.cvFile}
+                      label={t('joinUs:uploadCV') || 'CV'}
+                      t={t}
+                      required={isBaseFieldRequired('cvFilePath')}
+                      optionalLabel={
+                        t('joinUs:optional') ||
+                        (isArabic ? 'اختياري' : 'Optional')
+                      }
+                    />
                   )}
 
                   {/* Dynamic Custom Fields */}
