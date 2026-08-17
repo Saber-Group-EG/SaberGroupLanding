@@ -6,7 +6,7 @@
   "failedTitle": "Payment didn't go through",
   "failedBody": "The card may have been declined, or something went wrong. Please try again, or reach out if this keeps happening.",
   "unknownTitle": "Checkout complete",
-  "unknownBody": "There's no payment info here. If you're still trying to subscribe, head back to Services.",
+  "unknownBody": "payment is being processed.",
   "backToSite": "Back to site",
   "backToServices": "Back to Services",
   "tryAgain": "Try again"

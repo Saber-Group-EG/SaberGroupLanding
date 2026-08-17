@@ -47,6 +47,17 @@ export function paymobFeBaseUrl(checkoutUrl) {
   return 'https://eg.checkout.paymob.com';
 }
 
+const PAYMOB_ORIGINS = new Set([
+  ...Object.values(API_BASE_BY_CHECKOUT_HOST),
+  ...Object.values(FE_BASE_BY_CHECKOUT_HOST),
+  'https://accept.paymobsolutions.com',
+]);
+
+/** Returns true if `origin` belongs to any known Paymob host. */
+export function isPaymobOrigin(origin) {
+  return PAYMOB_ORIGINS.has(origin);
+}
+
 export class PaymobApiError extends Error {
   constructor(message, status, raw, redirect) {
     super(message);

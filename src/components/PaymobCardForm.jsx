@@ -4,6 +4,7 @@ import {
   fetchPaymobCardMethod,
   paymobFeBaseUrl,
   PaymobApiError,
+  isPaymobOrigin,
   isDarkMode,
   buildPaymobIframeCustomStyle,
 } from '../api/paymobApi';
@@ -121,7 +122,7 @@ export default function PaymobCardForm({
   useEffect(() => {
     if (!method) return;
     const handleMessage = (event) => {
-      if (event.origin !== feBase) return;
+      if (!isPaymobOrigin(event.origin)) return;
       const msg = event.data;
       if (!msg || typeof msg.type !== 'string') return;
 
@@ -152,22 +153,17 @@ export default function PaymobCardForm({
         case 'paymentResponse': {
           setPaying(false);
           const response = msg.response ?? {};
-          const data = response.data ?? {};
-          if (
-            response.status === 200 &&
-            isTrue(data.success) &&
-            !isTrue(data.is_3d_secure)
-          ) {
-            onSuccess();
-            return;
-          }
+          const txn =
+            (response.res && typeof response.res.data === 'object' && response.res.data) ||
+            (response.data && typeof response.data === 'object' && response.data) ||
+            response;
           const url =
-            typeof data.redirection_url === 'string'
-              ? data.redirection_url
-              : typeof data.redirect_url === 'string'
-                ? data.redirect_url
-                : typeof data.redirect === 'string'
-                  ? data.redirect
+            typeof txn.redirection_url === 'string'
+              ? txn.redirection_url
+              : typeof txn.redirect_url === 'string'
+                ? txn.redirect_url
+                : typeof txn.redirect === 'string'
+                  ? txn.redirect
                   : null;
           if (url) {
             onPending(url);
@@ -175,7 +171,7 @@ export default function PaymobCardForm({
           }
           setPayError(
             extractError(
-              data,
+              txn,
               isArabic
                 ? 'تعذر إتمام الدفع. حاول مرة أخرى.'
                 : 'Payment failed. Please try again.'
