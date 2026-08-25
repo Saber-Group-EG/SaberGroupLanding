@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -39,10 +39,35 @@ const Portfolio = () => {
   const [selectedSectorId, setSelectedSectorId] = useState('all');
   const [selectedTag, setSelectedTag] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [categoryOverflow, setCategoryOverflow] = useState(false);
+  const [tagOverflow, setTagOverflow] = useState(false);
+
+  const categoryScrollRef = useRef(null);
+  const tagScrollRef = useRef(null);
 
   const allTags = Array.from(
     new Set(publishedProjects.flatMap((p) => p.tags || []))
   );
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (categoryScrollRef.current) {
+        setCategoryOverflow(categoryScrollRef.current.scrollWidth > categoryScrollRef.current.clientWidth);
+      }
+      if (tagScrollRef.current) {
+        setTagOverflow(tagScrollRef.current.scrollWidth > tagScrollRef.current.clientWidth);
+      }
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [allCategories.length, allTags.length]);
+
+  const scrollContainer = (ref, direction) => {
+    if (ref.current) {
+      ref.current.scrollBy({ left: direction * 200, behavior: 'smooth' });
+    }
+  };
 
   const filteredProjects = publishedProjects.filter((proj) => {
     if (selectedSectorId !== 'all' && proj.sectorId !== selectedSectorId) return false;
@@ -138,7 +163,7 @@ const Portfolio = () => {
           <div className="lg:col-span-5">
             {featuredMasterProject ? (
               <Link to={`/portfolio/${featuredMasterProject.id}`} className="group cursor-pointer block">
-                <div className="relative aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/10] overflow-hidden rounded-[4px] bg-neutral-900 border border-neutral-200/90 shadow-xs">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[4px] bg-neutral-900 border border-neutral-200/90 shadow-xs">
                   <img src={featuredMasterProject.coverImage} alt="Featured Project" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-4">
@@ -154,7 +179,7 @@ const Portfolio = () => {
                 </div>
               </Link>
             ) : (
-              <div className="aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/10] rounded-[4px] bg-neutral-100 border border-neutral-200 animate-pulse" />
+              <div className="aspect-[4/5] rounded-[4px] bg-neutral-100 border border-neutral-200 animate-pulse" />
             )}
           </div>
         </section>
@@ -162,35 +187,59 @@ const Portfolio = () => {
         {/* SECTOR FILTER */}
         <section className="pt-6 sm:pt-8 border-t border-neutral-200/80 space-y-3">
           <div className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en">{t('exploreByCategory', 'EXPLORE BY CATEGORY')}</div>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6 lg:gap-8 py-2">
-            <button onClick={() => setSelectedSectorId('all')} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${selectedSectorId === 'all' ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
-              <span>{t('all', 'ALL')}</span>
-              {selectedSectorId === 'all' && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
-            </button>
-            {allCategories.map((cat) => {
-              const isActive = selectedSectorId === cat;
-              return (
-                <button key={cat} onClick={() => setSelectedSectorId(cat)} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${isActive ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
-                  <span>{cat}</span>
-                  {isActive && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-start gap-2">
+            {categoryOverflow && (
+              <button onClick={() => scrollContainer(categoryScrollRef, -1)} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-50 transition-colors cursor-pointer shrink-0">
+                <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+            )}
+            <div ref={categoryScrollRef} className="flex items-center gap-4 sm:gap-6 lg:gap-8 py-2 overflow-x-auto scrollbar-hide">
+              <button onClick={() => setSelectedSectorId('all')} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${selectedSectorId === 'all' ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
+                <span>{t('all', 'ALL')}</span>
+                {selectedSectorId === 'all' && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
+              </button>
+              {allCategories.map((cat) => {
+                const isActive = selectedSectorId === cat;
+                return (
+                  <button key={cat} onClick={() => setSelectedSectorId(cat)} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${isActive ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
+                    <span>{cat}</span>
+                    {isActive && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
+                  </button>
+                );
+              })}
+            </div>
+            {categoryOverflow && (
+              <button onClick={() => scrollContainer(categoryScrollRef, 1)} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border border-neutral-300 bg-white shadow-2xs text-neutral-950 hover:bg-neutral-50 transition-colors cursor-pointer shrink-0">
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+            )}
           </div>
         </section>
 
         {/* TAG FILTER */}
         <section className="space-y-3">
           <div className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en">{t('filterByTag', 'FILTER BY TAG')}</div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 py-1">
-            {allTags.map((tag) => {
-              const isActive = selectedTag === tag;
-              return (
-                <button key={tag} onClick={() => setSelectedTag(isActive ? 'all' : tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
-                  #{tag}
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-end gap-2">
+            {tagOverflow && (
+              <button onClick={() => scrollContainer(tagScrollRef, -1)} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-50 transition-colors cursor-pointer shrink-0">
+                <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+            )}
+            <div ref={tagScrollRef} className="flex items-center gap-2 sm:gap-2.5 py-1 overflow-x-auto scrollbar-hide">
+              {allTags.map((tag) => {
+                const isActive = selectedTag === tag;
+                return (
+                  <button key={tag} onClick={() => setSelectedTag(isActive ? 'all' : tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
+            {tagOverflow && (
+              <button onClick={() => scrollContainer(tagScrollRef, 1)} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border border-neutral-300 bg-white shadow-2xs text-neutral-950 hover:bg-neutral-50 transition-colors cursor-pointer shrink-0">
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+            )}
           </div>
         </section>
 

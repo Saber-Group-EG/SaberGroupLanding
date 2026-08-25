@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import { PORTFOLIO_SECTORS } from '../types/portfolio';
 import {
   getProjects,
   selectAllProjects,
@@ -42,7 +41,7 @@ const ProjectDetail = () => {
   const project = useSelector((state) => selectProjectById(state, id));
   const relatedProjects = useSelector((state) => selectRelatedProjects(state, id));
 
-  const sectorObj = project ? PORTFOLIO_SECTORS.find((s) => s.id === project.sectorId) : null;
+  const categoryName = project?.sectorId || '';
 
   const allPhotos = (project?.photos || []).map((p, i) => ({ url: p.url, altAr: p.caption || `لقطة #${i + 1}`, altEn: p.caption || `Photo #${i + 1}` }));
 
@@ -61,6 +60,12 @@ const ProjectDetail = () => {
   const [formData, setFormData] = useState({ name: '', phone: '', brand: '', notes: '' });
 
   const toggleSector = (key) => setOpenSectors((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const sectionRefs = useRef([]);
+
+  useEffect(() => {
+    sectionRefs.current = sectionRefs.current.slice(0, mediaGroups.length);
+  }, [mediaGroups.length]);
 
   useEffect(() => {
     const initial = {};
@@ -103,6 +108,15 @@ const ProjectDetail = () => {
   const nextSectionNum = () => { sectionCounter += 1; return String(sectionCounter).padStart(2, '0'); };
 
   const creditsList = (project.cast?.length > 0 ? project.cast : []).filter((c) => c.name);
+
+  const scrollToSection = (index) => {
+    if (sectionRefs.current[index]) {
+      const element = sectionRefs.current[index];
+      const offset = 120;
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
+    }
+  };
 
   const handleNextLightbox = (e) => {
     e?.stopPropagation();
@@ -162,9 +176,11 @@ const ProjectDetail = () => {
             <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-600 inline-block shrink-0" />
-                <span className="text-[10.5px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en truncate">{t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN')}</span>
+                <span className="text-[10.5px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en truncate">
+                  {project.categories?.length > 0 ? project.categories.filter(Boolean).join(' / ') : t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN')}
+                </span>
               </div>
-              <div className="text-[9.5px] sm:text-[11px] font-bold tracking-widest uppercase text-neutral-700 px-2 py-0.5 border border-neutral-300 rounded-[2px] font-sans-en shrink-0">{t('productionArchive', 'PRODUCTION ARCHIVE / 2026')}</div>
+              {/* <div className="text-[9.5px] sm:text-[11px] font-bold tracking-widest uppercase text-neutral-700 px-2 py-0.5 border border-neutral-300 rounded-[2px] font-sans-en shrink-0">{t('productionArchive', 'PRODUCTION ARCHIVE / 2026')}</div> */}
             </div>
 
             <div>
@@ -185,12 +201,14 @@ const ProjectDetail = () => {
               </div>
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('date', 'DATE')}</span>
-                <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{project.date || 'June 2026'}</div>
+                <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
+                  {project.shootedAt ? new Date(project.shootedAt).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : 'June 2026'}
+                </div>
               </div>
               <div className="space-y-0.5 sm:space-y-1">
-                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('sector', 'SECTOR')}</span>
+                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('category', 'CATEGORY')}</span>
                 <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
-                  {sectorObj ? t(sectorObj.id === 'all' ? 'all' : sectorObj.id, sectorObj.nameEn) : t('restaurants', 'Restaurants & Culinary')}
+                  {categoryName || t('restaurants', 'Restaurants & Culinary')}
                 </div>
               </div>
               <div className="space-y-0.5 sm:space-y-1">
@@ -216,12 +234,6 @@ const ProjectDetail = () => {
                   <div className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 font-sans-en mt-0.5 sm:mt-1">{t('videosCount', 'VIDEOS')}</div>
                 </div>
               )}
-              {project.shootedAt && (
-                <div className="text-center sm:text-left pl-2 sm:pl-4">
-                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-neutral-950 tracking-tight">{new Date(project.shootedAt).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                  <div className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 font-sans-en mt-0.5 sm:mt-1">{t('shootedAt', 'SHOOTED AT')}</div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -237,10 +249,11 @@ const ProjectDetail = () => {
               const items = group.items || [];
               const allVideos = items.every((item) => item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i));
               const allPhotos = items.every((item) => item.type !== 'video' && !item.url?.match(/\.(mp4|webm|ogg)$/i));
-              const label = allVideos ? 'VIDEO' : allPhotos ? 'PHOTO' : 'PHOTO';
-              const labelPlural = allVideos ? 'VIDEOS' : allPhotos ? 'PHOTOS' : 'PHOTOS';
+              const filteredGroups = mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo');
+              const totalSections = filteredGroups.length;
               return (
-                <SectorAccordion key={groupIdx} number={num} title={isArabic ? group.title || `المجموعة ${groupIdx + 1}` : group.title || `Group ${groupIdx + 1}`} subtitle={`${items.length} ${items.length === 1 ? label : labelPlural}`} count={items.length} countLabel={allVideos ? t('reelsLabel', 'VIDEOS') : t('photosLabel', 'PHOTOS')} isOpen={!!openSectors[`group_${groupIdx}`]} onToggle={() => setOpenSectors((prev) => ({ ...prev, [`group_${groupIdx}`]: !prev[`group_${groupIdx}`] }))}>
+                <div key={groupIdx} ref={(el) => { sectionRefs.current[groupIdx] = el; }}>
+                  <SectorAccordion number={num} title={isArabic ? group.title || `المجموعة ${groupIdx + 1}` : group.title || `Group ${groupIdx + 1}`} description={isArabic ? group.descriptionAr : group.descriptionEn} count={items.length} countLabel={allVideos ? t('reelsLabel', 'VIDEOS') : t('photosLabel', 'PHOTOS')} currentSection={groupIdx + 1} totalSections={totalSections} onPrev={() => scrollToSection(groupIdx - 1)} onNext={() => scrollToSection(groupIdx + 1)} hasPrev={groupIdx > 0} hasNext={groupIdx < totalSections - 1} isOpen={!!openSectors[`group_${groupIdx}`]} onToggle={() => setOpenSectors((prev) => ({ ...prev, [`group_${groupIdx}`]: !prev[`group_${groupIdx}`] }))}>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
                     {items.map((item, idx) => {
                       const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
@@ -266,6 +279,7 @@ const ProjectDetail = () => {
                     })}
                   </div>
                 </SectorAccordion>
+                </div>
               );
             })}
           </div>
@@ -392,7 +406,7 @@ const ProjectDetail = () => {
 };
 
 /* Sector Accordion Wrapper */
-const SectorAccordion = ({ number, title, subtitle, count, countLabel, isOpen, onToggle, children }) => (
+const SectorAccordion = ({ number, title, description, count, countLabel, currentSection, totalSections, onPrev, onNext, hasPrev, hasNext, isOpen, onToggle, children }) => (
   <div className="bg-white rounded-[3px] border border-neutral-200 shadow-2xs overflow-hidden">
     <button onClick={onToggle} className="w-full p-4 sm:p-5 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 cursor-pointer border-b border-neutral-200 text-left">
       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
@@ -402,26 +416,20 @@ const SectorAccordion = ({ number, title, subtitle, count, countLabel, isOpen, o
         </div>
         <div className="space-y-0.5">
           <div className="text-[10px] sm:text-[11px] font-black tracking-wider text-red-600 uppercase font-sans-en leading-none">{title}</div>
-          <h3 className="text-xs sm:text-base font-black text-neutral-950 tracking-tight leading-snug">{title}</h3>
-          <div className="text-[9.5px] sm:text-[11px] font-bold tracking-wider text-neutral-700 uppercase font-sans-en flex items-center gap-1.5">
-            <span>{subtitle}</span>
-            <span className="text-neutral-300">/</span>
-            <span>{count} {countLabel}</span>
-          </div>
+          {description && <p className="text-[10px] sm:text-[11px] text-neutral-500 leading-relaxed max-w-xl">{description}</p>}
         </div>
       </div>
       <div className="flex items-center justify-between sm:justify-center sm:flex-col sm:items-end gap-2.5 w-full sm:w-auto pt-2.5 sm:pt-0 border-t border-neutral-100 sm:border-t-0 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className="text-[9.5px] sm:text-[11px] font-extrabold tracking-wider text-neutral-500 uppercase font-sans-en">{count} {countLabel}</span>
-          <span className="text-[9px] sm:text-[10px] font-black tracking-wider text-neutral-950 border border-neutral-400 px-1.5 sm:px-2 py-0.5 rounded-[2px] uppercase font-sans-en bg-white">RATIO</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border border-neutral-200 text-neutral-500"><ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></span>
+          <button onClick={(e) => { e.stopPropagation(); if (hasPrev) onPrev(); }} className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer ${hasPrev ? 'border-neutral-300 bg-white text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>
           <div className="text-[11px] sm:text-xs font-sans-en px-1">
-            <span className="font-black text-neutral-950">01</span>
-            <span className="text-neutral-400 font-medium ml-0.5">/ {String(count).padStart(2, '0')}</span>
+            <span className="font-black text-neutral-950">{String(currentSection).padStart(2, '0')}</span>
+            <span className="text-neutral-400 font-medium ml-0.5">/ {String(totalSections).padStart(2, '0')}</span>
           </div>
-          <span className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border border-neutral-300 bg-white shadow-2xs text-neutral-950"><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></span>
+          <button onClick={(e) => { e.stopPropagation(); if (hasNext) onNext(); }} className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border transition-colors cursor-pointer ${hasNext ? 'border-neutral-300 bg-white shadow-2xs text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>
         </div>
       </div>
     </button>
