@@ -14,6 +14,8 @@ import AddressPage from './pages/Address';
 import ContactPage from './pages/Contact';
 import PoliciesPage from './pages/Policies';
 import TermsAndConditions from './pages/TermsAndConditions';
+import Portfolio from './pages/Portfolio';
+import ProjectDetail from './pages/ProjectDetail';
 
 import './index.css';
 import Checkout from './pages/Checkout';
@@ -30,6 +32,8 @@ function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/policies" element={<PoliciesPage />} />
         <Route path="/terms" element={<TermsAndConditions />} />
+        <Route path="/portfolio" element={<Portfolio />} />
+        <Route path="/portfolio/:id" element={<ProjectDetail />} />
         <Route path="/join-us" element={<JoinUs />} />
         <Route path="/join-us/:slug" element={<JobApplicationForm />} />
         <Route

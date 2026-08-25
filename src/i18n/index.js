@@ -9,6 +9,7 @@ import footerEN from './locales/en/footer.json';
 import aboutEN from './locales/en/about.json';
 import joinUsEN from './locales/en/joinUs.json';
 import checkoutEN from './locales/en/checkout.json';
+import portfolioEN from './locales/en/portfolio.json';
 import commonAR from './locales/ar/common.json';
 import navigationAR from './locales/ar/navigation.json';
 import contactAR from './locales/ar/contact.json';
@@ -17,6 +18,7 @@ import footerAR from './locales/ar/footer.json';
 import aboutAR from './locales/ar/about.json';
 import joinUsAR from './locales/ar/joinUs.json';
 import checkoutAR from './locales/ar/checkout.json';
+import portfolioAR from './locales/ar/portfolio.json';
 
 // Translation resources
 const resources = {
@@ -29,6 +31,7 @@ const resources = {
     about: aboutEN,
     joinUs: joinUsEN,
     checkout: checkoutEN,
+    portfolio: portfolioEN,
   },
   ar: {
     common: commonAR,
@@ -39,6 +42,7 @@ const resources = {
     about: aboutAR,
     joinUs: joinUsAR,
     checkout: checkoutAR,
+    portfolio: portfolioAR,
   },
 };
 
@@ -60,6 +64,7 @@ i18n
       'about',
       'joinUs',
       'checkout',
+      'portfolio',
     ],
 
     // React options

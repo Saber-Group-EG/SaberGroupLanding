@@ -22,6 +22,11 @@ const Navbar = () => {
     },
     { id: 'about', label: isArabic ? 'من نحن' : 'About', href: '/about' },
     {
+      id: 'portfolio',
+      label: isArabic ? 'معرض الأعمال' : 'Portfolio',
+      href: '/portfolio',
+    },
+    {
       id: 'contact',
       label: isArabic ? 'تواصل معنا' : 'Contact',
       href: '/contact',
@@ -41,6 +46,7 @@ const Navbar = () => {
     if (path.startsWith('/join-us')) setActiveLink('join');
     else if (path.startsWith('/services')) setActiveLink('services');
     else if (path.startsWith('/about')) setActiveLink('about');
+    else if (path.startsWith('/portfolio')) setActiveLink('portfolio');
     else if (path.startsWith('/contact')) setActiveLink('contact');
     else setActiveLink('home');
   }, [location.pathname]);
@@ -90,6 +96,15 @@ const Navbar = () => {
             strokeLinejoin="round"
             strokeWidth={2}
             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+          />
+        );
+      case 'portfolio':
+        return (
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
           />
         );
       case 'contact':

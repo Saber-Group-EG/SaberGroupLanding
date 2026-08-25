@@ -1,24 +1,103 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-// Async thunk to fetch projects
+const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
+
+const resolveBilingual = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    if (val.en || val.ar) return val.en || val.ar;
+    if (val.name?.en || val.name?.ar) return val.name.en || val.name.ar;
+    return '';
+  }
+  return '';
+};
+
+const transformProject = (raw) => {
+  const photos = [];
+  const videos = [];
+  const mediaGroups = [];
+
+  if (Array.isArray(raw.material)) {
+    raw.material.forEach((mat) => {
+      const caption = resolveBilingual(mat.caption);
+      if (mat.type === 'bulk' && Array.isArray(mat.items)) {
+        const items = mat.items.map((item) => ({
+          url: item.url,
+          thumbnail: item.thumbnail || item.url,
+          caption: resolveBilingual(item.caption) || caption,
+          type: item.type || (item.url?.match(/\.(mp4|webm|ogg)$/i) ? 'video' : 'photo'),
+        }));
+        const bulkVideos = items.filter((item) => item.type === 'video');
+        const bulkPhotos = items.filter((item) => item.type !== 'video');
+        videos.push(...bulkVideos);
+        photos.push(...bulkPhotos);
+        mediaGroups.push({ title: caption || 'Media', type: 'bulk', items });
+      } else if (mat.type === 'photo' && mat.url) {
+        const photo = { url: mat.url, thumbnail: mat.thumbnail || mat.url, caption, type: 'photo' };
+        photos.push(photo);
+        mediaGroups.push({ title: caption || 'Photo', type: 'bulk', items: [photo] });
+      } else if (mat.type === 'video' && mat.url) {
+        const video = { url: mat.url, thumbnail: mat.thumbnail || '', caption, type: 'video' };
+        videos.push(video);
+        mediaGroups.push({ title: caption || 'Video', type: 'bulk', items: [video] });
+      }
+    });
+  }
+
+  const coverImage = raw.mainCover?.url || (photos.length > 0 ? photos[0].url : '');
+  const galleryImages = photos.map((p) => p.url);
+
+  return {
+    id: raw._id,
+    titleAr: raw.name?.ar || '',
+    titleEn: raw.name?.en || '',
+    descriptionAr: raw.description?.ar || '',
+    descriptionEn: raw.description?.en || '',
+    coverImage,
+    galleryImages,
+    photos,
+    videos,
+    mediaGroups,
+    clientName: resolveBilingual(raw.company),
+    location: resolveBilingual(raw.location),
+    tags: (raw.types || [])
+      .map((t) => (typeof t === 'string' ? t : t.name?.en || t.name?.ar || ''))
+      .filter(Boolean),
+    sectorId: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),
+    mainCategory: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),
+    featured: raw.order === 1,
+    order: raw.order != null ? raw.order : 999,
+    photosCount: photos.length,
+    videosCount: videos.length,
+    reelsCount: videos.length,
+    shootedAt: resolveBilingual(raw.shootedAt) || raw.shootedAt || '',
+    cast: (raw.cast || []).map((c) => {
+      const castData = c.castId || c;
+      return {
+        roleAr: castData.title || '',
+        roleEn: castData.title || '',
+        name: castData.name || '',
+        avatar: castData.avatar || '',
+      };
+    }),
+    published: raw.published,
+    createdAt: raw.createdAt,
+    parentProject: raw.parentProject,
+    _raw: raw,
+  };
+};
+
 export const getProjects = createAsyncThunk(
   'projects/getProjects',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_CRM_BACKEND_URL}/project/public`,
-        {
-          params: {
-            deleted: false,
-            company: import.meta.env.VITE_CRM_COMPANY_ID,
-            PageCount: 10,
-            page: 1,
-            sort: "-createdAt",
-          },
-        }
-      );
-      return response.data.data || [];
+      const response = await axios.get(PROJECTS_API_URL, {
+        params: { PageCount: 'all' },
+      });
+      const rawProjects = response.data.projects || [];
+      return rawProjects.map(transformProject);
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);
     }
@@ -26,7 +105,6 @@ export const getProjects = createAsyncThunk(
   {
     condition: (force = false, { getState }) => {
       const { projects } = getState();
-      // Allow force refresh or fetch if we don't have projects
       if (force) return true;
       if (projects.rawProjects.length > 0) {
         return false;
@@ -67,5 +145,24 @@ const projectsSlice = createSlice({
 });
 
 export const { clearError } = projectsSlice.actions;
+
+export const selectAllProjects = (state) => state.projects.rawProjects;
+export const selectPublishedProjects = (state) => state.projects.rawProjects.filter((p) => p.published === true);
+export const selectProjectsLoading = (state) => state.projects.loading;
+export const selectProjectsError = (state) => state.projects.error;
+
+export const selectProjectById = (state, projectId) =>
+  state.projects.rawProjects.find((p) => p.id === projectId && p.published === true);
+
+export const selectRelatedProjects = createSelector(
+  [selectPublishedProjects, (state, projectId) => projectId],
+  (projects, projectId) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) return [];
+    return projects.filter(
+      (p) => p.id !== projectId && p.sectorId === project.sectorId
+    );
+  }
+);
 
 export default projectsSlice.reducer;
