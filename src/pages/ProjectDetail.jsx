@@ -177,7 +177,7 @@ const ProjectDetail = () => {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-600 inline-block shrink-0" />
                 <span className="text-[10.5px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en truncate">
-                  {project.categories?.length > 0 ? project.categories.filter(Boolean).join(' / ') : t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN')}
+                  {project.sectorId || t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN')}
                 </span>
               </div>
               {/* <div className="text-[9.5px] sm:text-[11px] font-bold tracking-widest uppercase text-neutral-700 px-2 py-0.5 border border-neutral-300 rounded-[2px] font-sans-en shrink-0">{t('productionArchive', 'PRODUCTION ARCHIVE / 2026')}</div> */}
@@ -199,14 +199,16 @@ const ProjectDetail = () => {
                 <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{project.clientName || 'La Chocolatier Group'}</div>
                 <div className="text-[10.5px] sm:text-[11px] text-neutral-500 font-medium">{t('city', 'Cairo & Tanta')}</div>
               </div>
-              <div className="space-y-0.5 sm:space-y-1">
-                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('date', 'DATE')}</span>
-                <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
-                  {project.shootedAt ? new Date(project.shootedAt).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : 'June 2026'}
+              {project.shootedAt && (
+                <div className="space-y-0.5 sm:space-y-1">
+                  <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('date', 'DATE')}</span>
+                  <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
+                    {new Date(project.shootedAt).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="space-y-0.5 sm:space-y-1">
-                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('category', 'CATEGORY')}</span>
+                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('sector', 'SECTOR')}</span>
                 <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
                   {categoryName || t('restaurants', 'Restaurants & Culinary')}
                 </div>
@@ -259,13 +261,10 @@ const ProjectDetail = () => {
                       const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                       return (
                         <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${idx + 1}` : item.caption || `Photo #${idx + 1}`, index: idx })} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
-                          <img src={item.thumbnail || item.url} alt={item.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                          {isVideo && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                              <button onClick={(e) => { e.stopPropagation(); setActiveVideoUrl(item.url); }} className="w-12 h-12 rounded-full bg-red-600/90 hover:bg-red-600 flex items-center justify-center transition-colors cursor-pointer shadow-lg">
-                                <Play className="w-5 h-5 fill-white text-white ml-0.5" />
-                              </button>
-                            </div>
+                          {isVideo ? (
+                            <video src={item.url} muted loop playsInline autoPlay className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={item.thumbnail || item.url} alt={item.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                           )}
                           <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
                             <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? item.caption : item.caption}</span>
@@ -397,7 +396,11 @@ const ProjectDetail = () => {
         <div onClick={() => setActiveVideoUrl(null)} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
           <button onClick={() => setActiveVideoUrl(null)} className="absolute top-5 right-5 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"><X className="w-6 h-6" /></button>
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm aspect-9/16 max-h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-            <iframe src={activeVideoUrl} title="Full Screen Video 9:16" className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            {activeVideoUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+              <video src={activeVideoUrl} controls autoPlay className="w-full h-full object-contain" />
+            ) : (
+              <iframe src={activeVideoUrl} title="Full Screen Video 9:16" className="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            )}
           </div>
         </div>
       )}

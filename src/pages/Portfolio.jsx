@@ -32,7 +32,7 @@ const Portfolio = () => {
   const publishedProjects = allProjects.filter((p) => p.published === true);
 
   const allCategories = Array.from(
-    new Set(publishedProjects.map((p) => p.sectorId).filter(Boolean))
+    new Set(publishedProjects.map((p) => p.sectorId?.trim().toLowerCase()).filter(Boolean))
   );
 
   // Portfolio list state
@@ -70,7 +70,7 @@ const Portfolio = () => {
   };
 
   const filteredProjects = publishedProjects.filter((proj) => {
-    if (selectedSectorId !== 'all' && proj.sectorId !== selectedSectorId) return false;
+    if (selectedSectorId !== 'all' && proj.sectorId?.trim().toLowerCase() !== selectedSectorId) return false;
     if (selectedTag !== 'all') {
       const matchTag = proj.tags.some((tg) => tg.toLowerCase() === selectedTag.toLowerCase());
       if (!matchTag) return false;
@@ -186,7 +186,7 @@ const Portfolio = () => {
 
         {/* SECTOR FILTER */}
         <section className="pt-6 sm:pt-8 border-t border-neutral-200/80 space-y-3">
-          <div className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en">{t('exploreByCategory', 'EXPLORE BY CATEGORY')}</div>
+          <div className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en">{t('sector', 'EXPLORE BY SECTOR')}</div>
           <div className="flex items-center justify-start gap-2">
             {categoryOverflow && (
               <button onClick={() => scrollContainer(categoryScrollRef, -1)} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-50 transition-colors cursor-pointer shrink-0">
@@ -282,45 +282,47 @@ const Portfolio = () => {
                 const photosCount = proj.photosCount || 0;
                 const videosCount = proj.videosCount || 0;
                 return (
-                  <Link to={`/portfolio/${proj.id}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden flex flex-col sm:flex-row hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
-                    <div className="relative w-full sm:w-[48%] aspect-[4/5] sm:aspect-auto overflow-hidden bg-neutral-900 shrink-0">
-                      <img src={proj.coverImage} alt={isArabic ? proj.titleAr : proj.titleEn} className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500 sm:min-h-[220px]" loading="lazy" />
+                  <Link to={`/portfolio/${proj.id}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[48%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
+                    <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900">
+                      <img src={proj.coverImage} alt={isArabic ? proj.titleAr : proj.titleEn} className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500" loading="lazy" />
                     </div>
-                    <div className="w-full sm:w-[54%] p-4 sm:p-4 flex flex-col justify-between space-y-3.5 sm:space-y-3">
-                      <div>
-                        <h3 className="font-bebas text-xl sm:text-2xl font-normal tracking-wide text-neutral-950 group-hover:text-red-600 transition-colors leading-tight line-clamp-2">
-                          {isArabic ? proj.titleAr : proj.titleEn}
-                        </h3>
-                        <div className="h-[1px] bg-neutral-200/70 my-2.5 sm:my-2 w-full" />
-                        <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{proj.clientName || 'La Chocolatier Group'}</p>
-                        <p className="text-[11px] sm:text-[11px] text-neutral-600 sm:text-neutral-500 leading-relaxed line-clamp-2 sm:line-clamp-3 mt-1.5 font-normal">
-                          {isArabic ? proj.descriptionAr : proj.descriptionEn}
-                        </p>
-                      </div>
-                      <div className="space-y-3 sm:space-y-2.5 pt-2 border-t border-neutral-100 sm:border-t-0">
-                        <div className="flex items-center justify-around bg-neutral-50 border border-neutral-100 rounded-xs px-3 py-1.5 text-neutral-700">
-                          {photosCount > 0 && (
-                            <div className="flex items-center gap-1 text-[11px]">
-                              <Camera className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                              <span className="font-bold text-neutral-950">{photosCount}</span>
-                              <span className="text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
-                            </div>
-                          )}
-                          {photosCount > 0 && videosCount > 0 && (
-                            <span className="text-neutral-200">|</span>
-                          )}
-                          {videosCount > 0 && (
-                            <div className="flex items-center gap-1 text-[11px]">
-                              <Film className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                              <span className="font-bold text-neutral-950">{videosCount}</span>
-                              <span className="text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
-                            </div>
-                          )}
+                    <div className="relative sm:h-full sm:overflow-hidden">
+                      <div className="p-4 h-full flex flex-col justify-between sm:justify-end gap-3 sm:gap-0">
+                        <div className="sm:overflow-hidden">
+                          <h3 className="text-lg sm:text-xl font-black uppercase text-neutral-950 group-hover:text-red-600 transition-colors leading-tight line-clamp-2 tracking-tight font-sans-en">
+                            {isArabic ? proj.titleAr : proj.titleEn}
+                          </h3>
+                          <div className="h-[1px] bg-neutral-200/70 my-2.5 sm:my-2 w-full" />
+                          <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{proj.clientName || 'La Chocolatier Group'}</p>
+                          <p className="text-[11px] sm:text-[11px] text-neutral-600 sm:text-neutral-500 leading-relaxed line-clamp-2 sm:line-clamp-2 mt-1.5 font-normal">
+                            {isArabic ? proj.descriptionAr : proj.descriptionEn}
+                          </p>
                         </div>
-                        <span className={`w-full py-2.5 sm:py-2 px-3 text-xs font-bold rounded-[2px] flex items-center justify-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white`}>
-                          <span>{t('viewProject', 'View Project')}</span>
-                          {isRtl ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
-                        </span>
+                        <div className="space-y-3 sm:space-y-2.5 pt-2 border-t border-neutral-100 sm:border-t-0 shrink-0">
+                          <div className="flex items-center justify-around bg-neutral-50 border border-neutral-100 rounded-xs px-3 py-1.5 text-neutral-700">
+                            {photosCount > 0 && (
+                              <div className="flex items-center gap-1 text-[11px]">
+                                <Camera className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                                <span className="font-bold text-neutral-950">{photosCount}</span>
+                                <span className="text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
+                              </div>
+                            )}
+                            {photosCount > 0 && videosCount > 0 && (
+                              <span className="text-neutral-200">|</span>
+                            )}
+                            {videosCount > 0 && (
+                              <div className="flex items-center gap-1 text-[11px]">
+                                <Film className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                                <span className="font-bold text-neutral-950">{videosCount}</span>
+                                <span className="text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className={`w-full py-2.5 sm:py-2 px-3 text-xs font-bold rounded-[2px] flex items-center justify-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white`}>
+                            <span>{t('viewProject', 'View Project')}</span>
+                            {isRtl ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </Link>

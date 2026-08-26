@@ -22,8 +22,6 @@ const transformProject = (raw) => {
   if (Array.isArray(raw.material)) {
     raw.material.forEach((mat) => {
       const caption = resolveBilingual(mat.caption);
-      const descriptionAr = mat.description?.ar || '';
-      const descriptionEn = mat.description?.en || '';
       if (mat.type === 'bulk' && Array.isArray(mat.items)) {
         const items = mat.items.map((item) => ({
           url: item.url,
@@ -35,15 +33,15 @@ const transformProject = (raw) => {
         const bulkPhotos = items.filter((item) => item.type !== 'video');
         videos.push(...bulkVideos);
         photos.push(...bulkPhotos);
-        mediaGroups.push({ title: caption || 'Media', descriptionAr, descriptionEn, type: 'bulk', items });
+        mediaGroups.push({ title: caption || 'Media', type: 'bulk', items });
       } else if (mat.type === 'photo' && mat.url) {
         const photo = { url: mat.url, thumbnail: mat.thumbnail || mat.url, caption, type: 'photo' };
         photos.push(photo);
-        mediaGroups.push({ title: caption || 'Photo', descriptionAr, descriptionEn, type: 'bulk', items: [photo] });
+        mediaGroups.push({ title: caption || 'Photo', type: 'bulk', items: [photo] });
       } else if (mat.type === 'video' && mat.url) {
         const video = { url: mat.url, thumbnail: mat.thumbnail || '', caption, type: 'video' };
         videos.push(video);
-        mediaGroups.push({ title: caption || 'Video', descriptionAr, descriptionEn, type: 'bulk', items: [video] });
+        mediaGroups.push({ title: caption || 'Video', type: 'bulk', items: [video] });
       }
     });
   }
@@ -67,9 +65,11 @@ const transformProject = (raw) => {
     tags: (raw.types || [])
       .map((t) => (typeof t === 'string' ? t : t.name?.en || t.name?.ar || ''))
       .filter(Boolean),
-    categories: (raw.categories || []).map((c) => resolveBilingual(c.name) || resolveBilingual(c) || ''),
     sectorId: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),
     mainCategory: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),
+    categoryId: raw.categories?.[0]?._id || '',
+    categoryNameEn: raw.categories?.[0]?.name?.en || (typeof raw.categories?.[0] === 'string' ? raw.categories[0] : ''),
+    categoryNameAr: raw.categories?.[0]?.name?.ar || '',
     featured: raw.order === 1,
     order: raw.order != null ? raw.order : 999,
     photosCount: photos.length,
