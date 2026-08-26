@@ -247,7 +247,7 @@ const Portfolio = () => {
         <section id="projects-grid-section" className="space-y-6 pt-4">
           <div className="flex items-center justify-between gap-4 border-b border-neutral-200 pb-3">
             <div className="text-base sm:text-lg font-black text-neutral-950 tracking-tight">
-              {loading ? '...' : `${filteredProjects.length} ${t('projectDisplayed', 'Projects')}`}
+              {loading && allProjects.length === 0 ? '...' : `${filteredProjects.length} ${t('projectDisplayed', 'Projects')}`}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-neutral-500">{t('sort', 'Sort by:')}</span>
@@ -263,7 +263,7 @@ const Portfolio = () => {
             </div>
           </div>
 
-          {loading ? (
+          {loading && allProjects.length === 0 ? (
             <div className="bg-neutral-50 p-12 text-center rounded-[4px] border border-neutral-200 space-y-3">
               <div className="w-10 h-10 border-4 border-neutral-200 border-t-red-600 rounded-full animate-spin mx-auto" />
               <h3 className="text-base font-bold text-neutral-800">{t('loading', 'Loading projects...')}</h3>

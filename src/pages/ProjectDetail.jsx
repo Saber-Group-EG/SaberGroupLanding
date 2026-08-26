@@ -77,7 +77,7 @@ const ProjectDetail = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [id]);
 
-  if (loading) {
+  if (loading && !project) {
     return (
       <div className="bg-white min-h-screen flex items-center justify-center font-sans pt-24">
         <div className="text-center space-y-4">

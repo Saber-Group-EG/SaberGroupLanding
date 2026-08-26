@@ -2,6 +2,24 @@ import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import axios from 'axios';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
+const CACHE_KEY = 'saber_projects_cache';
+
+const loadFromCache = () => {
+  try {
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveToCache = (projects) => {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(projects));
+  } catch {
+    // sessionStorage full or unavailable — ignore
+  }
+};
 
 const resolveBilingual = (val) => {
   if (!val) return '';
@@ -104,22 +122,13 @@ export const getProjects = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);
     }
-  },
-  {
-    condition: (force = false, { getState }) => {
-      const { projects } = getState();
-      if (force) return true;
-      if (projects.rawProjects.length > 0) {
-        return false;
-      }
-    },
   }
 );
 
 const projectsSlice = createSlice({
   name: 'projects',
   initialState: {
-    rawProjects: [],
+    rawProjects: loadFromCache(),
     loading: false,
     error: null,
   },
@@ -138,11 +147,15 @@ const projectsSlice = createSlice({
         state.loading = false;
         state.rawProjects = action.payload;
         state.error = null;
+        saveToCache(action.payload);
       })
       .addCase(getProjects.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to fetch projects';
-        state.rawProjects = [];
+        // Keep existing cached data on failure instead of clearing
+        if (state.rawProjects.length === 0) {
+          state.rawProjects = loadFromCache();
+        }
       });
   },
 });
