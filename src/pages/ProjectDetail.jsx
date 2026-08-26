@@ -262,7 +262,14 @@ const ProjectDetail = () => {
                       return (
                         <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${idx + 1}` : item.caption || `Photo #${idx + 1}`, index: idx })} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
                           {isVideo ? (
-                            <video src={item.url} muted loop playsInline autoPlay className="w-full h-full object-cover" />
+                            <>
+                              <video src={item.url} muted loop playsInline poster={item.thumbnail} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-lg">
+                                  <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white ml-0.5" fill="white" />
+                                </div>
+                              </div>
+                            </>
                           ) : (
                             <img src={item.thumbnail || item.url} alt={item.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                           )}
