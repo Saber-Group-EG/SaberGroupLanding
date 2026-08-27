@@ -65,6 +65,7 @@ const transformProject = (raw) => {
   }
 
   const coverImage = raw.mainCover?.url || (photos.length > 0 ? photos[0].url : '');
+  const fullMainCover = raw.fullMainCover || null;
   const galleryImages = photos.map((p) => p.url);
 
   return {
@@ -74,6 +75,7 @@ const transformProject = (raw) => {
     descriptionAr: raw.description?.ar || '',
     descriptionEn: raw.description?.en || '',
     coverImage,
+    fullMainCover,
     galleryImages,
     photos,
     videos,
