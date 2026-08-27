@@ -68,14 +68,20 @@ const ProjectDetail = () => {
   }, [mediaGroups.length]);
 
   useEffect(() => {
-    const initial = {};
-    photoGroups.forEach((_, i) => { initial[`group_${i}`] = true; });
-    setOpenSectors(initial);
+    if (mediaGroups.length === 0) return;
+    setOpenSectors((prev) => {
+      const next = { ...prev };
+      mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo').forEach((_, i) => {
+        const key = `group_${i}`;
+        if (!(key in next)) next[key] = true;
+      });
+      return next;
+    });
     setLightboxPhoto(null);
     setActiveVideoUrl(null);
     setFormSubmitted(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [id]);
+  }, [id, mediaGroups.length]);
 
   if (loading && !project) {
     return (
