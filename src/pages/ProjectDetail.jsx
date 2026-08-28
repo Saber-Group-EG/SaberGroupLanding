@@ -203,7 +203,7 @@ const ProjectDetail = () => {
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('client', 'CLIENT')}</span>
                 <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{project.clientName || 'La Chocolatier Group'}</div>
-                <div className="text-[10.5px] sm:text-[11px] text-neutral-500 font-medium">{t('city', 'Cairo & Tanta')}</div>
+                <div className="text-[10.5px] sm:text-[11px] text-neutral-500 font-medium">{isArabic ? project.locationAr : project.locationEn}</div>
               </div>
               {project.shootedAt && (
                 <div className="space-y-0.5 sm:space-y-1">

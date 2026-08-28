@@ -81,6 +81,8 @@ const transformProject = (raw) => {
     videos,
     mediaGroups,
     clientName: resolveBilingual(raw.company),
+    locationAr: raw.location?.ar || (typeof raw.location === 'string' ? raw.location : ''),
+    locationEn: raw.location?.en || (typeof raw.location === 'string' ? raw.location : ''),
     location: resolveBilingual(raw.location),
     tags: (raw.tags || [])
       .map((t) => (typeof t === 'string' ? t : t.en || t.ar || ''))
