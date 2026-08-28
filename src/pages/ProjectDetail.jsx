@@ -9,6 +9,7 @@ import {
   selectProjectById,
   selectRelatedProjects,
 } from '../store/slices/projectsSlice';
+import { getAbsoluteImageUrl, SITE_URL } from '../utils/ogMeta';
 import {
   Camera,
   ArrowRight,
@@ -43,8 +44,6 @@ const ProjectDetail = () => {
 
   const categoryName = project?.sectorId || '';
 
-  const allPhotos = (project?.photos || []).map((p, i) => ({ url: p.url, altAr: p.caption || `لقطة #${i + 1}`, altEn: p.caption || `Photo #${i + 1}` }));
-
   const mediaGroups = project?.mediaGroups || [];
   const photoGroups = mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo');
   const videoGroups = mediaGroups.filter((g) => g.type === 'video');
@@ -53,8 +52,50 @@ const ProjectDetail = () => {
     dispatch(getProjects());
   }, [dispatch]);
 
+  // Page title & OG meta tags
+  useEffect(() => {
+    if (!project) return;
+
+    const projectName = isArabic ? project.titleAr : project.titleEn;
+    const projectDesc = isArabic ? project.descriptionAr : project.descriptionEn;
+    const coverUrl = getAbsoluteImageUrl(project.fullMainCover?.url || project.coverImage);
+    const pageUrl = `${SITE_URL}/portfolio/${id}`;
+
+    document.title = `${projectName} | Saber Group`;
+
+    const setMeta = (property, content) => {
+      let el = document.querySelector(`meta[property="${property}"]`) || document.querySelector(`meta[name="${property}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        if (property.startsWith('og:')) {
+          el.setAttribute('property', property);
+        } else {
+          el.setAttribute('name', property);
+        }
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    setMeta('og:title', projectName);
+    setMeta('og:description', projectDesc || '');
+    setMeta('og:image', coverUrl || '');
+    setMeta('og:url', pageUrl);
+    setMeta('og:type', 'article');
+    setMeta('og:site_name', 'Saber Group');
+    setMeta('twitter:card', 'summary_large_image');
+    setMeta('twitter:title', projectName);
+    setMeta('twitter:description', projectDesc || '');
+    setMeta('twitter:image', coverUrl || '');
+
+    return () => {
+      document.title = 'Saber Group';
+    };
+  }, [project, id, isArabic]);
+
   const [openSectors, setOpenSectors] = useState({});
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const [lightboxSectionItems, setLightboxSectionItems] = useState([]);
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', brand: '', notes: '' });
@@ -126,17 +167,17 @@ const ProjectDetail = () => {
 
   const handleNextLightbox = (e) => {
     e?.stopPropagation();
-    if (lightboxPhoto) {
-      const nextIdx = (lightboxPhoto.index + 1) % allPhotos.length;
-      setLightboxPhoto({ url: allPhotos[nextIdx].url, title: allPhotos[nextIdx].altAr, index: nextIdx });
+    if (lightboxPhoto && lightboxSectionItems.length > 0) {
+      const nextIdx = (lightboxPhoto.index + 1) % lightboxSectionItems.length;
+      setLightboxPhoto({ url: lightboxSectionItems[nextIdx].url, title: lightboxSectionItems[nextIdx].caption || lightboxSectionItems[nextIdx].altAr || `Photo #${nextIdx + 1}`, index: nextIdx });
     }
   };
 
   const handlePrevLightbox = (e) => {
     e?.stopPropagation();
-    if (lightboxPhoto) {
-      const prevIdx = (lightboxPhoto.index - 1 + allPhotos.length) % allPhotos.length;
-      setLightboxPhoto({ url: allPhotos[prevIdx].url, title: allPhotos[prevIdx].altAr, index: prevIdx });
+    if (lightboxPhoto && lightboxSectionItems.length > 0) {
+      const prevIdx = (lightboxPhoto.index - 1 + lightboxSectionItems.length) % lightboxSectionItems.length;
+      setLightboxPhoto({ url: lightboxSectionItems[prevIdx].url, title: lightboxSectionItems[prevIdx].caption || lightboxSectionItems[prevIdx].altAr || `Photo #${prevIdx + 1}`, index: prevIdx });
     }
   };
 
@@ -167,7 +208,7 @@ const ProjectDetail = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 sm:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-stretch">
           <div className="lg:col-span-5 flex">
-            <div onClick={() => setLightboxPhoto({ url: project.fullMainCover?.url || project.coverImage, title: isArabic ? project.titleAr : project.titleEn, index: 0 })} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-pointer group shadow-2xs">
+            <div onClick={() => { setLightboxSectionItems([{ url: project.fullMainCover?.url || project.coverImage, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.fullMainCover?.url || project.coverImage, title: isArabic ? project.titleAr : project.titleEn, index: 0 }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-pointer group shadow-2xs">
               <img src={project.coverImage} alt={isArabic ? project.titleAr : project.titleEn} className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
               <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                 <span className="bg-neutral-950/80 backdrop-blur-xs text-xs font-bold px-3 py-1.5 rounded-[2px] border border-white/20 flex items-center gap-1.5">
@@ -272,7 +313,7 @@ const ProjectDetail = () => {
                     {items.map((item, idx) => {
                       const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                       return (
-                        <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${idx + 1}` : item.caption || `Photo #${idx + 1}`, index: idx })} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
+                        <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { setLightboxSectionItems(items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i)))); const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${photoIdx + 1}` : item.caption || `Photo #${photoIdx + 1}`, index: photoIdx >= 0 ? photoIdx : 0 }); })()} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
                           {isVideo ? (
                             <>
                               <video src={item.url} muted loop playsInline poster={item.thumbnail} className="w-full h-full object-cover" />
@@ -394,7 +435,7 @@ const ProjectDetail = () => {
         <div onClick={() => setLightboxPhoto(null)} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 select-none">
           <button onClick={() => setLightboxPhoto(null)} className="absolute top-5 right-5 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"><X className="w-6 h-6" /></button>
           <div className="absolute top-6 left-6 z-70 bg-neutral-900/90 text-white text-xs font-extrabold px-4 py-2 rounded-2xl backdrop-blur-md border border-neutral-700 flex items-center gap-3">
-            <span>{`Photo ${lightboxPhoto.index + 1} of ${allPhotos.length}`}</span>
+            <span>{`Photo ${lightboxPhoto.index + 1} of ${lightboxSectionItems.length}`}</span>
             <span className="text-neutral-500">|</span>
             <span className="text-neutral-300 max-w-xs truncate">{lightboxPhoto.title}</span>
           </div>
