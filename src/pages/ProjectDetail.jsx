@@ -156,6 +156,7 @@ const ProjectDetail = () => {
       <Helmet>
         <title>{projectName} | Saber Group</title>
         <meta name="description" content={projectDesc || projectName} />
+        <link rel="canonical" href={pageUrl} />
         <meta property="og:type" content="article" />
         <meta property="og:title" content={`${projectName} | Saber Group`} />
         <meta property="og:description" content={projectDesc || projectName} />
@@ -320,6 +321,24 @@ const ProjectDetail = () => {
                 </div>
               );
             })}
+
+            {/* META TAGS */}
+            {(project.tags || []).length > 0 && (
+              <div className="bg-white rounded-[3px] border border-neutral-200 p-4 sm:p-5 shadow-2xs">
+                <h3 className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en mb-3">Meta tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {project.tags.map((tag, i) => (
+                    <a
+                      key={i}
+                      href={`/portfolio/${slug}`}
+                      className="inline-flex items-center px-3 py-1.5 bg-neutral-100 hover:bg-red-50 hover:border-red-300 border border-neutral-200 rounded-full text-[11px] sm:text-xs font-bold text-neutral-700 hover:text-red-600 transition-all"
+                    >
+                      {tag}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* SIDEBAR */}

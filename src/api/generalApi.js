@@ -5,7 +5,7 @@ const apiBase = import.meta.env.VITE_CRM_BACKEND_URL || import.meta.env.VITE_LOC
 if (!apiBase) {
   // If no base is configured, axios will issue requests relative to the page origin (localhost during dev).
   // Log a clear warning to help debugging.
-  // eslint-disable-next-line no-console
+   
   console.warn('VITE_CRM_BACKEND_URL and VITE_LOCATION_API_URL are not set — API requests will use the site origin. Set VITE_CRM_BACKEND_URL in your .env to point to the API.');
 }
 
