@@ -82,7 +82,10 @@ const transformProject = (raw) => {
     mediaGroups,
     clientName: resolveBilingual(raw.company),
     location: resolveBilingual(raw.location),
-    tags: (raw.types || [])
+    tags: (raw.tags || [])
+      .map((t) => (typeof t === 'string' ? t : t.en || t.ar || ''))
+      .filter(Boolean),
+    services: (raw.types || [])
       .map((t) => (typeof t === 'string' ? t : t.name?.en || t.name?.ar || ''))
       .filter(Boolean),
     sectorId: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),

@@ -222,9 +222,15 @@ const ProjectDetail = () => {
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('services', 'SERVICES')}</span>
                 <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
-                  <div>{t('photography', 'Photography')}</div>
-                  <div>{t('videography', 'Videography')}</div>
-                  <div>{t('foodStyling', 'Food Styling')}</div>
+                  {(project.tags || []).length > 0
+                    ? project.tags.map((tag, i) => <div key={i}>{tag}</div>)
+                    : <div>{t('photography', 'Photography')}</div>}
+                </div>
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('projectType', 'PROJECT TYPE')}</span>
+                <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
+                  {(project.services || []).map((service, i) => <div key={i}>{service}</div>)}
                 </div>
               </div>
             </div>
