@@ -7,7 +7,7 @@ import {
   getProjects,
   selectAllProjects,
   selectProjectsLoading,
-  selectProjectById,
+  selectProjectBySlug,
   selectRelatedProjects,
 } from '../store/slices/projectsSlice';
 import { getAbsoluteImageUrl, SITE_URL } from '../utils/ogMeta';
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 const ProjectDetail = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { t: tFn, isArabic } = useTranslation();
@@ -40,8 +40,8 @@ const ProjectDetail = () => {
   };
 
   const loading = useSelector(selectProjectsLoading);
-  const project = useSelector((state) => selectProjectById(state, id));
-  const relatedProjects = useSelector((state) => selectRelatedProjects(state, id));
+  const project = useSelector((state) => selectProjectBySlug(state, slug));
+  const relatedProjects = useSelector((state) => selectRelatedProjects(state, slug));
 
   const categoryName = project?.sectorId || '';
 
@@ -82,7 +82,7 @@ const ProjectDetail = () => {
     setActiveVideoUrl(null);
     setFormSubmitted(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [id, mediaGroups.length]);
+  }, [slug, mediaGroups.length]);
 
   if (loading && !project) {
     return (
@@ -149,7 +149,7 @@ const ProjectDetail = () => {
   const projectName = isArabic ? project.titleAr : project.titleEn;
   const projectDesc = isArabic ? project.descriptionAr : project.descriptionEn;
   const coverUrl = getAbsoluteImageUrl(project.fullMainCover?.url || project.coverImage);
-  const pageUrl = `${SITE_URL}/portfolio/${id}`;
+  const pageUrl = `${SITE_URL}/portfolio/${slug}`;
 
   return (
     <div className="w-full bg-white text-neutral-900 animate-fade-in pb-20 font-sans">
@@ -394,7 +394,7 @@ const ProjectDetail = () => {
                 <h4 className="text-xs font-extrabold text-neutral-950 flex items-center gap-2"><Building2 className="w-3.5 h-3.5 text-red-600" /><span>{t('moreInSector', 'More in this Sector')}</span></h4>
                 <div className="space-y-2">
                   {relatedProjects.slice(0, 3).map((rel) => (
-                    <div key={rel.id} onClick={() => navigate(`/portfolio/${rel.id}`)} className="p-2 rounded-[2px] hover:bg-neutral-50 border border-transparent hover:border-neutral-200 transition-all cursor-pointer flex items-center gap-3">
+                    <div key={rel.id} onClick={() => navigate(`/portfolio/${rel.slug}`)} className="p-2 rounded-[2px] hover:bg-neutral-50 border border-transparent hover:border-neutral-200 transition-all cursor-pointer flex items-center gap-3">
                       <img src={rel.coverImage} alt="" className="w-11 h-11 rounded-[2px] object-cover shrink-0" />
                       <div className="overflow-hidden">
                         <h5 className="text-xs font-bold text-neutral-950 truncate">{isArabic ? rel.titleAr : rel.titleEn}</h5>

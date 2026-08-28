@@ -30,6 +30,27 @@ function resolveBilingual(val) {
   return '';
 }
 
+function slugify(text) {
+  if (!text) return '';
+  return String(text)
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+function getEnSlug(raw) {
+  if (!raw) return '';
+  const enName = raw.name?.en || '';
+  if (enName) {
+    const s = slugify(enName);
+    if (s) return s;
+  }
+  return String(raw._id || '').replace(/[^a-z0-9-]/gi, '-');
+}
+
 export default async function middleware(request) {
   const { pathname } = new URL(request.url);
   const ua = request.headers.get('user-agent') || '';
@@ -37,13 +58,13 @@ export default async function middleware(request) {
   if (!CRAWLER_UA.test(ua)) return;
 
   const segments = pathname.split('/');
-  const projectId = segments[segments.length - 1] || segments[segments.length - 2];
-  if (!projectId || projectId === 'portfolio') return;
+  const slug = segments[segments.length - 1] || segments[segments.length - 2];
+  if (!slug || slug === 'portfolio') return;
 
   try {
     const res = await fetch(`${PROJECTS_API}?PageCount=all`);
     const data = await res.json();
-    const raw = (data.projects || []).find((p) => p._id === projectId);
+    const raw = (data.projects || []).find((p) => getEnSlug(p) === slug);
     if (!raw) return;
 
     const projectName = resolveBilingual(raw.name);
@@ -52,7 +73,7 @@ export default async function middleware(request) {
     const absoluteCover = coverImage.startsWith('http')
       ? coverImage
       : `${SITE_URL}${coverImage}`;
-    const pageUrl = `${SITE_URL}/portfolio/${projectId}`;
+    const pageUrl = `${SITE_URL}/portfolio/${slug}`;
 
     const html = `<!doctype html>
 <html lang="en" dir="ltr">

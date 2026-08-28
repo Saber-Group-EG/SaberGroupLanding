@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { getEnSlug } from '../../utils/slug';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
 const CACHE_KEY = 'saber_projects_cache';
@@ -70,6 +71,7 @@ const transformProject = (raw) => {
 
   return {
     id: raw._id,
+    slug: getEnSlug(raw),
     titleAr: raw.name?.ar || '',
     titleEn: raw.name?.en || '',
     descriptionAr: raw.description?.ar || '',
@@ -177,13 +179,16 @@ export const selectProjectsError = (state) => state.projects.error;
 export const selectProjectById = (state, projectId) =>
   state.projects.rawProjects.find((p) => p.id === projectId && p.published === true);
 
+export const selectProjectBySlug = (state, slug) =>
+  state.projects.rawProjects.find((p) => p.slug === slug && p.published === true);
+
 export const selectRelatedProjects = createSelector(
-  [selectPublishedProjects, (state, projectId) => projectId],
-  (projects, projectId) => {
-    const project = projects.find((p) => p.id === projectId);
+  [selectPublishedProjects, (state, _slug) => _slug],
+  (projects, slug) => {
+    const project = projects.find((p) => p.slug === slug);
     if (!project) return [];
     return projects.filter(
-      (p) => p.id !== projectId && p.sectorId === project.sectorId
+      (p) => p.slug !== slug && p.sectorId === project.sectorId
     );
   }
 );

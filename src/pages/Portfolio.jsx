@@ -162,7 +162,7 @@ const Portfolio = () => {
           {/* Featured Image */}
           <div className="lg:col-span-5">
             {featuredMasterProject ? (
-              <Link to={`/portfolio/${featuredMasterProject.id}`} className="group cursor-pointer block">
+              <Link to={`/portfolio/${featuredMasterProject.slug}`} className="group cursor-pointer block">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[4px] bg-neutral-900 border border-neutral-200/90 shadow-xs">
                   <img src={featuredMasterProject.coverImage} alt="Featured Project" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
                 </div>
@@ -282,7 +282,7 @@ const Portfolio = () => {
                 const photosCount = proj.photosCount || 0;
                 const videosCount = proj.videosCount || 0;
                 return (
-                  <Link to={`/portfolio/${proj.id}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[48%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
+                  <Link to={`/portfolio/${proj.slug}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[48%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
                     <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900">
                       <img src={proj.coverImage} alt={isArabic ? proj.titleAr : proj.titleEn} className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500" loading="lazy" />
                     </div>
