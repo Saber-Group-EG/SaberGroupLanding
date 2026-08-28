@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { Helmet } from 'react-helmet-async';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
   getProjects,
@@ -51,47 +52,6 @@ const ProjectDetail = () => {
   useEffect(() => {
     dispatch(getProjects());
   }, [dispatch]);
-
-  // Page title & OG meta tags
-  useEffect(() => {
-    if (!project) return;
-
-    const projectName = isArabic ? project.titleAr : project.titleEn;
-    const projectDesc = isArabic ? project.descriptionAr : project.descriptionEn;
-    const coverUrl = getAbsoluteImageUrl(project.fullMainCover?.url || project.coverImage);
-    const pageUrl = `${SITE_URL}/portfolio/${id}`;
-
-    document.title = `${projectName} | Saber Group`;
-
-    const setMeta = (property, content) => {
-      let el = document.querySelector(`meta[property="${property}"]`) || document.querySelector(`meta[name="${property}"]`);
-      if (!el) {
-        el = document.createElement('meta');
-        if (property.startsWith('og:')) {
-          el.setAttribute('property', property);
-        } else {
-          el.setAttribute('name', property);
-        }
-        document.head.appendChild(el);
-      }
-      el.setAttribute('content', content);
-    };
-
-    setMeta('og:title', projectName);
-    setMeta('og:description', projectDesc || '');
-    setMeta('og:image', coverUrl || '');
-    setMeta('og:url', pageUrl);
-    setMeta('og:type', 'article');
-    setMeta('og:site_name', 'Saber Group');
-    setMeta('twitter:card', 'summary_large_image');
-    setMeta('twitter:title', projectName);
-    setMeta('twitter:description', projectDesc || '');
-    setMeta('twitter:image', coverUrl || '');
-
-    return () => {
-      document.title = 'Saber Group';
-    };
-  }, [project, id, isArabic]);
 
   const [openSectors, setOpenSectors] = useState({});
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
@@ -186,8 +146,27 @@ const ProjectDetail = () => {
     setFormSubmitted(true);
   };
 
+  const projectName = isArabic ? project.titleAr : project.titleEn;
+  const projectDesc = isArabic ? project.descriptionAr : project.descriptionEn;
+  const coverUrl = getAbsoluteImageUrl(project.fullMainCover?.url || project.coverImage);
+  const pageUrl = `${SITE_URL}/portfolio/${id}`;
+
   return (
     <div className="w-full bg-white text-neutral-900 animate-fade-in pb-20 font-sans">
+      <Helmet>
+        <title>{projectName} | Saber Group</title>
+        <meta name="description" content={projectDesc || projectName} />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={`${projectName} | Saber Group`} />
+        <meta property="og:description" content={projectDesc || projectName} />
+        <meta property="og:image" content={coverUrl} />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:site_name" content="Saber Group" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${projectName} | Saber Group`} />
+        <meta name="twitter:description" content={projectDesc || projectName} />
+        <meta name="twitter:image" content={coverUrl} />
+      </Helmet>
       {/* BREADCRUMB */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-4">
         <div className="flex items-center gap-4 text-xs sm:text-sm font-medium">
