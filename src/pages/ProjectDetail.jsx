@@ -72,15 +72,11 @@ const ProjectDetail = () => {
   const sectionRefs = useRef([]);
 
   const getAllPhotos = () => {
-    return renderableGroups.map((group) => {
-      if (group.type === 'before_after') {
-        const items = [];
-        if (group.before?.url) items.push({ url: group.before.url, caption: group.before.caption || 'Before', type: 'photo' });
-        if (group.after?.url) items.push({ url: group.after.url, caption: group.after.caption || 'After', type: 'photo' });
-        return items;
-      }
-      return (group.items || []).filter((item) => !(item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i)));
-    });
+    return renderableGroups
+      .filter((group) => group.type !== 'before_after')
+      .map((group) => {
+        return (group.items || []).filter((item) => !(item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i)));
+      });
   };
 
   const resetZoom = () => { setZoomLevel(1); setZoomPosition({ x: 0, y: 0 }); };
@@ -677,7 +673,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-[2/3] sm:aspect-[4/3] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
+      className="relative w-full max-w-[440px] sm:max-w-[500px] mx-auto aspect-[4/6] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
       onPointerDown={handlePointerDown}
     >
       {/* After image (full width background) */}
