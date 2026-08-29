@@ -518,7 +518,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-[4/5] sm:aspect-[16/10] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
+      className="relative w-full aspect-[2/3] sm:aspect-[4/3] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
       onPointerDown={handlePointerDown}
     >
       {/* After image (full width background) */}
