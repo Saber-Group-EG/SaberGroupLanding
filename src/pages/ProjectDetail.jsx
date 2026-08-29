@@ -46,7 +46,7 @@ const ProjectDetail = () => {
   const categoryName = project?.sectorId || '';
 
   const mediaGroups = project?.mediaGroups || [];
-  const photoGroups = mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo');
+  const renderableGroups = mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo' || g.type === 'before_after');
   const videoGroups = mediaGroups.filter((g) => g.type === 'video');
 
   useEffect(() => {
@@ -65,14 +65,14 @@ const ProjectDetail = () => {
   const sectionRefs = useRef([]);
 
   useEffect(() => {
-    sectionRefs.current = sectionRefs.current.slice(0, mediaGroups.length);
-  }, [mediaGroups.length]);
+    sectionRefs.current = sectionRefs.current.slice(0, renderableGroups.length);
+  }, [renderableGroups.length]);
 
   useEffect(() => {
-    if (mediaGroups.length === 0) return;
+    if (renderableGroups.length === 0) return;
     setOpenSectors((prev) => {
       const next = { ...prev };
-      mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo').forEach((_, i) => {
+      renderableGroups.forEach((_, i) => {
         const key = `group_${i}`;
         if (!(key in next)) next[key] = true;
       });
@@ -82,7 +82,7 @@ const ProjectDetail = () => {
     setActiveVideoUrl(null);
     setFormSubmitted(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [slug, mediaGroups.length]);
+  }, [slug, renderableGroups.length]);
 
   if (loading && !project) {
     return (
@@ -114,7 +114,16 @@ const ProjectDetail = () => {
   let sectionCounter = 0;
   const nextSectionNum = () => { sectionCounter += 1; return String(sectionCounter).padStart(2, '0'); };
 
-  const creditsList = (project.cast?.length > 0 ? project.cast : []).filter((c) => c.name);
+  const creditsList = (project.cast?.length > 0 ? project.cast : [])
+    .map((c) => ({
+      name: c.castId?.name || c.name,
+      title: c.castId?.title || c.title,
+      photo: c.castId?.photo || c.photo,
+      avatar: c.castId?.photo || c.photo || c.avatar,
+      roleAr: c.castId?.title || c.roleAr,
+      roleEn: c.castId?.title || c.roleEn,
+    }))
+    .filter((c) => c.name);
 
   const scrollToSection = (index) => {
     if (sectionRefs.current[index]) {
@@ -279,44 +288,54 @@ const ProjectDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-8 space-y-6">
             {/* Dynamic Photo/Video Groups */}
-            {mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo').map((group, groupIdx) => {
+            {renderableGroups.map((group, groupIdx) => {
               const num = nextSectionNum();
-              const items = group.items || [];
-              const allVideos = items.every((item) => item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i));
-              const allPhotos = items.every((item) => item.type !== 'video' && !item.url?.match(/\.(mp4|webm|ogg)$/i));
-              const filteredGroups = mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo');
+              const isBeforeAfter = group.type === 'before_after';
+              const items = isBeforeAfter ? (group.items || []) : (group.items || []);
+              const allVideos = !isBeforeAfter && items.every((item) => item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i));
+              const filteredGroups = renderableGroups;
               const totalSections = filteredGroups.length;
               return (
                 <div key={groupIdx} ref={(el) => { sectionRefs.current[groupIdx] = el; }}>
-                  <SectorAccordion number={num} title={isArabic ? group.title || `المجموعة ${groupIdx + 1}` : group.title || `Group ${groupIdx + 1}`} description={isArabic ? group.descriptionAr : group.descriptionEn} count={items.length} countLabel={allVideos ? t('reelsLabel', 'VIDEOS') : t('photosLabel', 'PHOTOS')} currentSection={groupIdx + 1} totalSections={totalSections} onPrev={() => scrollToSection(groupIdx - 1)} onNext={() => scrollToSection(groupIdx + 1)} hasPrev={groupIdx > 0} hasNext={groupIdx < totalSections - 1} isOpen={!!openSectors[`group_${groupIdx}`]} onToggle={() => setOpenSectors((prev) => ({ ...prev, [`group_${groupIdx}`]: !prev[`group_${groupIdx}`] }))}>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
-                    {items.map((item, idx) => {
-                      const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
-                      return (
-                        <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { setLightboxSectionItems(items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i)))); const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${photoIdx + 1}` : item.caption || `Photo #${photoIdx + 1}`, index: photoIdx >= 0 ? photoIdx : 0 }); })()} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
-                          {isVideo ? (
-                            <>
-                              <video src={item.url} muted loop playsInline poster={item.thumbnail} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-lg">
-                                  <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white ml-0.5" fill="white" />
+                  <SectorAccordion number={num} title={isArabic ? group.title || `المجموعة ${groupIdx + 1}` : group.title || `Group ${groupIdx + 1}`} description={isArabic ? group.descriptionAr : group.descriptionEn} count={isBeforeAfter ? 2 : items.length} countLabel={isBeforeAfter ? t('photosLabel', 'PHOTOS') : allVideos ? t('reelsLabel', 'VIDEOS') : t('photosLabel', 'PHOTOS')} currentSection={groupIdx + 1} totalSections={totalSections} onPrev={() => scrollToSection(groupIdx - 1)} onNext={() => scrollToSection(groupIdx + 1)} hasPrev={groupIdx > 0} hasNext={groupIdx < totalSections - 1} isOpen={!!openSectors[`group_${groupIdx}`]} onToggle={() => setOpenSectors((prev) => ({ ...prev, [`group_${groupIdx}`]: !prev[`group_${groupIdx}`] }))}>
+                  {isBeforeAfter ? (
+                    <BeforeAfterSlider
+                      beforeImage={group.before?.url}
+                      afterImage={group.after?.url}
+                      beforeLabel={group.before?.caption}
+                      afterLabel={group.after?.caption}
+                      isArabic={isArabic}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
+                      {items.map((item, idx) => {
+                        const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
+                        return (
+                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { setLightboxSectionItems(items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i)))); const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${photoIdx + 1}` : item.caption || `Photo #${photoIdx + 1}`, index: photoIdx >= 0 ? photoIdx : 0 }); })()} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
+                            {isVideo ? (
+                              <>
+                                <video src={item.url} muted loop playsInline poster={item.thumbnail} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-lg">
+                                    <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white ml-0.5" fill="white" />
+                                  </div>
                                 </div>
-                              </div>
-                            </>
-                          ) : (
-                            <img src={item.thumbnail || item.url} alt={item.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                          )}
-                          <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
-                            <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? item.caption : item.caption}</span>
-                            <span className="text-[9px] text-red-400 font-bold mt-1 flex items-center gap-1">
-                              {isVideo ? <><Play className="w-2.5 h-2.5" />{t('playVideo', 'Play video')}</> : <><Maximize2 className="w-2.5 h-2.5" />{t('viewFullSize', 'View full size')}</>}
-                            </span>
+                              </>
+                            ) : (
+                              <img src={item.thumbnail || item.url} alt={item.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                            )}
+                            <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
+                              <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? item.caption : item.caption}</span>
+                              <span className="text-[9px] text-red-400 font-bold mt-1 flex items-center gap-1">
+                                {isVideo ? <><Play className="w-2.5 h-2.5" />{t('playVideo', 'Play video')}</> : <><Maximize2 className="w-2.5 h-2.5" />{t('viewFullSize', 'View full size')}</>}
+                              </span>
+                            </div>
+                            <div className="absolute top-1.5 left-1.5 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-[2px]">#{idx + 1}</div>
                           </div>
-                          <div className="absolute top-1.5 left-1.5 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-[2px]">#{idx + 1}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </SectorAccordion>
                 </div>
               );
@@ -466,10 +485,98 @@ const ProjectDetail = () => {
   );
 };
 
+/* Before / After Comparison Slider */
+const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, isArabic }) => {
+  const containerRef = useRef(null);
+  const [sliderPos, setSliderPos] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const updatePosition = (clientX) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setSliderPos(pct);
+  };
+
+  const handlePointerDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+    updatePosition(e.clientX);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    updatePosition(e.clientX);
+  };
+
+  const handlePointerUp = () => setIsDragging(false);
+
+  useEffect(() => {
+    if (isDragging) {
+      const onMove = (e) => { e.preventDefault(); updatePosition(e.clientX); };
+      const onUp = () => setIsDragging(false);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      return () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+    }
+  }, [isDragging]);
+
+  const lblBefore = beforeLabel || (isArabic ? 'قبل' : 'Before');
+  const lblAfter = afterLabel || (isArabic ? 'بعد' : 'After');
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full aspect-[4/5] sm:aspect-[16/10] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
+      onPointerDown={handlePointerDown}
+    >
+      {/* After image (full width background) */}
+      {afterImage && (
+        <img src={afterImage} alt={lblAfter} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+      )}
+
+      {/* Before image (clipped) */}
+      {beforeImage && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ width: `${sliderPos}%` }}>
+          <img src={beforeImage} alt={lblBefore} className="absolute inset-0 w-full h-full object-cover" style={{ width: containerRef.current ? `${containerRef.current.offsetWidth}px` : '100vw', maxWidth: 'none' }} draggable={false} />
+        </div>
+      )}
+
+      {/* Slider line */}
+      <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10 pointer-events-none" style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-neutral-200">
+          <div className="flex items-center gap-0">
+            <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
+            <ArrowRight className="w-3.5 h-3.5 text-neutral-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Labels */}
+      {beforeImage && (
+        <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-[2px] z-10 pointer-events-none">
+          {lblBefore}
+        </div>
+      )}
+      {afterImage && (
+        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-[2px] z-10 pointer-events-none">
+          {lblAfter}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* Sector Accordion Wrapper */
 const SectorAccordion = ({ number, title, description, count, countLabel, currentSection, totalSections, onPrev, onNext, hasPrev, hasNext, isOpen, onToggle, children }) => (
   <div className="bg-white rounded-[3px] border border-neutral-200 shadow-2xs overflow-hidden">
-    <button onClick={onToggle} className="w-full p-4 sm:p-5 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 cursor-pointer border-b border-neutral-200 text-left">
+    <div role="button" tabIndex={0} onClick={onToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }} className="w-full p-4 sm:p-5 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 cursor-pointer border-b border-neutral-200 text-left">
       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
         <div className="flex items-baseline shrink-0">
           <span className="text-2xl sm:text-3xl font-black text-neutral-950 font-sans-en tracking-tight border-b-2 border-red-600 pb-0.5 leading-none">{number}</span>
@@ -493,7 +600,7 @@ const SectorAccordion = ({ number, title, description, count, countLabel, curren
           <button onClick={(e) => { e.stopPropagation(); if (hasNext) onNext(); }} className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border transition-colors cursor-pointer ${hasNext ? 'border-neutral-300 bg-white shadow-2xs text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>
         </div>
       </div>
-    </button>
+    </div>
     {isOpen && <div className="p-3 sm:p-5 bg-white animate-fade-in">{children}</div>}
   </div>
 );

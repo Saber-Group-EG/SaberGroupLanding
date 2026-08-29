@@ -61,6 +61,31 @@ const transformProject = (raw) => {
         const video = { url: mat.url, thumbnail: mat.thumbnail || '', caption, type: 'video' };
         videos.push(video);
         mediaGroups.push({ title: caption || 'Video', type: 'bulk', items: [video] });
+      } else if (mat.type === 'before_after') {
+        const beforeItem = mat.before?.url ? {
+          url: mat.before.url,
+          thumbnail: mat.before.thumbnail || mat.before.url,
+          caption: resolveBilingual(mat.before.label) || resolveBilingual(mat.caption) || 'Before',
+          type: 'photo',
+        } : null;
+        const afterItem = mat.after?.url ? {
+          url: mat.after.url,
+          thumbnail: mat.after.thumbnail || mat.after.url,
+          caption: resolveBilingual(mat.after.label) || resolveBilingual(mat.caption) || 'After',
+          type: 'photo',
+        } : null;
+        const baItems = [beforeItem, afterItem].filter(Boolean);
+        if (baItems.length > 0) {
+          photos.push(...baItems);
+          mediaGroups.push({
+            title: caption || 'Before & After',
+            type: 'before_after',
+            before: beforeItem,
+            after: afterItem,
+            caption,
+            items: baItems,
+          });
+        }
       }
     });
   }
@@ -179,8 +204,10 @@ export const selectProjectsError = (state) => state.projects.error;
 export const selectProjectById = (state, projectId) =>
   state.projects.rawProjects.find((p) => p.id === projectId && p.published === true);
 
-export const selectProjectBySlug = (state, slug) =>
-  state.projects.rawProjects.find((p) => p.slug === slug && p.published === true);
+export const selectProjectBySlug = createSelector(
+  [(state) => state.projects.rawProjects, (_state, slug) => slug],
+  (projects, slug) => projects.find((p) => p.slug === slug && p.published === true)
+);
 
 export const selectRelatedProjects = createSelector(
   [selectPublishedProjects, (state, _slug) => _slug],
