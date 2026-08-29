@@ -111,9 +111,11 @@ const transformProject = (raw) => {
     locationAr: raw.location?.ar || (typeof raw.location === 'string' ? raw.location : ''),
     locationEn: raw.location?.en || (typeof raw.location === 'string' ? raw.location : ''),
     location: resolveBilingual(raw.location),
-    tags: (raw.tags || [])
-      .map((t) => (typeof t === 'string' ? t : t.en || t.ar || ''))
-      .filter(Boolean),
+    tags: [
+      ...(Array.isArray(raw.tagsEn) ? raw.tagsEn : []),
+      ...(Array.isArray(raw.tagsAr) ? raw.tagsAr : []),
+      ...(Array.isArray(raw.tags) ? raw.tags : []),
+    ].map((t) => (typeof t === 'string' ? t : t.en || t.ar || '')).filter(Boolean),
     services: (raw.types || [])
       .map((t) => (typeof t === 'string' ? t : t.name?.en || t.name?.ar || ''))
       .filter(Boolean),
@@ -134,7 +136,7 @@ const transformProject = (raw) => {
         roleAr: castData.title || '',
         roleEn: castData.title || '',
         name: castData.name || '',
-        avatar: castData.avatar || '',
+        avatar: castData.photo || castData.avatar || '',
       };
     }),
     published: raw.published,

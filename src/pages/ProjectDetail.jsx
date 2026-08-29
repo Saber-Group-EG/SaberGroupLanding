@@ -114,16 +114,7 @@ const ProjectDetail = () => {
   let sectionCounter = 0;
   const nextSectionNum = () => { sectionCounter += 1; return String(sectionCounter).padStart(2, '0'); };
 
-  const creditsList = (project.cast?.length > 0 ? project.cast : [])
-    .map((c) => ({
-      name: c.castId?.name || c.name,
-      title: c.castId?.title || c.title,
-      photo: c.castId?.photo || c.photo,
-      avatar: c.castId?.photo || c.photo || c.avatar,
-      roleAr: c.castId?.title || c.roleAr,
-      roleEn: c.castId?.title || c.roleEn,
-    }))
-    .filter((c) => c.name);
+  const creditsList = (project.cast?.length > 0 ? project.cast : []).filter((c) => c.name);
 
   const scrollToSection = (index) => {
     if (sectionRefs.current[index]) {
@@ -249,14 +240,16 @@ const ProjectDetail = () => {
                   {categoryName || t('restaurants', 'Restaurants & Culinary')}
                 </div>
               </div>
+              {/* SERVICES - commented out for now
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('services', 'SERVICES')}</span>
                 <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
-                  {(project.tags || []).length > 0
-                    ? project.tags.map((tag, i) => <div key={i}>{tag}</div>)
+                  {(project.services || []).length > 0
+                    ? project.services.map((service, i) => <div key={i}>{service}</div>)
                     : <div>{t('photography', 'Photography')}</div>}
                 </div>
               </div>
+              */}
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('projectType', 'PROJECT TYPE')}</span>
                 <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
@@ -488,47 +481,39 @@ const ProjectDetail = () => {
 /* Before / After Comparison Slider */
 const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, isArabic }) => {
   const containerRef = useRef(null);
-  const [sliderPos, setSliderPos] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
+  const beforeClipRef = useRef(null);
+  const sliderLineRef = useRef(null);
+  const posRef = useRef(50);
 
-  const updatePosition = (clientX) => {
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setSliderPos(pct);
+  const lblBefore = beforeLabel || (isArabic ? 'قبل' : 'Before');
+  const lblAfter = afterLabel || (isArabic ? 'بعد' : 'After');
+
+  const setPosition = (pct) => {
+    const clamped = Math.max(0, Math.min(100, pct));
+    posRef.current = clamped;
+    if (beforeClipRef.current) beforeClipRef.current.style.clipPath = `inset(0 ${100 - clamped}% 0 0)`;
+    if (sliderLineRef.current) sliderLineRef.current.style.left = `${clamped}%`;
   };
 
   const handlePointerDown = (e) => {
     e.preventDefault();
-    setIsDragging(true);
-    updatePosition(e.clientX);
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    setPosition(((e.clientX - rect.left) / rect.width) * 100);
+
+    const onMove = (ev) => {
+      ev.preventDefault();
+      const r = container.getBoundingClientRect();
+      setPosition(((ev.clientX - r.left) / r.width) * 100);
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    updatePosition(e.clientX);
-  };
-
-  const handlePointerUp = () => setIsDragging(false);
-
-  useEffect(() => {
-    if (isDragging) {
-      const onMove = (e) => { e.preventDefault(); updatePosition(e.clientX); };
-      const onUp = () => setIsDragging(false);
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      return () => {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-    }
-  }, [isDragging]);
-
-  const lblBefore = beforeLabel || (isArabic ? 'قبل' : 'Before');
-  const lblAfter = afterLabel || (isArabic ? 'بعد' : 'After');
 
   return (
     <div
@@ -538,18 +523,16 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
     >
       {/* After image (full width background) */}
       {afterImage && (
-        <img src={afterImage} alt={lblAfter} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} />
+        <img src={afterImage} alt={lblAfter} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} loading="lazy" />
       )}
 
-      {/* Before image (clipped) */}
+      {/* Before image (clipped via clip-path, no re-render) */}
       {beforeImage && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ width: `${sliderPos}%` }}>
-          <img src={beforeImage} alt={lblBefore} className="absolute inset-0 w-full h-full object-cover" style={{ width: containerRef.current ? `${containerRef.current.offsetWidth}px` : '100vw', maxWidth: 'none' }} draggable={false} />
-        </div>
+        <img ref={beforeClipRef} src={beforeImage} alt={lblBefore} className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ clipPath: 'inset(0 50% 0 0)' }} draggable={false} loading="lazy" />
       )}
 
       {/* Slider line */}
-      <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10 pointer-events-none" style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}>
+      <div ref={sliderLineRef} className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10 pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)' }}>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-neutral-200">
           <div className="flex items-center gap-0">
             <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
