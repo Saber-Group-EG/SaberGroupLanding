@@ -56,13 +56,97 @@ const ProjectDetail = () => {
   const [openSectors, setOpenSectors] = useState({});
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [lightboxSectionItems, setLightboxSectionItems] = useState([]);
+  const [lightboxGroupIndex, setLightboxGroupIndex] = useState(0);
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', brand: '', notes: '' });
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, zoomX: 0, zoomY: 0 });
+  const lastTouchDistRef = useRef(0);
+  const lightboxImgRef = useRef(null);
 
   const toggleSector = (key) => setOpenSectors((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const sectionRefs = useRef([]);
+
+  const getAllPhotos = () => {
+    return renderableGroups.map((group) => {
+      if (group.type === 'before_after') {
+        const items = [];
+        if (group.before?.url) items.push({ url: group.before.url, caption: group.before.caption || 'Before', type: 'photo' });
+        if (group.after?.url) items.push({ url: group.after.url, caption: group.after.caption || 'After', type: 'photo' });
+        return items;
+      }
+      return (group.items || []).filter((item) => !(item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i)));
+    });
+  };
+
+  const resetZoom = () => { setZoomLevel(1); setZoomPosition({ x: 0, y: 0 }); };
+
+  const handleWheelZoom = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    setZoomLevel((prev) => {
+      const next = Math.max(1, Math.min(4, prev + delta));
+      if (next === 1) setZoomPosition({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    if (zoomLevel > 1) {
+      resetZoom();
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width - 0.5) * -100;
+      const y = ((e.clientY - rect.top) / rect.height - 0.5) * -100;
+      setZoomLevel(2.5);
+      setZoomPosition({ x, y });
+    }
+  };
+
+  const handleZoomMouseDown = (e) => {
+    if (zoomLevel <= 1) return;
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY, zoomX: zoomPosition.x, zoomY: zoomPosition.y };
+    const onMove = (ev) => {
+      const dx = ev.clientX - dragStartRef.current.x;
+      const dy = ev.clientY - dragStartRef.current.y;
+      const newX = Math.max(-100, Math.min(100, dragStartRef.current.zoomX + (dx / window.innerWidth) * 100));
+      const newY = Math.max(-100, Math.min(100, dragStartRef.current.zoomY + (dy / window.innerHeight) * 100));
+      setZoomPosition({ x: newX, y: newY });
+    };
+    const onUp = () => { setIsDragging(false); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDistRef.current = Math.sqrt(dx * dx + dy * dy);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const scale = dist / lastTouchDistRef.current;
+      lastTouchDistRef.current = dist;
+      setZoomLevel((prev) => Math.max(1, Math.min(4, prev * scale)));
+    }
+  };
+
+  const totalLightboxPhotos = lightboxPhoto?.totalPhotos || lightboxSectionItems.length;
+  const currentFlatIndex = (lightboxPhoto?.flatIndex ?? lightboxPhoto?.index ?? 0) + 1;
 
   useEffect(() => {
     sectionRefs.current = sectionRefs.current.slice(0, renderableGroups.length);
@@ -83,6 +167,28 @@ const ProjectDetail = () => {
     setFormSubmitted(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [slug, renderableGroups.length]);
+
+  useEffect(() => {
+    if (!lightboxPhoto) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') { isRtl ? handlePrevLightbox() : handleNextLightbox(); }
+      else if (e.key === 'ArrowLeft') { isRtl ? handleNextLightbox() : handlePrevLightbox(); }
+      else if (e.key === 'Escape') { setLightboxPhoto(null); resetZoom(); }
+      else if (e.key === '+' || e.key === '=') { setZoomLevel((prev) => Math.min(4, prev + 0.25)); }
+      else if (e.key === '-') { setZoomLevel((prev) => { const next = Math.max(1, prev - 0.25); if (next === 1) resetZoom(); return next; }); }
+      else if (e.key === '0') { resetZoom(); }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxPhoto, isRtl]);
+
+  useEffect(() => {
+    const img = lightboxImgRef.current;
+    if (!img || !lightboxPhoto) return;
+    const onWheel = (e) => { e.preventDefault(); handleWheelZoom(e); };
+    img.addEventListener('wheel', onWheel, { passive: false });
+    return () => img.removeEventListener('wheel', onWheel);
+  }, [lightboxPhoto]);
 
   if (loading && !project) {
     return (
@@ -127,18 +233,49 @@ const ProjectDetail = () => {
 
   const handleNextLightbox = (e) => {
     e?.stopPropagation();
-    if (lightboxPhoto && lightboxSectionItems.length > 0) {
-      const nextIdx = (lightboxPhoto.index + 1) % lightboxSectionItems.length;
-      setLightboxPhoto({ url: lightboxSectionItems[nextIdx].url, title: lightboxSectionItems[nextIdx].caption || lightboxSectionItems[nextIdx].altAr || `Photo #${nextIdx + 1}`, index: nextIdx });
+    resetZoom();
+    const allGroups = getAllPhotos();
+    if (allGroups.length === 0) return;
+    let groupIdx = lightboxGroupIndex;
+    let photoIdx = lightboxPhoto.index;
+    const currentGroup = allGroups[groupIdx];
+    if (photoIdx < currentGroup.length - 1) {
+      photoIdx += 1;
+    } else {
+      groupIdx = (groupIdx + 1) % allGroups.length;
+      photoIdx = 0;
     }
+    const item = allGroups[groupIdx][photoIdx];
+    const totalPhotos = allGroups.reduce((sum, g) => sum + g.length, 0);
+    let flatIndex = 0;
+    for (let i = 0; i < groupIdx; i++) flatIndex += allGroups[i].length;
+    flatIndex += photoIdx;
+    setLightboxGroupIndex(groupIdx);
+    setLightboxSectionItems(allGroups[groupIdx]);
+    setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx, flatIndex, totalPhotos });
   };
 
   const handlePrevLightbox = (e) => {
     e?.stopPropagation();
-    if (lightboxPhoto && lightboxSectionItems.length > 0) {
-      const prevIdx = (lightboxPhoto.index - 1 + lightboxSectionItems.length) % lightboxSectionItems.length;
-      setLightboxPhoto({ url: lightboxSectionItems[prevIdx].url, title: lightboxSectionItems[prevIdx].caption || lightboxSectionItems[prevIdx].altAr || `Photo #${prevIdx + 1}`, index: prevIdx });
+    resetZoom();
+    const allGroups = getAllPhotos();
+    if (allGroups.length === 0) return;
+    let groupIdx = lightboxGroupIndex;
+    let photoIdx = lightboxPhoto.index;
+    if (photoIdx > 0) {
+      photoIdx -= 1;
+    } else {
+      groupIdx = (groupIdx - 1 + allGroups.length) % allGroups.length;
+      photoIdx = allGroups[groupIdx].length - 1;
     }
+    const item = allGroups[groupIdx][photoIdx];
+    const totalPhotos = allGroups.reduce((sum, g) => sum + g.length, 0);
+    let flatIndex = 0;
+    for (let i = 0; i < groupIdx; i++) flatIndex += allGroups[i].length;
+    flatIndex += photoIdx;
+    setLightboxGroupIndex(groupIdx);
+    setLightboxSectionItems(allGroups[groupIdx]);
+    setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx, flatIndex, totalPhotos });
   };
 
   const handleFormSubmit = (e) => {
@@ -304,7 +441,7 @@ const ProjectDetail = () => {
                       {items.map((item, idx) => {
                         const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                         return (
-                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { setLightboxSectionItems(items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i)))); const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${photoIdx + 1}` : item.caption || `Photo #${photoIdx + 1}`, index: photoIdx >= 0 ? photoIdx : 0 }); })()} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
+                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
                             {isVideo ? (
                               <>
                                 <video src={item.url} muted loop playsInline poster={item.thumbnail} className="w-full h-full object-cover" />
@@ -442,22 +579,44 @@ const ProjectDetail = () => {
 
       {/* LIGHTBOX */}
       {lightboxPhoto && (
-        <div onClick={() => setLightboxPhoto(null)} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 select-none">
-          <button onClick={() => setLightboxPhoto(null)} className="absolute top-5 right-5 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"><X className="w-6 h-6" /></button>
+        <div onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 select-none">
+          <button onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="absolute top-5 right-5 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"><X className="w-6 h-6" /></button>
           <div className="absolute top-6 left-6 z-70 bg-neutral-900/90 text-white text-xs font-extrabold px-4 py-2 rounded-2xl backdrop-blur-md border border-neutral-700 flex items-center gap-3">
-            <span>{`Photo ${lightboxPhoto.index + 1} of ${lightboxSectionItems.length}`}</span>
+            <span>{`Photo ${currentFlatIndex} of ${totalLightboxPhotos}`}</span>
             <span className="text-neutral-500">|</span>
             <span className="text-neutral-300 max-w-xs truncate">{lightboxPhoto.title}</span>
+            {zoomLevel > 1 && <span className="text-red-400">{Math.round(zoomLevel * 100)}%</span>}
           </div>
           <button onClick={handlePrevLightbox} className="absolute left-4 top-1/2 -translate-y-1/2 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
             {isRtl ? <ArrowRight className="w-6 h-6" /> : <ArrowLeft className="w-6 h-6" />}
           </button>
-          <div onClick={(e) => e.stopPropagation()} className="relative max-w-6xl max-h-[88vh] flex items-center justify-center">
-            <img src={lightboxPhoto.url} alt={lightboxPhoto.title} className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl border border-white/10" />
+          <div onClick={(e) => e.stopPropagation()} className="relative max-w-6xl max-h-[88vh] flex items-center justify-center overflow-hidden">
+            <img
+              ref={lightboxImgRef}
+              src={lightboxPhoto.url}
+              alt={lightboxPhoto.title}
+              className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+              style={{
+                transform: `scale(${zoomLevel}) translate(${zoomPosition.x}%, ${zoomPosition.y}%)`,
+                transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+                cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+              }}
+              onWheel={handleWheelZoom}
+              onDoubleClick={handleDoubleClick}
+              onMouseDown={handleZoomMouseDown}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              draggable={false}
+            />
           </div>
           <button onClick={handleNextLightbox} className="absolute right-4 top-1/2 -translate-y-1/2 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
             {isRtl ? <ArrowLeft className="w-6 h-6" /> : <ArrowRight className="w-6 h-6" />}
           </button>
+          {zoomLevel > 1 && (
+            <button onClick={(e) => { e.stopPropagation(); resetZoom(); }} className="absolute bottom-6 left-1/2 -translate-x-1/2 z-70 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors cursor-pointer backdrop-blur-md border border-white/10">
+              Reset Zoom
+            </button>
+          )}
         </div>
       )}
 
