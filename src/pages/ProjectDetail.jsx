@@ -673,17 +673,22 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-[440px] sm:max-w-[500px] mx-auto aspect-[4/6] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
+      className="relative w-full overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
       onPointerDown={handlePointerDown}
     >
-      {/* After image (full width background) */}
+      {/* Spacer image - defines correct container height */}
       {afterImage && (
-        <img src={afterImage} alt={lblAfter} className="absolute inset-0 w-full h-full object-cover pointer-events-none" draggable={false} loading="lazy" />
+        <img src={afterImage} alt="" className="w-full h-auto block pointer-events-none" style={{ visibility: 'hidden' }} draggable={false} loading="lazy" />
       )}
 
-      {/* Before image (clipped via clip-path, no re-render) */}
+      {/* After image */}
+      {afterImage && (
+        <img src={afterImage} alt={lblAfter} className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ objectFit: 'cover', objectPosition: 'center' }} draggable={false} loading="lazy" />
+      )}
+
+      {/* Before image (clipped via clip-path) */}
       {beforeImage && (
-        <img ref={beforeClipRef} src={beforeImage} alt={lblBefore} className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ clipPath: 'inset(0 50% 0 0)' }} draggable={false} loading="lazy" />
+        <img ref={beforeClipRef} src={beforeImage} alt={lblBefore} className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ objectFit: 'cover', objectPosition: 'center', clipPath: 'inset(0 50% 0 0)' }} draggable={false} loading="lazy" />
       )}
 
       {/* Slider line */}
