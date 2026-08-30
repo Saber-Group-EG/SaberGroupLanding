@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { getEnSlug } from '../../utils/slug';
+import { getProxiedCoverUrl } from '../../utils/imageProxy';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
 const CACHE_KEY = 'saber_projects_cache_v2';
@@ -90,7 +91,8 @@ const transformProject = (raw) => {
     });
   }
 
-  const coverImage = raw.mainCover?.url || (photos.length > 0 ? photos[0].url : '');
+  const rawCoverUrl = raw.mainCover?.url || (photos.length > 0 ? photos[0].url : '');
+  const coverImage = getProxiedCoverUrl(rawCoverUrl, { width: 800, quality: 75 });
   const fullMainCover = raw.fullMainCover || null;
   const galleryImages = photos.map((p) => p.url);
 
