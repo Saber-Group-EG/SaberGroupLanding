@@ -24,6 +24,7 @@ import {
   Send,
   MessageSquare,
   Check,
+  MapPin,
 } from 'lucide-react';
 
 const ProjectDetail = () => {
@@ -352,13 +353,26 @@ const ProjectDetail = () => {
               <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed max-w-2xl font-normal">
                 {isArabic ? project.descriptionAr : project.descriptionEn}
               </p>
+              {(project.services || []).length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  {project.services.map((service, i) => (
+                    <React.Fragment key={i}>
+                      <span className="text-[11px] sm:text-xs font-bold text-neutral-700">{service}</span>
+                      {i < project.services.length - 1 && <span className="text-neutral-300">|</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 sm:pt-5 border-t border-neutral-200">
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('client', 'CLIENT')}</span>
                 <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{project.clientName || 'La Chocolatier Group'}</div>
-                <div className="text-[10.5px] sm:text-[11px] text-neutral-500 font-medium">{isArabic ? project.locationAr : project.locationEn}</div>
+                <div className="flex items-center gap-1 text-[10.5px] sm:text-[11px] text-neutral-500 font-medium">
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  <span>{isArabic ? project.locationAr : project.locationEn}</span>
+                </div>
               </div>
               {project.shootedAt && (
                 <div className="space-y-0.5 sm:space-y-1">
@@ -388,12 +402,6 @@ const ProjectDetail = () => {
                   </div>
                 </div>
               )}
-              <div className="space-y-0.5 sm:space-y-1">
-                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('projectType', 'PROJECT TYPE')}</span>
-                <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
-                  {(project.services || []).map((service, i) => <div key={i}>{service}</div>)}
-                </div>
-              </div>
             </div>
 
             <div className="grid grid-cols-3 pt-4 sm:pt-6 border-t border-neutral-200">
