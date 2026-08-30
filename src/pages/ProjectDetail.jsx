@@ -42,6 +42,7 @@ const ProjectDetail = () => {
   const loading = useSelector(selectProjectsLoading);
   const project = useSelector((state) => selectProjectBySlug(state, slug));
   const relatedProjects = useSelector((state) => selectRelatedProjects(state, slug));
+  const allProjects = useSelector(selectAllProjects);
 
   const categoryName = project?.sectorId || '';
 
@@ -373,16 +374,20 @@ const ProjectDetail = () => {
                   {categoryName || t('restaurants', 'Restaurants & Culinary')}
                 </div>
               </div>
-              {/* SERVICES - commented out for now
-              <div className="space-y-0.5 sm:space-y-1">
-                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('services', 'SERVICES')}</span>
-                <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
-                  {(project.services || []).length > 0
-                    ? project.services.map((service, i) => <div key={i}>{service}</div>)
-                    : <div>{t('photography', 'Photography')}</div>}
+              {/* SUB SECTORS */}
+              {(project.subcategories || []).length > 0 && (
+                <div className="space-y-0.5 sm:space-y-1">
+                  <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('subSectors', 'SUB SECTORS')}</span>
+                  <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
+                    {project.subcategories.map((sub, i) => {
+                      const name = typeof sub === 'string'
+                        ? (allProjects.find((p) => p.id === sub) ? (isArabic ? allProjects.find((p) => p.id === sub).titleAr : allProjects.find((p) => p.id === sub).titleEn) : sub)
+                        : (isArabic ? sub.name?.ar : sub.name?.en) || sub.name?.en || sub.name?.ar || sub._id || '';
+                      return <div key={i}>{name}</div>;
+                    })}
+                  </div>
                 </div>
-              </div>
-              */}
+              )}
               <div className="space-y-0.5 sm:space-y-1">
                 <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('projectType', 'PROJECT TYPE')}</span>
                 <div className="space-y-0.5 text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">

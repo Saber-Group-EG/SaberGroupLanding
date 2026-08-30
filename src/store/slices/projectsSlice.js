@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getEnSlug } from '../../utils/slug';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
-const CACHE_KEY = 'saber_projects_cache';
+const CACHE_KEY = 'saber_projects_cache_v2';
 
 const loadFromCache = () => {
   try {
@@ -142,6 +142,7 @@ const transformProject = (raw) => {
     published: raw.published,
     createdAt: raw.createdAt,
     parentProject: raw.parentProject,
+    subcategories: Array.isArray(raw.subcategories) ? raw.subcategories : [],
     _raw: raw,
   };
 };
