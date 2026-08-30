@@ -37,7 +37,7 @@ const Portfolio = () => {
 
   // Portfolio list state
   const [selectedSectorId, setSelectedSectorId] = useState('all');
-  const [selectedTag, setSelectedTag] = useState('all');
+  const [selectedTags, setSelectedTags] = useState([]);
   const [sortBy, setSortBy] = useState('newest');
   const [categoryOverflow, setCategoryOverflow] = useState(false);
   const [tagOverflow, setTagOverflow] = useState(false);
@@ -73,7 +73,34 @@ const Portfolio = () => {
     } else {
       setSelectedSectorId(sector);
     }
-    setSelectedTag('all');
+    setSelectedTags([]);
+  };
+
+  const handleTagChange = (tag) => {
+    const isSelected = selectedTags.includes(tag);
+    let newTags;
+
+    if (isSelected) {
+      newTags = selectedTags.filter((t) => t !== tag);
+    } else {
+      newTags = [...selectedTags, tag];
+    }
+
+    setSelectedTags(newTags);
+
+    if (newTags.length === 0) {
+      setSelectedSectorId('all');
+    } else if (!isSelected) {
+      const matchingProject = publishedProjects.find((p) => {
+        const subs = (p.subcategories || []).map((sub) =>
+          typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || ''
+        );
+        return subs.some((name) => name.toLowerCase() === tag.toLowerCase());
+      });
+      if (matchingProject?.sectorId) {
+        setSelectedSectorId(matchingProject.sectorId.trim().toLowerCase());
+      }
+    }
   };
 
   const scrollContainer = (ref, direction) => {
@@ -84,10 +111,10 @@ const Portfolio = () => {
 
   const filteredProjects = publishedProjects.filter((proj) => {
     if (selectedSectorId !== 'all' && proj.sectorId?.trim().toLowerCase() !== selectedSectorId) return false;
-    if (selectedTag !== 'all') {
+    if (selectedTags.length > 0) {
       const matchSubcategory = (proj.subcategories || []).some((sub) => {
         const name = typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '';
-        return name.toLowerCase() === selectedTag.toLowerCase();
+        return selectedTags.some((t) => t.toLowerCase() === name.toLowerCase());
       });
       if (!matchSubcategory) return false;
     }
@@ -243,9 +270,9 @@ const Portfolio = () => {
             )}
             <div ref={tagScrollRef} className="flex items-center gap-2 sm:gap-2.5 py-1 overflow-x-auto scrollbar-hide">
               {allTags.map((tag) => {
-                const isActive = selectedTag === tag;
+                const isActive = selectedTags.includes(tag);
                 return (
-                  <button key={tag} onClick={() => setSelectedTag(isActive ? 'all' : tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
+                  <button key={tag} onClick={() => handleTagChange(tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
                     {tag}
                   </button>
                 );
@@ -288,7 +315,7 @@ const Portfolio = () => {
             <div className="bg-neutral-50 p-12 text-center rounded-[4px] border border-neutral-200 space-y-3">
               <Camera className="w-10 h-10 text-neutral-400 mx-auto stroke-1" />
               <h3 className="text-base font-bold text-neutral-800">{t('noProjects', 'No projects match your selected filter')}</h3>
-              <button onClick={() => { setSelectedSectorId('all'); setSelectedTag('all'); }} className="px-4 py-2 bg-neutral-950 text-white text-xs font-bold rounded-[3px] mt-2 cursor-pointer hover:bg-neutral-800">
+              <button onClick={() => { setSelectedSectorId('all'); setSelectedTags([]); }} className="px-4 py-2 bg-neutral-950 text-white text-xs font-bold rounded-[3px] mt-2 cursor-pointer hover:bg-neutral-800">
                 {t('viewAllProjects', 'View All Projects')}
               </button>
             </div>
