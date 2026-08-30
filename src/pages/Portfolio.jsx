@@ -45,8 +45,12 @@ const Portfolio = () => {
   const categoryScrollRef = useRef(null);
   const tagScrollRef = useRef(null);
 
+  const sectorProjects = selectedSectorId === 'all'
+    ? publishedProjects
+    : publishedProjects.filter((p) => p.sectorId?.trim().toLowerCase() === selectedSectorId);
+
   const allTags = Array.from(
-    new Set(publishedProjects.flatMap((p) => p.tags || []))
+    new Set(sectorProjects.flatMap((p) => (p.subcategories || []).map((sub) => (typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '')).filter(Boolean)))
   );
 
   useEffect(() => {
@@ -63,6 +67,15 @@ const Portfolio = () => {
     return () => window.removeEventListener('resize', checkOverflow);
   }, [allCategories.length, allTags.length]);
 
+  const handleSectorChange = (sector) => {
+    if (sector === selectedSectorId) {
+      setSelectedSectorId('all');
+    } else {
+      setSelectedSectorId(sector);
+    }
+    setSelectedTag('all');
+  };
+
   const scrollContainer = (ref, direction) => {
     if (ref.current) {
       ref.current.scrollBy({ left: direction * 200, behavior: 'smooth' });
@@ -72,8 +85,11 @@ const Portfolio = () => {
   const filteredProjects = publishedProjects.filter((proj) => {
     if (selectedSectorId !== 'all' && proj.sectorId?.trim().toLowerCase() !== selectedSectorId) return false;
     if (selectedTag !== 'all') {
-      const matchTag = proj.tags.some((tg) => tg.toLowerCase() === selectedTag.toLowerCase());
-      if (!matchTag) return false;
+      const matchSubcategory = (proj.subcategories || []).some((sub) => {
+        const name = typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '';
+        return name.toLowerCase() === selectedTag.toLowerCase();
+      });
+      if (!matchSubcategory) return false;
     }
     return true;
   });
@@ -194,14 +210,14 @@ const Portfolio = () => {
               </button>
             )}
             <div ref={categoryScrollRef} className="flex items-center gap-4 sm:gap-6 lg:gap-8 py-2 overflow-x-auto scrollbar-hide">
-              <button onClick={() => setSelectedSectorId('all')} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${selectedSectorId === 'all' ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
+              <button onClick={() => handleSectorChange('all')} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${selectedSectorId === 'all' ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
                 <span>{t('all', 'ALL')}</span>
                 {selectedSectorId === 'all' && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
               </button>
               {allCategories.map((cat) => {
                 const isActive = selectedSectorId === cat;
                 return (
-                  <button key={cat} onClick={() => setSelectedSectorId(cat)} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${isActive ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
+                  <button key={cat} onClick={() => handleSectorChange(cat)} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${isActive ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
                     <span>{cat}</span>
                     {isActive && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
                   </button>
@@ -216,10 +232,10 @@ const Portfolio = () => {
           </div>
         </section>
 
-        {/* TAG FILTER */}
+        {/* SUBCATEGORY FILTER */}
         <section className="space-y-3">
-          <div className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en">{t('filterByTag', 'FILTER BY TAG')}</div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="text-[11px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en">{t('filterByTag', 'FILTER BY TYPE')}</div>
+          <div className="flex items-center justify-start gap-2">
             {tagOverflow && (
               <button onClick={() => scrollContainer(tagScrollRef, -1)} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-50 transition-colors cursor-pointer shrink-0">
                 <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -230,7 +246,7 @@ const Portfolio = () => {
                 const isActive = selectedTag === tag;
                 return (
                   <button key={tag} onClick={() => setSelectedTag(isActive ? 'all' : tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
-                    #{tag}
+                    {tag}
                   </button>
                 );
               })}
@@ -293,7 +309,7 @@ const Portfolio = () => {
                             {isArabic ? proj.titleAr : proj.titleEn}
                           </h3>
                           <div className="h-[1px] bg-neutral-200/70 my-2.5 sm:my-2 w-full" />
-                          <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{proj.clientName || 'La Chocolatier Group'}</p>
+                          <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{proj.clientName || ''}</p>
                           <p className="text-[11px] sm:text-[11px] text-neutral-600 sm:text-neutral-500 leading-relaxed line-clamp-2 sm:line-clamp-2 mt-1.5 font-normal">
                             {isArabic ? proj.descriptionAr : proj.descriptionEn}
                           </p>
