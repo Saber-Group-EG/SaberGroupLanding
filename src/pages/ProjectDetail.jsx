@@ -45,7 +45,7 @@ const ProjectDetail = () => {
   const relatedProjects = useSelector((state) => selectRelatedProjects(state, slug));
   const allProjects = useSelector(selectAllProjects);
 
-  const categoryName = project?.sectorId || '';
+  const categoryName = isArabic ? (project?.categoryNameAr || project?.sectorId || '') : (project?.sectorId || '');
 
   const mediaGroups = project?.mediaGroups || [];
   const renderableGroups = mediaGroups.filter((g) => g.type === 'bulk' || g.type === 'photo' || g.type === 'before_after');
@@ -108,6 +108,11 @@ const ProjectDetail = () => {
       .map((group) => {
         return (group.items || []).filter((item) => !(item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i)));
       });
+  };
+
+  const getCaption = (item, fallback) => {
+    const caption = isArabic ? (item.captionAr || item.caption) : item.caption;
+    return caption || fallback;
   };
 
   const resetZoom = () => { setZoomLevel(1); setZoomPosition({ x: 0, y: 0 }); };
@@ -279,7 +284,7 @@ const ProjectDetail = () => {
     flatIndex += photoIdx;
     setLightboxGroupIndex(groupIdx);
     setLightboxSectionItems(allGroups[groupIdx]);
-    setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx, flatIndex, totalPhotos });
+    setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx, flatIndex, totalPhotos });
   };
 
   const handlePrevLightbox = (e) => {
@@ -302,7 +307,7 @@ const ProjectDetail = () => {
     flatIndex += photoIdx;
     setLightboxGroupIndex(groupIdx);
     setLightboxSectionItems(allGroups[groupIdx]);
-    setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx, flatIndex, totalPhotos });
+    setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx, flatIndex, totalPhotos });
   };
 
   const handleFormSubmit = (e) => {
@@ -368,7 +373,7 @@ const ProjectDetail = () => {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-600 inline-block shrink-0" />
                 <span className="text-[10.5px] sm:text-xs font-black tracking-wider uppercase text-neutral-950 font-sans-en truncate">
-                  {project.sectorId || t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN')}
+                  {isArabic ? (project.categoryNameAr || project.sectorId || t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN')) : (project.sectorId || t('foodStylingCommercial', 'FOOD STYLING / COMMERCIAL CAMPAIGN'))}
                 </span>
               </div>
               {/* <div className="text-[9.5px] sm:text-[11px] font-bold tracking-widest uppercase text-neutral-700 px-2 py-0.5 border border-neutral-300 rounded-[2px] font-sans-en shrink-0">{t('productionArchive', 'PRODUCTION ARCHIVE / 2026')}</div> */}
@@ -384,10 +389,10 @@ const ProjectDetail = () => {
               </p>
               {(project.services || []).length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  {project.services.map((service, i) => (
+                  {(isArabic ? (project.servicesAr || project.services) : project.services).map((service, i) => (
                     <React.Fragment key={i}>
                       <span className="text-[11px] sm:text-xs font-bold text-neutral-700">{service}</span>
-                      {i < project.services.length - 1 && <span className="text-neutral-300">|</span>}
+                      {i < (isArabic ? (project.servicesAr || project.services) : project.services).length - 1 && <span className="text-neutral-300">|</span>}
                     </React.Fragment>
                   ))}
                 </div>
@@ -400,7 +405,7 @@ const ProjectDetail = () => {
                   {project.clientName && (
                     <>
                       <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('client', 'CLIENT')}</span>
-                      <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{project.clientName}</div>
+                      <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{isArabic ? project.clientNameAr : project.clientName}</div>
                     </>
                   )}
                   <div className="flex items-center gap-1 text-[10.5px] sm:text-[11px] text-neutral-500 font-medium">
@@ -471,7 +476,7 @@ const ProjectDetail = () => {
               const totalSections = filteredGroups.length;
               return (
                 <div key={groupIdx} ref={(el) => { sectionRefs.current[groupIdx] = el; }}>
-                  <SectorAccordion number={num} title={isArabic ? group.title || `المجموعة ${groupIdx + 1}` : group.title || `Group ${groupIdx + 1}`} description={isArabic ? group.descriptionAr : group.descriptionEn} count={isBeforeAfter ? 2 : items.length} countLabel={isBeforeAfter ? t('photosLabel', 'PHOTOS') : allVideos ? t('reelsLabel', 'VIDEOS') : t('photosLabel', 'PHOTOS')} currentSection={groupIdx + 1} totalSections={totalSections} onPrev={() => scrollToSection(groupIdx - 1)} onNext={() => scrollToSection(groupIdx + 1)} hasPrev={groupIdx > 0} hasNext={groupIdx < totalSections - 1} isOpen={!!openSectors[`group_${groupIdx}`]} onToggle={() => setOpenSectors((prev) => ({ ...prev, [`group_${groupIdx}`]: !prev[`group_${groupIdx}`] }))}>
+                  <SectorAccordion number={num} title={isArabic ? group.titleAr || `المجموعة ${groupIdx + 1}` : group.title || `Group ${groupIdx + 1}`} description={isArabic ? group.descriptionAr : group.descriptionEn} count={isBeforeAfter ? 2 : items.length} countLabel={isBeforeAfter ? t('photosLabel', 'PHOTOS') : allVideos ? t('reelsLabel', 'VIDEOS') : t('photosLabel', 'PHOTOS')} currentSection={groupIdx + 1} totalSections={totalSections} onPrev={() => scrollToSection(groupIdx - 1)} onNext={() => scrollToSection(groupIdx + 1)} hasPrev={groupIdx > 0} hasNext={groupIdx < totalSections - 1} isOpen={!!openSectors[`group_${groupIdx}`]} onToggle={() => setOpenSectors((prev) => ({ ...prev, [`group_${groupIdx}`]: !prev[`group_${groupIdx}`] }))}>
                   {isBeforeAfter ? (
                     <BeforeAfterSlider
                       beforeImage={group.before?.url}
@@ -485,7 +490,7 @@ const ProjectDetail = () => {
                       {items.map((item, idx) => {
                         const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                         return (
-                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs`}>
+                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs`}>
                             {isVideo ? (
                               <>
                                 <video src={item.url} muted loop playsInline poster={item.thumbnail} onLoadedMetadata={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover" />
@@ -499,7 +504,7 @@ const ProjectDetail = () => {
                               <img src={item.thumbnail || item.url} alt={item.caption || ''} onLoad={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                             )}
                             <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
-                              <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? item.caption : item.caption}</span>
+                              <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? (item.captionAr || item.caption) : item.caption}</span>
                               <span className="text-[9px] text-red-400 font-bold mt-1 flex items-center gap-1">
                                 {isVideo ? <><Play className="w-2.5 h-2.5" />{t('playVideo', 'Play video')}</> : <><Maximize2 className="w-2.5 h-2.5" />{t('viewFullSize', 'View full size')}</>}
                               </span>
@@ -610,7 +615,7 @@ const ProjectDetail = () => {
                       <img src={rel.coverImage} alt="" className="w-11 h-11 rounded-[2px] object-cover shrink-0" />
                       <div className="overflow-hidden">
                         <h5 className="text-xs font-bold text-neutral-950 truncate">{isArabic ? rel.titleAr : rel.titleEn}</h5>
-                        <p className="text-[10px] text-neutral-500 truncate mt-0.5">{rel.clientName || rel.tags?.slice(0, 2).join(', ')}</p>
+                        <p className="text-[10px] text-neutral-500 truncate mt-0.5">{isArabic ? rel.clientNameAr : rel.clientName || rel.tags?.slice(0, 2).join(', ')}</p>
                       </div>
                     </div>
                   ))}

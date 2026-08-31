@@ -42,37 +42,41 @@ const transformProject = (raw) => {
   if (Array.isArray(raw.material)) {
     raw.material.forEach((mat) => {
       const caption = resolveBilingual(mat.caption);
+      const captionAr = mat.caption?.ar || mat.caption?.name?.ar || caption;
       if (mat.type === 'bulk' && Array.isArray(mat.items)) {
         const items = mat.items.map((item) => ({
           url: item.url,
           thumbnail: item.thumbnail || item.url,
           caption: resolveBilingual(item.caption) || caption,
+          captionAr: item.caption?.ar || item.caption?.name?.ar || captionAr,
           type: item.type || (item.url?.match(/\.(mp4|webm|ogg)$/i) ? 'video' : 'photo'),
         }));
         const bulkVideos = items.filter((item) => item.type === 'video');
         const bulkPhotos = items.filter((item) => item.type !== 'video');
         videos.push(...bulkVideos);
         photos.push(...bulkPhotos);
-        mediaGroups.push({ title: caption || 'Media', type: 'bulk', items });
+        mediaGroups.push({ title: caption || 'Media', titleAr: captionAr || 'الوسائط', type: 'bulk', items });
       } else if (mat.type === 'photo' && mat.url) {
-        const photo = { url: mat.url, thumbnail: mat.thumbnail || mat.url, caption, type: 'photo' };
+        const photo = { url: mat.url, thumbnail: mat.thumbnail || mat.url, caption, captionAr, type: 'photo' };
         photos.push(photo);
-        mediaGroups.push({ title: caption || 'Photo', type: 'bulk', items: [photo] });
+        mediaGroups.push({ title: caption || 'Photo', titleAr: captionAr || 'صورة', type: 'bulk', items: [photo] });
       } else if (mat.type === 'video' && mat.url) {
-        const video = { url: mat.url, thumbnail: mat.thumbnail || '', caption, type: 'video' };
+        const video = { url: mat.url, thumbnail: mat.thumbnail || '', caption, captionAr, type: 'video' };
         videos.push(video);
-        mediaGroups.push({ title: caption || 'Video', type: 'bulk', items: [video] });
+        mediaGroups.push({ title: caption || 'Video', titleAr: captionAr || 'فيديو', type: 'bulk', items: [video] });
       } else if (mat.type === 'before_after') {
         const beforeItem = mat.before?.url ? {
           url: mat.before.url,
           thumbnail: mat.before.thumbnail || mat.before.url,
           caption: resolveBilingual(mat.before.label) || resolveBilingual(mat.caption) || 'Before',
+          captionAr: mat.before.label?.ar || mat.caption?.ar || 'قبل',
           type: 'photo',
         } : null;
         const afterItem = mat.after?.url ? {
           url: mat.after.url,
           thumbnail: mat.after.thumbnail || mat.after.url,
           caption: resolveBilingual(mat.after.label) || resolveBilingual(mat.caption) || 'After',
+          captionAr: mat.after.label?.ar || mat.caption?.ar || 'بعد',
           type: 'photo',
         } : null;
         const baItems = [beforeItem, afterItem].filter(Boolean);
@@ -80,10 +84,12 @@ const transformProject = (raw) => {
           photos.push(...baItems);
           mediaGroups.push({
             title: caption || 'Before & After',
+            titleAr: captionAr || 'قبل وبعد',
             type: 'before_after',
             before: beforeItem,
             after: afterItem,
             caption,
+            captionAr,
             items: baItems,
           });
         }
@@ -110,6 +116,7 @@ const transformProject = (raw) => {
     videos,
     mediaGroups,
     clientName: resolveBilingual(raw.company),
+    clientNameAr: raw.company?.ar || raw.company?.name?.ar || resolveBilingual(raw.company),
     locationAr: raw.location?.ar || (typeof raw.location === 'string' ? raw.location : ''),
     locationEn: raw.location?.en || (typeof raw.location === 'string' ? raw.location : ''),
     location: resolveBilingual(raw.location),
@@ -120,6 +127,9 @@ const transformProject = (raw) => {
     ].map((t) => (typeof t === 'string' ? t : t.en || t.ar || '')).filter(Boolean),
     services: (raw.types || [])
       .map((t) => (typeof t === 'string' ? t : t.name?.en || t.name?.ar || ''))
+      .filter(Boolean),
+    servicesAr: (raw.types || [])
+      .map((t) => (typeof t === 'string' ? t : t.name?.ar || t.name?.en || ''))
       .filter(Boolean),
     sectorId: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),
     mainCategory: (raw.categories?.[0]?.name?.en || raw.categories?.[0] || 'all'),
@@ -145,6 +155,10 @@ const transformProject = (raw) => {
     createdAt: raw.createdAt,
     parentProject: raw.parentProject,
     subcategories: Array.isArray(raw.subcategories) ? raw.subcategories : [],
+    subcategoriesAr: (raw.subcategories || []).map((sub) => {
+      if (typeof sub === 'string') return sub;
+      return sub.name?.ar || sub.name?.en || sub._id || '';
+    }).filter(Boolean),
     _raw: raw,
   };
 };

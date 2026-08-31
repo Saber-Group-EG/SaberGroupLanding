@@ -26,6 +26,8 @@
   "client": "العميل",
   "date": "التاريخ",
   "sector": "القطاع",
+  "sectordetails": "القطاع",
+  "subSectors": "الأقسام الفرعية",
   "category": "الفئة",
   "services": "الوسوم",
   "projectType": "نوع المشروع",
