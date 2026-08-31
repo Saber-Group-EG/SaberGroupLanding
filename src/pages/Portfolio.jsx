@@ -334,7 +334,7 @@ const Portfolio = () => {
                             {isArabic ? proj.titleAr : proj.titleEn}
                           </h3>
                           <div className="h-[1px] bg-neutral-200/70 my-2.5 sm:my-2 w-full" />
-                          <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{proj.clientName || ''}</p>
+                          <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{isArabic ? proj.clientNameAr : proj.clientName || ''}</p>
                           <p className="text-[11px] sm:text-[11px] text-neutral-600 sm:text-neutral-500 leading-relaxed line-clamp-2 sm:line-clamp-2 mt-1.5 font-normal">
                             {isArabic ? proj.descriptionAr : proj.descriptionEn}
                           </p>
