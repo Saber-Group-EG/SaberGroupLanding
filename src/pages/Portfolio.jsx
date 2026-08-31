@@ -88,9 +88,7 @@ const Portfolio = () => {
 
     setSelectedTags(newTags);
 
-    if (newTags.length === 0) {
-      setSelectedSectorId('all');
-    } else if (!isSelected) {
+    if (newTags.length > 0 && !isSelected) {
       const matchingProject = publishedProjects.find((p) => {
         const subs = (p.subcategories || []).map((sub) =>
           typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || ''

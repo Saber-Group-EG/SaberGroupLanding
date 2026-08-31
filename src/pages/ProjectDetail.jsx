@@ -68,6 +68,35 @@ const ProjectDetail = () => {
   const dragStartRef = useRef({ x: 0, y: 0, zoomX: 0, zoomY: 0 });
   const lastTouchDistRef = useRef(0);
   const lightboxImgRef = useRef(null);
+  const [aspectRatios, setAspectRatios] = useState({});
+
+  const getAspectClass = (url) => {
+    const ratio = aspectRatios[url];
+    if (!ratio) return 'aspect-[4/5]';
+    const { width, height } = ratio;
+    if (width === 0 || height === 0) return 'aspect-[4/5]';
+    const r = width / height;
+    return r < 0.65 ? 'aspect-[9/16]' : 'aspect-[4/5]';
+  };
+
+  const handleMediaLoad = (url, e) => {
+    const target = e.target;
+    let w = 0;
+    let h = 0;
+    if (target.tagName === 'IMG') {
+      w = target.naturalWidth;
+      h = target.naturalHeight;
+    } else if (target.tagName === 'VIDEO') {
+      w = target.videoWidth;
+      h = target.videoHeight;
+    }
+    if (w > 0 && h > 0) {
+      setAspectRatios((prev) => {
+        if (prev[url]) return prev;
+        return { ...prev, [url]: { width: w, height: h } };
+      });
+    }
+  };
 
   const toggleSector = (key) => setOpenSectors((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -456,10 +485,10 @@ const ProjectDetail = () => {
                       {items.map((item, idx) => {
                         const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                         return (
-                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className="group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer aspect-4/5 shadow-2xs">
+                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: isArabic ? item.caption || `لقطة #${flatIndex + 1}` : item.caption || `Photo #${flatIndex + 1}`, index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs`}>
                             {isVideo ? (
                               <>
-                                <video src={item.url} muted loop playsInline poster={item.thumbnail} className="w-full h-full object-cover" />
+                                <video src={item.url} muted loop playsInline poster={item.thumbnail} onLoadedMetadata={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 flex items-center justify-center">
                                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20 shadow-lg">
                                     <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white ml-0.5" fill="white" />
@@ -467,7 +496,7 @@ const ProjectDetail = () => {
                                 </div>
                               </>
                             ) : (
-                              <img src={item.thumbnail || item.url} alt={item.caption || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                              <img src={item.thumbnail || item.url} alt={item.caption || ''} onLoad={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                             )}
                             <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
                               <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? item.caption : item.caption}</span>
