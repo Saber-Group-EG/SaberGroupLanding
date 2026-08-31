@@ -389,7 +389,7 @@ const ProjectDetail = () => {
                 </div>
               )}
               <div className="space-y-0.5 sm:space-y-1">
-                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('sector', 'SECTOR')}</span>
+                <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('sectordetails', 'SECTOR')}</span>
                 <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">
                   {categoryName || t('restaurants', 'Restaurants & Culinary')}
                 </div>
