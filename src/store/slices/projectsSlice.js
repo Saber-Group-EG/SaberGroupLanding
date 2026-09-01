@@ -4,7 +4,7 @@ import { getEnSlug } from '../../utils/slug';
 import { getProxiedCoverUrl } from '../../utils/imageProxy';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
-const CACHE_KEY = 'saber_projects_cache_v2';
+const CACHE_KEY = 'saber_projects_cache_v3';
 
 const loadFromCache = () => {
   try {
@@ -143,12 +143,12 @@ const transformProject = (raw) => {
     reelsCount: videos.length,
     shootedAt: resolveBilingual(raw.shootedAt) || raw.shootedAt || '',
     cast: (raw.cast || []).map((c) => {
-      const castData = c.castId || c;
+      const castData = typeof c.castId === 'object' && c.castId !== null ? c.castId : c;
       return {
-        roleAr: castData.title || '',
-        roleEn: castData.title || '',
-        name: castData.name || '',
-        avatar: castData.photo || castData.avatar || '',
+        roleAr: c.title || castData.titleAr || castData.title || '',
+        roleEn: c.title || castData.titleEn || castData.title || '',
+        name: castData.name || c.castId?.name || '',
+        avatar: castData.photo || castData.avatar || c.castId?.photo || '',
       };
     }),
     published: raw.published,
