@@ -252,7 +252,7 @@ const ProjectDetail = () => {
   let sectionCounter = 0;
   const nextSectionNum = () => { sectionCounter += 1; return String(sectionCounter).padStart(2, '0'); };
 
-  const creditsList = (project.cast?.length > 0 ? project.cast : []).filter((c) => c.name);
+  const creditsList = (project.cast?.length > 0 ? project.cast : []).filter((c) => Array.isArray(c.name) ? c.name.length > 0 : !!c.name);
 
   const scrollToSection = (index) => {
     if (sectionRefs.current[index]) {
@@ -592,12 +592,12 @@ const ProjectDetail = () => {
                           <img src={cred.avatar} alt={cred.name} className="w-7 h-7 rounded-full object-cover shrink-0 border border-neutral-200 shadow-2xs" loading="lazy" />
                         ) : (
                           <div className="w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center shrink-0 text-[10px] font-bold">
-                            {cred.name?.charAt(0)?.toUpperCase() || '?'}
+                            {(Array.isArray(cred.name) ? cred.name[0] : cred.name)?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                         )}
                         <div className="overflow-hidden">
-                          <span className="text-[9.5px] font-bold text-neutral-500 block truncate">{isArabic ? cred.roleAr : cred.roleEn}</span>
-                          <span className="text-xs font-bold text-neutral-950 block truncate">{cred.name}</span>
+                          <span className="text-[9.5px] font-bold text-neutral-500 block truncate">{Array.isArray(isArabic ? cred.roleAr : cred.roleEn) ? (isArabic ? cred.roleAr : cred.roleEn).join(', ') : (isArabic ? cred.roleAr : cred.roleEn)}</span>
+                          <span className="text-xs font-bold text-neutral-950 block truncate">{Array.isArray(cred.name) ? cred.name.join(', ') : cred.name}</span>
                         </div>
                       </div>
                     </div>
