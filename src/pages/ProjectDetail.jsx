@@ -317,7 +317,7 @@ const ProjectDetail = () => {
 
   const projectName = isArabic ? project.titleAr : project.titleEn;
   const projectDesc = isArabic ? project.descriptionAr : project.descriptionEn;
-  const coverUrl = getAbsoluteImageUrl(project.fullMainCover?.url || project.coverImage);
+  const coverUrl = getAbsoluteImageUrl(project.mainCover);
   const pageUrl = `${SITE_URL}/portfolio/${slug}`;
 
   return (
@@ -357,8 +357,8 @@ const ProjectDetail = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 sm:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-stretch">
           <div className="lg:col-span-5 flex">
-            <div onClick={() => { setLightboxSectionItems([{ url: project.fullMainCover?.url || project.coverImage, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.fullMainCover?.url || project.coverImage, title: isArabic ? project.titleAr : project.titleEn, index: 0 }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-pointer group shadow-2xs">
-              <img src={project.coverImage} alt={isArabic ? project.titleAr : project.titleEn} className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
+            <div onClick={() => { setLightboxSectionItems([{ url: project.mainCover, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.mainCover, title: isArabic ? project.titleAr : project.titleEn, index: 0 }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-pointer group shadow-2xs">
+              <img src={project.mainCover} alt={isArabic ? project.titleAr : project.titleEn} className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
               <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                 <span className="bg-neutral-950/80 backdrop-blur-xs text-xs font-bold px-3 py-1.5 rounded-[2px] border border-white/20 flex items-center gap-1.5">
                   <Maximize2 className="w-3.5 h-3.5 text-red-500" />

@@ -323,7 +323,7 @@ const Portfolio = () => {
                 const photosCount = proj.photosCount || 0;
                 const videosCount = proj.videosCount || 0;
                 return (
-                  <Link to={`/portfolio/${proj.slug}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[48%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
+                  <Link to={`/portfolio/${proj.slug}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[38%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
                     <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900">
                       <img src={proj.coverImage} alt={isArabic ? proj.titleAr : proj.titleEn} className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500" loading="lazy" />
                     </div>

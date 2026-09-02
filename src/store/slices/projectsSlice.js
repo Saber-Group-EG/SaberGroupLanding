@@ -99,6 +99,7 @@ const transformProject = (raw) => {
 
   const rawCoverUrl = raw.mainCover?.url || (photos.length > 0 ? photos[0].url : '');
   const coverImage = getProxiedCoverUrl(rawCoverUrl, { width: 800, quality: 75 });
+  const mainCover = rawCoverUrl;
   const fullMainCover = raw.fullMainCover || null;
   const galleryImages = photos.map((p) => p.url);
 
@@ -110,6 +111,7 @@ const transformProject = (raw) => {
     descriptionAr: raw.description?.ar || '',
     descriptionEn: raw.description?.en || '',
     coverImage,
+    mainCover,
     fullMainCover,
     galleryImages,
     photos,
