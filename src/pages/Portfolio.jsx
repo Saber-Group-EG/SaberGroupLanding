@@ -353,17 +353,23 @@ const Portfolio = () => {
                         </div>
                         <div className="space-y-2 sm:space-y-2.5 pt-2 border-t border-neutral-100 sm:border-t-0 shrink-0">
                           <div className="flex items-center justify-center sm:justify-around bg-neutral-50 sm:bg-transparent border sm:border-0 border-neutral-100 rounded-xs px-3 py-1.5 sm:p-0 text-neutral-700">
-                            <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-                              <Camera className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                              <span className="font-bold text-neutral-950">{photosCount}</span>
-                              <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
-                            </div>
-                            <span className="text-neutral-300">|</span>
-                            <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-                              <Film className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
-                              <span className="font-bold text-neutral-950">{videosCount}</span>
-                              <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
-                            </div>
+                            {photosCount > 0 && (
+                              <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
+                                <Camera className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                <span className="font-bold text-neutral-950">{photosCount}</span>
+                                <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
+                              </div>
+                            )}
+                            {photosCount > 0 && videosCount > 0 && (
+                              <span className="text-neutral-300">|</span>
+                            )}
+                            {videosCount > 0 && (
+                              <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
+                                <Film className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+                                <span className="font-bold text-neutral-950">{videosCount}</span>
+                                <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
+                              </div>
+                            )}
                           </div>
                           <span className="w-full py-2 sm:py-2 px-2 sm:px-3 text-[10px] sm:text-xs font-bold rounded-[2px] flex items-center justify-center gap-1 sm:gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
                             <span>{t('viewProject', 'View Project')}</span>
