@@ -164,37 +164,27 @@ const Portfolio = () => {
             </div>
 
             <div className="pt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-8 lg:gap-10 border-t border-neutral-100">
-              <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center sm:text-left">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[4px] border border-red-500/30 bg-red-50/50 flex items-center justify-center text-red-600 shrink-0">
-                  <Camera className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
-                </div>
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-700 stroke-[1.5]" />
                 <div>
-                  <div className="text-lg sm:text-2xl font-black text-neutral-950 tracking-tight leading-none sm:leading-tight">{publishedProjects.length}</div>
-                  <div className="text-[10px] sm:text-xs text-neutral-500 font-medium mt-0.5 sm:mt-0">{t('projects', 'Projects')}</div>
+                  <div className="text-base sm:text-lg font-bold text-neutral-950 tracking-tight leading-none">{publishedProjects.length}</div>
+                  <div className="text-[9px] sm:text-[10px] text-neutral-500 font-medium mt-0.5 uppercase tracking-wider">{t('projects', 'Projects')}</div>
                 </div>
               </div>
 
-              <div className="hidden sm:block w-[1px] h-10 bg-neutral-200/80" />
-
-              <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center sm:text-left border-x border-neutral-100 sm:border-x-0 px-1 sm:px-0">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[4px] border border-red-500/30 bg-red-50/50 flex items-center justify-center text-red-600 shrink-0">
-                  <Layers className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
-                </div>
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-700 stroke-[1.5]" />
                 <div>
-                  <div className="text-lg sm:text-2xl font-black text-neutral-950 tracking-tight leading-none sm:leading-tight">{publishedProjects.reduce((sum, p) => sum + (p.photosCount || 0), 0)}+</div>
-                  <div className="text-[10px] sm:text-xs text-neutral-500 font-medium mt-0.5 sm:mt-0">{t('photos', 'Photos')}</div>
+                  <div className="text-base sm:text-lg font-bold text-neutral-950 tracking-tight leading-none">{publishedProjects.reduce((sum, p) => sum + (p.photosCount || 0), 0)}+</div>
+                  <div className="text-[9px] sm:text-[10px] text-neutral-500 font-medium mt-0.5 uppercase tracking-wider">{t('photos', 'Photos')}</div>
                 </div>
               </div>
 
-              <div className="hidden sm:block w-[1px] h-10 bg-neutral-200/80" />
-
-              <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center sm:text-left">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[4px] border border-red-500/30 bg-red-50/50 flex items-center justify-center text-red-600 shrink-0">
-                  <Film className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.75]" />
-                </div>
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <Film className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-700 stroke-[1.5]" />
                 <div>
-                  <div className="text-lg sm:text-2xl font-black text-neutral-950 tracking-tight leading-none sm:leading-tight">{publishedProjects.reduce((sum, p) => sum + (p.videosCount || 0), 0)}+</div>
-                  <div className="text-[10px] sm:text-xs text-neutral-500 font-medium mt-0.5 sm:mt-0">{t('videos', 'Videos')}</div>
+                  <div className="text-base sm:text-lg font-bold text-neutral-950 tracking-tight leading-none">{publishedProjects.reduce((sum, p) => sum + (p.videosCount || 0), 0)}+</div>
+                  <div className="text-[9px] sm:text-[10px] text-neutral-500 font-medium mt-0.5 uppercase tracking-wider">{t('videos', 'Reels')}</div>
                 </div>
               </div>
             </div>
@@ -204,18 +194,40 @@ const Portfolio = () => {
           <div className="lg:col-span-5">
             {featuredMasterProject ? (
               <Link to={`/portfolio/${featuredMasterProject.slug}`} className="group cursor-pointer block">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[4px] bg-neutral-900 border border-neutral-200/90 shadow-xs">
-                  <img src={featuredMasterProject.coverImage} alt="Featured Project" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black tracking-widest text-red-600 uppercase font-sans-en">{t('featuredProject', 'FEATURED PROJECT')}</span>
-                    <h3 className="text-base sm:text-lg font-black text-neutral-950 group-hover:text-red-600 transition-colors leading-snug">{isArabic ? featuredMasterProject.titleAr : featuredMasterProject.titleEn}</h3>
-                    <p className="text-xs text-neutral-500">{isArabic ? featuredMasterProject.descriptionAr?.slice(0, 60) : featuredMasterProject.descriptionEn?.slice(0, 60)}...</p>
+                {/* Mobile: Horizontal card */}
+                <div className="lg:hidden bg-white border border-neutral-200 rounded-lg overflow-hidden hover:shadow-md transition-all">
+                  <div className="flex flex-row">
+                    <div className="relative w-32 h-28 overflow-hidden shrink-0">
+                      <img src={featuredMasterProject.coverImage} alt="Featured Project" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
+                      <div className="absolute top-2 left-2 bg-red-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase">
+                        {t('featured', 'FEATURED')}
+                      </div>
+                    </div>
+                    <div className="p-2.5 flex flex-col justify-center gap-1 flex-1 min-w-0">
+                      <h3 className="text-xs font-bold text-neutral-950 group-hover:text-red-600 transition-colors leading-snug line-clamp-2">{isArabic ? featuredMasterProject.titleAr : featuredMasterProject.titleEn}</h3>
+                      <p className="text-[9px] text-neutral-500 line-clamp-2">{isArabic ? featuredMasterProject.subtitleAr : featuredMasterProject.subtitleEn}</p>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-neutral-950 group-hover:text-red-600 transition-colors mt-0.5">
+                        <span>{t('viewProject', 'View Project')}</span>
+                        <ArrowRight className="w-3 h-3 text-red-600 transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-neutral-950 group-hover:text-red-600 transition-colors">
-                    <span>{t('viewProject', 'View Project')}</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-red-600 transition-transform group-hover:translate-x-1" />
+                </div>
+                {/* Desktop: Vertical card */}
+                <div className="hidden lg:block">
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-[4px] bg-neutral-900 border border-neutral-200/90 shadow-xs">
+                    <img src={featuredMasterProject.coverImage} alt="Featured Project" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black tracking-widest text-red-600 uppercase font-sans-en">{t('featuredProject', 'FEATURED PROJECT')}</span>
+                      <h3 className="text-base sm:text-lg font-black text-neutral-950 group-hover:text-red-600 transition-colors leading-snug">{isArabic ? featuredMasterProject.titleAr : featuredMasterProject.titleEn}</h3>
+                      <p className="text-xs text-neutral-500">{isArabic ? featuredMasterProject.descriptionAr?.slice(0, 60) : featuredMasterProject.descriptionEn?.slice(0, 60)}...</p>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-neutral-950 group-hover:text-red-600 transition-colors">
+                      <span>{t('viewProject', 'View Project')}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-red-600 transition-transform group-hover:translate-x-1" />
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -318,50 +330,44 @@ const Portfolio = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {sortedProjects.map((proj) => {
                 const photosCount = proj.photosCount || 0;
                 const videosCount = proj.videosCount || 0;
                 return (
                   <Link to={`/portfolio/${proj.slug}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[48%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
-                    <div className="relative aspect-[4/5] overflow-hidden bg-neutral-900">
+                    <div className="relative aspect-square sm:aspect-[4/5] overflow-hidden bg-neutral-900">
                       <img src={proj.coverImage} alt={isArabic ? proj.titleAr : proj.titleEn} className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500" loading="lazy" />
                     </div>
                     <div className="relative sm:h-full sm:overflow-hidden">
-                      <div className="p-4 h-full flex flex-col justify-between sm:justify-end gap-3 sm:gap-0">
+                      <div className="p-2.5 sm:p-4 h-full flex flex-col justify-between sm:justify-center gap-1.5 sm:gap-1">
                         <div className="sm:overflow-hidden">
-                          <h3 className="text-lg sm:text-xl font-black uppercase text-neutral-950 group-hover:text-red-600 transition-colors leading-tight line-clamp-2 tracking-tight font-sans-en">
+                          <h3 className="text-xs sm:text-xl font-black uppercase text-neutral-950 group-hover:text-red-600 transition-colors leading-tight line-clamp-2 tracking-tight font-sans-en">
                             {isArabic ? proj.titleAr : proj.titleEn}
                           </h3>
-                          <div className="h-[1px] bg-neutral-200/70 my-2.5 sm:my-2 w-full" />
-                          <p className="text-[11px] sm:text-[10.5px] font-semibold text-neutral-500">{isArabic ? proj.clientNameAr : proj.clientName || ''}</p>
-                          <p className="text-[11px] sm:text-[11px] text-neutral-600 sm:text-neutral-500 leading-relaxed line-clamp-2 sm:line-clamp-2 mt-1.5 font-normal">
+                          <div className="hidden sm:block h-[1px] bg-neutral-200/70 my-2 w-full" />
+                          <p className="text-[10px] sm:text-[10.5px] font-semibold text-neutral-500">{isArabic ? proj.clientNameAr : proj.clientName || ''}</p>
+                          <p className="hidden sm:block text-[11px] text-neutral-500 leading-relaxed mt-1.5 font-normal" style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                             {isArabic ? proj.descriptionAr : proj.descriptionEn}
                           </p>
                         </div>
-                        <div className="space-y-3 sm:space-y-2.5 pt-2 border-t border-neutral-100 sm:border-t-0 shrink-0">
-                          <div className="flex items-center justify-around bg-neutral-50 border border-neutral-100 rounded-xs px-3 py-1.5 text-neutral-700">
-                            {photosCount > 0 && (
-                              <div className="flex items-center gap-1 text-[11px]">
-                                <Camera className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                                <span className="font-bold text-neutral-950">{photosCount}</span>
-                                <span className="text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
-                              </div>
-                            )}
-                            {photosCount > 0 && videosCount > 0 && (
-                              <span className="text-neutral-200">|</span>
-                            )}
-                            {videosCount > 0 && (
-                              <div className="flex items-center gap-1 text-[11px]">
-                                <Film className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                                <span className="font-bold text-neutral-950">{videosCount}</span>
-                                <span className="text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
-                              </div>
-                            )}
+                        <div className="space-y-2 sm:space-y-2.5 pt-2 border-t border-neutral-100 sm:border-t-0 shrink-0">
+                          <div className="flex items-center justify-center sm:justify-around bg-neutral-50 sm:bg-transparent border sm:border-0 border-neutral-100 rounded-xs px-3 py-1.5 sm:p-0 text-neutral-700">
+                            <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
+                              <Camera className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                              <span className="font-bold text-neutral-950">{photosCount}</span>
+                              <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
+                            </div>
+                            <span className="text-neutral-300">|</span>
+                            <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
+                              <Film className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+                              <span className="font-bold text-neutral-950">{videosCount}</span>
+                              <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
+                            </div>
                           </div>
-                          <span className={`w-full py-2.5 sm:py-2 px-3 text-xs font-bold rounded-[2px] flex items-center justify-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white`}>
+                          <span className="w-full py-2 sm:py-2 px-2 sm:px-3 text-[10px] sm:text-xs font-bold rounded-[2px] flex items-center justify-center gap-1 sm:gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
                             <span>{t('viewProject', 'View Project')}</span>
-                            {isRtl ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                            {isRtl ? <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
                           </span>
                         </div>
                       </div>
