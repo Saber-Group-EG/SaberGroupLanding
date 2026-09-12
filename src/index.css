@@ -144,4 +144,24 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+
+  /* Mobile touch utilities */
+  .safe-area-inset {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
+
+  .touch-action-none {
+    touch-action: none;
+  }
+
+  /* Smooth momentum scrolling on iOS */
+  .overflow-scroll-touch {
+    -webkit-overflow-scrolling: touch;
+  }
 }

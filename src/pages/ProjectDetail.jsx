@@ -68,6 +68,7 @@ const ProjectDetail = () => {
   const dragStartRef = useRef({ x: 0, y: 0, zoomX: 0, zoomY: 0 });
   const lastTouchDistRef = useRef(0);
   const lightboxImgRef = useRef(null);
+  const swipeStartRef = useRef({ x: 0, y: 0, time: 0 });
   const [aspectRatios, setAspectRatios] = useState({});
 
   const getAspectClass = (url) => {
@@ -174,6 +175,27 @@ const ProjectDetail = () => {
       const scale = dist / lastTouchDistRef.current;
       lastTouchDistRef.current = dist;
       setZoomLevel((prev) => Math.max(1, Math.min(4, prev * scale)));
+    }
+  };
+
+  const handleLightboxSwipeStart = (e) => {
+    if (zoomLevel > 1 || e.touches.length !== 1) return;
+    swipeStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+  };
+
+  const handleLightboxSwipeEnd = (e) => {
+    if (zoomLevel > 1 || swipeStartRef.current.time === 0) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - swipeStartRef.current.x;
+    const dy = touch.clientY - swipeStartRef.current.y;
+    const dt = Date.now() - swipeStartRef.current.time;
+    swipeStartRef.current = { x: 0, y: 0, time: 0 };
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 400) {
+      if (dx > 0) {
+        isRtl ? handleNextLightbox() : handlePrevLightbox();
+      } else {
+        isRtl ? handlePrevLightbox() : handleNextLightbox();
+      }
     }
   };
 
@@ -321,7 +343,7 @@ const ProjectDetail = () => {
   const pageUrl = `${SITE_URL}/portfolio/${slug}`;
 
   return (
-    <div className="w-full bg-white text-neutral-900 animate-fade-in pb-20 font-sans">
+    <div className="w-full bg-white text-neutral-900 animate-fade-in pb-20 font-sans safe-area-inset">
       <Helmet>
         <title>{projectName} | Saber Group</title>
         <meta name="description" content={projectDesc || projectName} />
@@ -340,7 +362,7 @@ const ProjectDetail = () => {
       {/* BREADCRUMB */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-4">
         <div className="flex items-center gap-4 text-xs sm:text-sm font-medium">
-          <button onClick={() => navigate('/portfolio')} className="flex items-center gap-2 font-bold text-neutral-950 hover:text-red-600 transition-colors cursor-pointer group">
+          <button onClick={() => navigate('/portfolio')} className="flex items-center gap-2 font-bold text-neutral-950 hover:text-red-600 transition-colors cursor-pointer group min-h-[44px] touch-action-manipulation">
             {isRtl ? <ArrowRight className="w-4 h-4 text-red-600 transition-transform group-hover:translate-x-1" /> : <ArrowLeft className="w-4 h-4 text-red-600 transition-transform group-hover:-translate-x-1" />}
             <span>{t('backToPortfolio', 'Back to Portfolio')}</span>
           </button>
@@ -354,21 +376,23 @@ const ProjectDetail = () => {
       </div>
 
       {/* HERO SHOWCASE */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-10 sm:pb-12">
+      <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 pt-4 pb-10 sm:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-stretch">
           <div className="lg:col-span-5 flex">
-            <div onClick={() => { setLightboxSectionItems([{ url: project.mainCover, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.mainCover, title: isArabic ? project.titleAr : project.titleEn, index: 0 }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-pointer group shadow-2xs">
-              <img src={project.mainCover} alt={isArabic ? project.titleAr : project.titleEn} className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
-              <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                <span className="bg-neutral-950/80 backdrop-blur-xs text-xs font-bold px-3 py-1.5 rounded-[2px] border border-white/20 flex items-center gap-1.5">
-                  <Maximize2 className="w-3.5 h-3.5 text-red-500" />
-                  <span>{t('viewFullSize', 'View Full Screen')}</span>
+            <div onClick={() => { setLightboxSectionItems([{ url: project.mainCover, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.mainCover, title: isArabic ? project.titleAr : project.titleEn, index: 0 }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden bg-neutral-950 border-y sm:border sm:border-neutral-200 cursor-pointer group shadow-2xs touch-action-manipulation active:scale-[0.98] transition-transform duration-150">
+              <img src={project.mainCover} alt={isArabic ? project.titleAr : project.titleEn} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent sm:bg-neutral-950/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+              <div className="absolute bottom-3 left-3 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center text-white">
+                <span className="bg-black/70 sm:bg-neutral-950/80 backdrop-blur-sm text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full sm:rounded-[2px] border border-white/20 flex items-center gap-1.5">
+                  <Maximize2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500" />
+                  <span className="hidden sm:inline">{t('viewFullSize', 'View Full Screen')}</span>
+                  <span className="sm:hidden">{t('tapToView', 'Tap to view')}</span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-7 flex flex-col justify-between space-y-5 sm:space-y-6">
+          <div className="lg:col-span-7 flex flex-col justify-between space-y-5 sm:space-y-6 px-4 sm:px-0">
             <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-red-600 inline-block shrink-0" />
@@ -380,7 +404,7 @@ const ProjectDetail = () => {
             </div>
 
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-[34px] xl:text-[38px] font-black uppercase text-neutral-950 tracking-tight leading-[1.18] font-sans-en">
+              <h1 className="text-xl sm:text-3xl lg:text-[34px] xl:text-[38px] font-black uppercase text-neutral-950 tracking-tight leading-[1.18] font-sans-en">
                 {isArabic ? project.titleAr : project.titleEn}
               </h1>
               <div className="w-12 sm:w-14 h-[3px] bg-red-600 mt-3 mb-3" />
@@ -388,7 +412,7 @@ const ProjectDetail = () => {
                 {isArabic ? project.descriptionAr : project.descriptionEn}
               </p>
               {(project.services || []).length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mt-3">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-3">
                   {(isArabic ? (project.servicesAr || project.services) : project.services).map((service, i) => (
                     <React.Fragment key={i}>
                       <span className="text-[11px] sm:text-xs font-bold text-neutral-700">{service}</span>
@@ -399,7 +423,7 @@ const ProjectDetail = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 sm:pt-5 border-t border-neutral-200">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 pt-4 sm:pt-5 border-t border-neutral-200">
               {(isArabic ? project.locationAr : project.locationEn) && (
                 <div className="space-y-0.5 sm:space-y-1">
                   {project.clientName && (
@@ -447,14 +471,14 @@ const ProjectDetail = () => {
             <div className="grid grid-cols-3 pt-4 sm:pt-6 border-t border-neutral-200">
               {project.photosCount > 0 && (
                 <div className="text-center sm:text-left pr-2 sm:pr-4">
-                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-neutral-950 tracking-tight">{project.photosCount}</div>
-                  <div className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 font-sans-en mt-0.5 sm:mt-1">{t('photosCount', 'PHOTOS')}</div>
+                  <div className="text-lg sm:text-3xl lg:text-4xl font-black text-neutral-950 tracking-tight">{project.photosCount}</div>
+                  <div className="text-[9px] sm:text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 font-sans-en mt-0.5 sm:mt-1">{t('photosCount', 'PHOTOS')}</div>
                 </div>
               )}
               {project.videosCount > 0 && (
                 <div className="text-center sm:text-left px-2 sm:px-4 border-x border-neutral-200">
-                  <div className="text-xl sm:text-3xl lg:text-4xl font-black text-neutral-950 tracking-tight">{String(project.videosCount).padStart(2, '0')}</div>
-                  <div className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 font-sans-en mt-0.5 sm:mt-1">{t('videosCount', 'VIDEOS')}</div>
+                  <div className="text-lg sm:text-3xl lg:text-4xl font-black text-neutral-950 tracking-tight">{String(project.videosCount).padStart(2, '0')}</div>
+                  <div className="text-[9px] sm:text-[11px] font-extrabold uppercase tracking-wider text-neutral-500 font-sans-en mt-0.5 sm:mt-1">{t('videosCount', 'VIDEOS')}</div>
                 </div>
               )}
             </div>
@@ -465,7 +489,7 @@ const ProjectDetail = () => {
       {/* MEDIA SECTORS */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-neutral-200 pt-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-6 order-2 lg:order-1">
             {/* Dynamic Photo/Video Groups */}
             {renderableGroups.map((group, groupIdx) => {
               const num = nextSectionNum();
@@ -486,11 +510,11 @@ const ProjectDetail = () => {
                       isArabic={isArabic}
                     />
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-3">
                       {items.map((item, idx) => {
                         const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                         return (
-                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs`}>
+                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs touch-action-manipulation`}>
                             {isVideo ? (
                               <>
                                 <video src={item.url} muted loop playsInline poster={item.thumbnail} onLoadedMetadata={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover" />
@@ -503,7 +527,7 @@ const ProjectDetail = () => {
                             ) : (
                               <img src={item.thumbnail || item.url} alt={item.caption || ''} onLoad={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                             )}
-                            <div className="absolute inset-0 bg-neutral-950/80 opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
+                            <div className="absolute inset-0 bg-neutral-950/80 opacity-0 sm:group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
                               <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? (item.captionAr || item.caption) : item.caption}</span>
                               <span className="text-[9px] text-red-400 font-bold mt-1 flex items-center gap-1">
                                 {isVideo ? <><Play className="w-2.5 h-2.5" />{t('playVideo', 'Play video')}</> : <><Maximize2 className="w-2.5 h-2.5" />{t('viewFullSize', 'View full size')}</>}
@@ -540,7 +564,7 @@ const ProjectDetail = () => {
           </div>
 
           {/* SIDEBAR */}
-          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-20 order-1 lg:order-2">
             {/* Inquiry Form */}
             <div className="bg-white rounded-[3px] border border-neutral-200 p-5 space-y-4 shadow-2xs">
               <div className="flex items-center gap-3 border-b border-neutral-100 pb-3">
@@ -560,17 +584,17 @@ const ProjectDetail = () => {
                 <form onSubmit={handleFormSubmit} className="space-y-3">
                   <div>
                     <label className="block text-[11px] font-bold text-neutral-700 mb-1">{t('nameBrand', 'Name / Brand Name *')}</label>
-                    <input type="text" required placeholder={t('namePlaceholder', 'e.g. My Restaurant Brand')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-neutral-50 border border-neutral-200 rounded-[2px] px-3 py-2 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white" />
+                    <input type="text" required placeholder={t('namePlaceholder', 'e.g. My Restaurant Brand')} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-neutral-50 border border-neutral-200 rounded-[2px] px-3 py-3 sm:py-2 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-neutral-700 mb-1">{t('phone', 'Phone / WhatsApp *')}</label>
-                    <input type="tel" required placeholder="010xxxxxxx" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-neutral-50 border border-neutral-200 rounded-[2px] px-3 py-2 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white" />
+                    <input type="tel" required placeholder="010xxxxxxx" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-neutral-50 border border-neutral-200 rounded-[2px] px-3 py-3 sm:py-2 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-neutral-700 mb-1">{t('notes', 'Shooting Notes / Preferences')}</label>
-                    <textarea rows={2} placeholder={t('notesPlaceholder', 'Number of photos, reels needed...')} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full bg-neutral-50 border border-neutral-200 rounded-[2px] px-3 py-2 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white resize-none" />
+                    <textarea rows={2} placeholder={t('notesPlaceholder', 'Number of photos, reels needed...')} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full bg-neutral-50 border border-neutral-200 rounded-[2px] px-3 py-3 sm:py-2 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-1 focus:ring-red-500 focus:bg-white resize-none" />
                   </div>
-                  <button type="submit" className="w-full py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-extrabold text-xs rounded-[2px] transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer">
+                  <button type="submit" className="w-full py-3 sm:py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-extrabold text-xs rounded-[2px] transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer touch-action-manipulation min-h-[44px]">
                     <Send className="w-3.5 h-3.5" />
                     <span>{t('submitRequest', 'Submit Shooting Request')}</span>
                   </button>
@@ -628,23 +652,27 @@ const ProjectDetail = () => {
 
       {/* LIGHTBOX */}
       {lightboxPhoto && (
-        <div onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 select-none">
-          <button onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="absolute top-5 right-5 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"><X className="w-6 h-6" /></button>
-          <div className="absolute top-6 left-6 z-70 bg-neutral-900/90 text-white text-xs font-extrabold px-4 py-2 rounded-2xl backdrop-blur-md border border-neutral-700 flex items-center gap-3">
-            <span>{`Photo ${currentFlatIndex} of ${totalLightboxPhotos}`}</span>
-            <span className="text-neutral-500">|</span>
-            <span className="text-neutral-300 max-w-xs truncate">{lightboxPhoto.title}</span>
-            {zoomLevel > 1 && <span className="text-red-400">{Math.round(zoomLevel * 100)}%</span>}
+        <div onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center sm:p-4 select-none safe-area-inset">
+          <button onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
+          <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-70 bg-neutral-900/90 text-white text-xs font-extrabold px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl backdrop-blur-md border border-neutral-700 flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-8rem)]">
+            <span className="shrink-0">{`${currentFlatIndex}/${totalLightboxPhotos}`}</span>
+            <span className="text-neutral-300 max-w-[120px] sm:max-w-xs truncate hidden sm:inline">| {lightboxPhoto.title}</span>
+            {zoomLevel > 1 && <span className="text-red-400 shrink-0">{Math.round(zoomLevel * 100)}%</span>}
           </div>
-          <button onClick={handlePrevLightbox} className="absolute left-4 top-1/2 -translate-y-1/2 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
-            {isRtl ? <ArrowRight className="w-6 h-6" /> : <ArrowLeft className="w-6 h-6" />}
+          <button onClick={handlePrevLightbox} className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]">
+            {isRtl ? <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" /> : <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
-          <div onClick={(e) => e.stopPropagation()} className="relative max-w-6xl max-h-[88vh] flex items-center justify-center overflow-hidden">
+          <div
+            onTouchStart={handleLightboxSwipeStart}
+            onTouchEnd={handleLightboxSwipeEnd}
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-6xl max-h-[88vh] flex items-center justify-center overflow-hidden"
+          >
             <img
               ref={lightboxImgRef}
               src={lightboxPhoto.url}
               alt={lightboxPhoto.title}
-              className="max-w-full max-h-[88vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+              className="max-w-full max-h-[88vh] object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10"
               style={{
                 transform: `scale(${zoomLevel}) translate(${zoomPosition.x}%, ${zoomPosition.y}%)`,
                 transition: isDragging ? 'none' : 'transform 0.2s ease-out',
@@ -658,11 +686,11 @@ const ProjectDetail = () => {
               draggable={false}
             />
           </div>
-          <button onClick={handleNextLightbox} className="absolute right-4 top-1/2 -translate-y-1/2 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
-            {isRtl ? <ArrowLeft className="w-6 h-6" /> : <ArrowRight className="w-6 h-6" />}
+          <button onClick={handleNextLightbox} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]">
+            {isRtl ? <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" /> : <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
           {zoomLevel > 1 && (
-            <button onClick={(e) => { e.stopPropagation(); resetZoom(); }} className="absolute bottom-6 left-1/2 -translate-x-1/2 z-70 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors cursor-pointer backdrop-blur-md border border-white/10">
+            <button onClick={(e) => { e.stopPropagation(); resetZoom(); }} className="absolute bottom-6 left-1/2 -translate-x-1/2 z-70 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors cursor-pointer backdrop-blur-md border border-white/10 touch-action-manipulation">
               Reset Zoom
             </button>
           )}
@@ -671,8 +699,8 @@ const ProjectDetail = () => {
 
       {/* VIDEO MODAL */}
       {activeVideoUrl && (
-        <div onClick={() => setActiveVideoUrl(null)} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
-          <button onClick={() => setActiveVideoUrl(null)} className="absolute top-5 right-5 z-70 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"><X className="w-6 h-6" /></button>
+        <div onClick={() => setActiveVideoUrl(null)} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 safe-area-inset">
+          <button onClick={() => setActiveVideoUrl(null)} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm aspect-9/16 max-h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
             {activeVideoUrl.match(/\.(mp4|webm|ogg)$/i) ? (
               <video src={activeVideoUrl} controls autoPlay className="w-full h-full object-contain" />
@@ -726,7 +754,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs"
+      className="relative w-full overflow-hidden rounded-[3px] bg-neutral-950 border border-neutral-200 cursor-ew-resize select-none shadow-2xs touch-action-none"
       onPointerDown={handlePointerDown}
     >
       {/* Spacer image - defines correct container height */}
@@ -746,7 +774,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
 
       {/* Slider line */}
       <div ref={sliderLineRef} className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10 pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)' }}>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-neutral-200">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-10 sm:h-10 bg-white rounded-full shadow-xl flex items-center justify-center border-2 border-neutral-200">
           <div className="flex items-center gap-0">
             <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
             <ArrowRight className="w-3.5 h-3.5 text-neutral-600" />
@@ -756,12 +784,12 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
 
       {/* Labels */}
       {beforeImage && (
-        <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-[2px] z-10 pointer-events-none">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/70 backdrop-blur-sm text-white text-[9px] sm:text-[11px] font-bold px-2 py-1 sm:px-2.5 sm:py-1 rounded-[2px] z-10 pointer-events-none max-w-[45%] truncate">
           {lblBefore}
         </div>
       )}
       {afterImage && (
-        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-[2px] z-10 pointer-events-none">
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-black/70 backdrop-blur-sm text-white text-[9px] sm:text-[11px] font-bold px-2 py-1 sm:px-2.5 sm:py-1 rounded-[2px] z-10 pointer-events-none max-w-[45%] truncate">
           {lblAfter}
         </div>
       )}
@@ -772,7 +800,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage, beforeLabel, afterLabel, i
 /* Sector Accordion Wrapper */
 const SectorAccordion = ({ number, title, description, count, countLabel, currentSection, totalSections, onPrev, onNext, hasPrev, hasNext, isOpen, onToggle, children }) => (
   <div className="bg-white rounded-[3px] border border-neutral-200 shadow-2xs overflow-hidden">
-    <div role="button" tabIndex={0} onClick={onToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }} className="w-full p-4 sm:p-5 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 cursor-pointer border-b border-neutral-200 text-left">
+    <div role="button" tabIndex={0} onClick={onToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }} className="w-full p-4 sm:p-5 bg-white hover:bg-neutral-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 cursor-pointer border-b border-neutral-200 text-left min-h-[56px] touch-action-manipulation">
       <div className="flex items-start sm:items-center gap-3 sm:gap-4">
         <div className="flex items-baseline shrink-0">
           <span className="text-2xl sm:text-3xl font-black text-neutral-950 font-sans-en tracking-tight border-b-2 border-red-600 pb-0.5 leading-none">{number}</span>
@@ -788,12 +816,12 @@ const SectorAccordion = ({ number, title, description, count, countLabel, curren
           <span className="text-[9.5px] sm:text-[11px] font-extrabold tracking-wider text-neutral-500 uppercase font-sans-en">{count} {countLabel}</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <button onClick={(e) => { e.stopPropagation(); if (hasPrev) onPrev(); }} className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer ${hasPrev ? 'border-neutral-300 bg-white text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); if (hasPrev) onPrev(); }} className={`w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-[2px] border transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 ${hasPrev ? 'border-neutral-300 bg-white text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowLeft className="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5" /></button>
           <div className="text-[11px] sm:text-xs font-sans-en px-1">
             <span className="font-black text-neutral-950">{String(currentSection).padStart(2, '0')}</span>
             <span className="text-neutral-400 font-medium ml-0.5">/ {String(totalSections).padStart(2, '0')}</span>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); if (hasNext) onNext(); }} className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border transition-colors cursor-pointer ${hasNext ? 'border-neutral-300 bg-white shadow-2xs text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); if (hasNext) onNext(); }} className={`w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-[3px] border transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 ${hasNext ? 'border-neutral-300 bg-white shadow-2xs text-neutral-950 hover:bg-neutral-50' : 'border-neutral-200 text-neutral-300 cursor-not-allowed'}`}><ArrowRight className="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5" /></button>
         </div>
       </div>
     </div>
