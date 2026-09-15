@@ -31,9 +31,20 @@ const Portfolio = () => {
 
   const publishedProjects = allProjects.filter((p) => p.published === true);
 
-  const allCategories = Array.from(
+  const allCategoryIds = Array.from(
     new Set(publishedProjects.map((p) => p.sectorId?.trim().toLowerCase()).filter(Boolean))
   );
+
+  const categoryNames = allCategoryIds.reduce((acc, id) => {
+    const sample = publishedProjects.find((p) => p.sectorId?.trim().toLowerCase() === id);
+    if (sample) {
+      acc[id] = {
+        en: sample.categoryNameEn || sample.sectorId || id,
+        ar: sample.categoryNameAr || sample.sectorId || id,
+      };
+    }
+    return acc;
+  }, {});
 
   // Portfolio list state
   const [selectedSectorId, setSelectedSectorId] = useState('all');
@@ -49,9 +60,19 @@ const Portfolio = () => {
     ? publishedProjects
     : publishedProjects.filter((p) => p.sectorId?.trim().toLowerCase() === selectedSectorId);
 
-  const allTags = Array.from(
+  const allTagsRaw = Array.from(
     new Set(sectorProjects.flatMap((p) => (p.subcategories || []).map((sub) => (typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '')).filter(Boolean)))
   );
+
+  const allTagNames = allTagsRaw.reduce((acc, key) => {
+    const sample = sectorProjects.flatMap((p) => (p.subcategories || [])).find((sub) => {
+      const k = typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '';
+      return k === key;
+    });
+    const nameObj = typeof sample === 'object' && sample !== null ? sample.name : null;
+    acc[key] = isArabic ? (nameObj?.ar || nameObj?.en || key) : (nameObj?.en || nameObj?.ar || key);
+    return acc;
+  }, {});
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -65,7 +86,7 @@ const Portfolio = () => {
     checkOverflow();
     window.addEventListener('resize', checkOverflow);
     return () => window.removeEventListener('resize', checkOverflow);
-  }, [allCategories.length, allTags.length]);
+  }, [allCategoryIds.length, allTagsRaw.length]);
 
   const handleSectorChange = (sector) => {
     if (sector === selectedSectorId) {
@@ -251,11 +272,11 @@ const Portfolio = () => {
                 <span>{t('all', 'ALL')}</span>
                 {selectedSectorId === 'all' && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
               </button>
-              {allCategories.map((cat) => {
+              {allCategoryIds.map((cat) => {
                 const isActive = selectedSectorId === cat;
                 return (
                   <button key={cat} onClick={() => handleSectorChange(cat)} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${isActive ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
-                    <span>{cat}</span>
+                    <span>{categoryNames[cat]?.[isArabic ? 'ar' : 'en'] || cat}</span>
                     {isActive && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
                   </button>
                 );
@@ -279,11 +300,11 @@ const Portfolio = () => {
               </button>
             )}
             <div ref={tagScrollRef} className="flex items-center gap-2 sm:gap-2.5 py-1 overflow-x-auto scrollbar-hide">
-              {allTags.map((tag) => {
+              {allTagsRaw.map((tag) => {
                 const isActive = selectedTags.includes(tag);
                 return (
                   <button key={tag} onClick={() => handleTagChange(tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
-                    {tag}
+                    {allTagNames[tag] || tag}
                   </button>
                 );
               })}
