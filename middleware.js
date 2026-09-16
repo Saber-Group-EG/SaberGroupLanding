@@ -51,15 +51,57 @@ function getEnSlug(raw) {
   return String(raw._id || '').replace(/[^a-z0-9-]/gi, '-');
 }
 
+function getAllMediaItems(raw) {
+  const items = [];
+  const mediaGroups = raw.mediaGroups || [];
+  for (const group of mediaGroups) {
+    if (group.type === 'before_after') {
+      if (group.before?.url) items.push({ url: group.before.url, thumbnail: group.before.thumbnail || group.before.url, caption: resolveBilingual(group.before.caption) || resolveBilingual(group.before.name) || '' });
+      if (group.after?.url) items.push({ url: group.after.url, thumbnail: group.after.thumbnail || group.after.url, caption: resolveBilingual(group.after.caption) || resolveBilingual(group.after.name) || '' });
+    } else if (group.items?.length) {
+      for (const item of group.items) {
+        items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveBilingual(item.caption) || resolveBilingual(item.name) || '' });
+      }
+    }
+  }
+  return items;
+}
+
+function isVideoUrl(url) {
+  return /\.(mp4|webm|ogg)$/i.test(url);
+}
+
+function parseMediaRoute(pathname) {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length >= 4 && segments[0] === 'portfolio') {
+    const slug = segments[1];
+    if (segments[2] === 'cover') {
+      return { slug, type: 'cover', index: -1 };
+    }
+    if (segments[2] === 'photo' && segments[3]) {
+      return { slug, type: 'photo', index: parseInt(segments[3], 10) };
+    }
+    if (segments[2] === 'video' && segments[3]) {
+      return { slug, type: 'video', index: parseInt(segments[3], 10) };
+    }
+  }
+  if (segments.length >= 2 && segments[0] === 'portfolio') {
+    return { slug: segments[1], type: null, index: -1 };
+  }
+  return null;
+}
+
 export default async function middleware(request) {
   const { pathname } = new URL(request.url);
   const ua = request.headers.get('user-agent') || '';
 
   if (!CRAWLER_UA.test(ua)) return;
 
-  const segments = pathname.split('/');
-  const slug = segments[segments.length - 1] || segments[segments.length - 2];
-  if (!slug || slug === 'portfolio') return;
+  const route = parseMediaRoute(pathname);
+  if (!route) return;
+
+  const { slug, type, index } = route;
+  if (!slug) return;
 
   try {
     const res = await fetch(`${PROJECTS_API}?PageCount=all`);
@@ -75,27 +117,64 @@ export default async function middleware(request) {
       : `${SITE_URL}${coverImage}`;
     const pageUrl = `${SITE_URL}/portfolio/${slug}`;
 
+    let ogImage = absoluteCover;
+    let ogTitle = `${projectName} | Saber Group`;
+    let ogDescription = projectDesc || projectName;
+    let mediaUrl = pageUrl;
+
+    if (type === 'cover') {
+      mediaUrl = `${SITE_URL}/portfolio/${slug}/cover`;
+      ogTitle = `${projectName} | Saber Group`;
+    } else if (type === 'photo' || type === 'video') {
+      const allMedia = getAllMediaItems(raw);
+      const videoItems = allMedia.filter((m) => isVideoUrl(m.url));
+      const photoItems = allMedia.filter((m) => !isVideoUrl(m.url));
+
+      let mediaItem = null;
+      if (type === 'photo' && index >= 0 && index < photoItems.length) {
+        mediaItem = photoItems[index];
+        mediaUrl = `${SITE_URL}/portfolio/${slug}/photo/${index}`;
+      } else if (type === 'video' && index >= 0 && index < videoItems.length) {
+        mediaItem = videoItems[index];
+        mediaUrl = `${SITE_URL}/portfolio/${slug}/video/${index}`;
+      }
+
+      if (mediaItem) {
+        const mediaThumb = mediaItem.thumbnail?.startsWith('http')
+          ? mediaItem.thumbnail
+          : mediaItem.thumbnail
+            ? `${SITE_URL}${mediaItem.thumbnail}`
+            : mediaItem.url?.startsWith('http')
+              ? mediaItem.url
+              : `${SITE_URL}${mediaItem.url}`;
+        ogImage = mediaThumb;
+        const mediaCaption = mediaItem.caption || projectName;
+        ogTitle = `${mediaCaption} | ${projectName} | Saber Group`;
+        ogDescription = `${mediaCaption} - ${projectName}`;
+      }
+    }
+
     const html = `<!doctype html>
 <html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/jpeg" href="/S ICON.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="${esc(projectDesc || projectName)}" />
+    <meta name="description" content="${esc(ogDescription)}" />
     <meta property="og:type" content="article" />
-    <meta property="og:url" content="${esc(pageUrl)}" />
-    <meta property="og:title" content="${esc(projectName)} | Saber Group" />
-    <meta property="og:description" content="${esc(projectDesc || projectName)}" />
+    <meta property="og:url" content="${esc(mediaUrl)}" />
+    <meta property="og:title" content="${esc(ogTitle)}" />
+    <meta property="og:description" content="${esc(ogDescription)}" />
     <meta property="og:site_name" content="Saber Group" />
-    <meta property="og:image" content="${esc(absoluteCover)}" />
+    <meta property="og:image" content="${esc(ogImage)}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="${esc(projectName)}" />
+    <meta property="og:image:alt" content="${esc(ogTitle)}" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${esc(projectName)} | Saber Group" />
-    <meta name="twitter:description" content="${esc(projectDesc || projectName)}" />
-    <meta name="twitter:image" content="${esc(absoluteCover)}" />
-    <title>${esc(projectName)} | Saber Group</title>
+    <meta name="twitter:title" content="${esc(ogTitle)}" />
+    <meta name="twitter:description" content="${esc(ogDescription)}" />
+    <meta name="twitter:image" content="${esc(ogImage)}" />
+    <title>${esc(ogTitle)}</title>
   </head>
   <body>
     <div id="root"></div>

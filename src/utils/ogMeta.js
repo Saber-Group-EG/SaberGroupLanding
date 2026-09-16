@@ -4,7 +4,7 @@
  */
 
 // Site configuration
-export const SITE_URL = 'https://Saber Group-rs.com';
+export const SITE_URL = 'https://www.sabergroup-eg.com';
 export const SITE_NAME = 'Saber Group';
 export const DEFAULT_OG_IMAGE = '/src/assets/logos/MAIN LOGO.png';
 

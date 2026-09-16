@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 const ProjectDetail = () => {
-  const { slug } = useParams();
+  const { slug, photoIndex, videoIndex, cover } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { t: tFn, isArabic } = useTranslation();
@@ -109,6 +109,50 @@ const ProjectDetail = () => {
       .map((group) => {
         return (group.items || []).filter((item) => !(item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i)));
       });
+  };
+
+  const getAllVideos = () => {
+    return renderableGroups
+      .filter((group) => group.type !== 'before_after')
+      .map((group) => {
+        return (group.items || []).filter((item) => item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i));
+      });
+  };
+
+  const getFlatPhotoIndex = (groupIdx, itemIdx) => {
+    const allGroups = getAllPhotos();
+    let flatIndex = 0;
+    for (let i = 0; i < groupIdx; i++) flatIndex += allGroups[i].length;
+    flatIndex += itemIdx;
+    return flatIndex;
+  };
+
+  const getPhotoByFlatIndex = (flatIdx) => {
+    const allGroups = getAllPhotos();
+    let counter = 0;
+    for (let g = 0; g < allGroups.length; g++) {
+      for (let i = 0; i < allGroups[g].length; i++) {
+        if (counter === flatIdx) {
+          return { groupIdx: g, itemIdx: i, item: allGroups[g][i], sectionItems: allGroups[g] };
+        }
+        counter++;
+      }
+    }
+    return null;
+  };
+
+  const getVideoByFlatIndex = (flatIdx) => {
+    const allGroups = getAllVideos();
+    let counter = 0;
+    for (let g = 0; g < allGroups.length; g++) {
+      for (let i = 0; i < allGroups[g].length; i++) {
+        if (counter === flatIdx) {
+          return { groupIdx: g, itemIdx: i, item: allGroups[g][i] };
+        }
+        counter++;
+      }
+    }
+    return null;
   };
 
   const getCaption = (item, fallback) => {
@@ -227,7 +271,7 @@ const ProjectDetail = () => {
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowRight') { isRtl ? handlePrevLightbox() : handleNextLightbox(); }
       else if (e.key === 'ArrowLeft') { isRtl ? handleNextLightbox() : handlePrevLightbox(); }
-      else if (e.key === 'Escape') { setLightboxPhoto(null); resetZoom(); }
+      else if (e.key === 'Escape') { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }
       else if (e.key === '+' || e.key === '=') { setZoomLevel((prev) => Math.min(4, prev + 0.25)); }
       else if (e.key === '-') { setZoomLevel((prev) => { const next = Math.max(1, prev - 0.25); if (next === 1) resetZoom(); return next; }); }
       else if (e.key === '0') { resetZoom(); }
@@ -235,6 +279,39 @@ const ProjectDetail = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxPhoto, isRtl]);
+
+  useEffect(() => {
+    if (!project) return;
+    if (cover !== undefined && cover !== null) {
+      setLightboxSectionItems([{ url: project.mainCover, caption: isArabic ? project.titleAr : project.titleEn }]);
+      setLightboxPhoto({ url: project.mainCover, title: isArabic ? project.titleAr : project.titleEn, index: 0, flatIndex: 0, totalPhotos: 1 });
+    } else if (photoIndex !== undefined && photoIndex !== null) {
+      const idx = parseInt(photoIndex, 10);
+      if (!isNaN(idx)) {
+        const found = getPhotoByFlatIndex(idx);
+        if (found) {
+          const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0);
+          setLightboxGroupIndex(found.groupIdx);
+          setLightboxSectionItems(found.sectionItems);
+          setLightboxPhoto({
+            url: found.item.url,
+            title: getCaption(found.item, isArabic ? `لقطة #${idx + 1}` : `Photo #${idx + 1}`),
+            index: found.itemIdx,
+            flatIndex: idx,
+            totalPhotos,
+          });
+        }
+      }
+    } else if (videoIndex !== undefined && videoIndex !== null) {
+      const idx = parseInt(videoIndex, 10);
+      if (!isNaN(idx)) {
+        const found = getVideoByFlatIndex(idx);
+        if (found) {
+          setActiveVideoUrl(found.item.url);
+        }
+      }
+    }
+  }, [project, photoIndex, videoIndex]);
 
   useEffect(() => {
     const img = lightboxImgRef.current;
@@ -307,6 +384,7 @@ const ProjectDetail = () => {
     setLightboxGroupIndex(groupIdx);
     setLightboxSectionItems(allGroups[groupIdx]);
     setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx, flatIndex, totalPhotos });
+    navigate(`/portfolio/${slug}/photo/${flatIndex}`, { replace: true });
   };
 
   const handlePrevLightbox = (e) => {
@@ -330,6 +408,7 @@ const ProjectDetail = () => {
     setLightboxGroupIndex(groupIdx);
     setLightboxSectionItems(allGroups[groupIdx]);
     setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx, flatIndex, totalPhotos });
+    navigate(`/portfolio/${slug}/photo/${flatIndex}`, { replace: true });
   };
 
   const handleFormSubmit = (e) => {
@@ -342,22 +421,46 @@ const ProjectDetail = () => {
   const coverUrl = getAbsoluteImageUrl(project.mainCover);
   const pageUrl = `${SITE_URL}/portfolio/${slug}`;
 
+  let ogImageUrl = coverUrl;
+  let ogTitle = `${projectName} | Saber Group`;
+  let ogDescription = projectDesc || projectName;
+  let ogUrl = pageUrl;
+
+  if (cover !== undefined && cover !== null) {
+    ogUrl = `${SITE_URL}/portfolio/${slug}/cover`;
+  } else if (photoIndex !== undefined && photoIndex !== null && lightboxPhoto) {
+    ogImageUrl = getAbsoluteImageUrl(lightboxPhoto.url);
+    const photoCaption = lightboxPhoto.title || projectName;
+    ogTitle = `${photoCaption} | ${projectName} | Saber Group`;
+    ogDescription = `${photoCaption} - ${projectName}`;
+    ogUrl = `${SITE_URL}/portfolio/${slug}/photo/${photoIndex}`;
+  } else if (videoIndex !== undefined && videoIndex !== null && activeVideoUrl) {
+    const found = getVideoByFlatIndex(parseInt(videoIndex, 10));
+    if (found) {
+      ogImageUrl = getAbsoluteImageUrl(found.item.thumbnail || found.item.url);
+      const videoCaption = getCaption(found.item, projectName);
+      ogTitle = `${videoCaption} | ${projectName} | Saber Group`;
+      ogDescription = `${videoCaption} - ${projectName}`;
+      ogUrl = `${SITE_URL}/portfolio/${slug}/video/${videoIndex}`;
+    }
+  }
+
   return (
     <div className="w-full bg-white text-neutral-900 animate-fade-in pb-20 font-sans safe-area-inset">
       <Helmet>
-        <title>{projectName} | Saber Group</title>
-        <meta name="description" content={projectDesc || projectName} />
-        <link rel="canonical" href={pageUrl} />
+        <title>{ogTitle}</title>
+        <meta name="description" content={ogDescription} />
+        <link rel="canonical" href={ogUrl} />
         <meta property="og:type" content="article" />
-        <meta property="og:title" content={`${projectName} | Saber Group`} />
-        <meta property="og:description" content={projectDesc || projectName} />
-        <meta property="og:image" content={coverUrl} />
-        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={ogTitle} />
+        <meta property="og:description" content={ogDescription} />
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:url" content={ogUrl} />
         <meta property="og:site_name" content="Saber Group" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${projectName} | Saber Group`} />
-        <meta name="twitter:description" content={projectDesc || projectName} />
-        <meta name="twitter:image" content={coverUrl} />
+        <meta name="twitter:title" content={ogTitle} />
+        <meta name="twitter:description" content={ogDescription} />
+        <meta name="twitter:image" content={ogImageUrl} />
       </Helmet>
       {/* BREADCRUMB */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-4">
@@ -379,7 +482,7 @@ const ProjectDetail = () => {
       <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 pt-4 pb-10 sm:pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-stretch">
           <div className="lg:col-span-5 flex">
-            <div onClick={() => { setLightboxSectionItems([{ url: project.mainCover, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.mainCover, title: isArabic ? project.titleAr : project.titleEn, index: 0 }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden bg-neutral-950 border-y sm:border sm:border-neutral-200 cursor-pointer group shadow-2xs touch-action-manipulation active:scale-[0.98] transition-transform duration-150">
+            <div onClick={() => { setLightboxSectionItems([{ url: project.mainCover, caption: isArabic ? project.titleAr : project.titleEn }]); setLightboxPhoto({ url: project.mainCover, title: isArabic ? project.titleAr : project.titleEn, index: 0, flatIndex: 0, totalPhotos: 1 }); navigate(`/portfolio/${slug}/cover`, { replace: true }); }} className="relative w-full aspect-[4/5] sm:aspect-[4/5] lg:aspect-[3/4] overflow-hidden bg-neutral-950 border-y sm:border sm:border-neutral-200 cursor-pointer group shadow-2xs touch-action-manipulation active:scale-[0.98] transition-transform duration-150">
               <img src={project.mainCover} alt={isArabic ? project.titleAr : project.titleEn} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent sm:bg-neutral-950/40 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
               <div className="absolute bottom-3 left-3 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center text-white">
@@ -514,7 +617,7 @@ const ProjectDetail = () => {
                       {items.map((item, idx) => {
                         const isVideo = item.type === 'video' || item.url?.match(/\.(mp4|webm|ogg)$/i);
                         return (
-                          <div key={idx} onClick={() => isVideo ? setActiveVideoUrl(item.url) : (() => { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); })()} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs touch-action-manipulation`}>
+                          <div key={idx} onClick={() => { if (isVideo) { const videoItems = items.filter(i => i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i)); const videoFlatIdx = getAllVideos().reduce((sum, g) => sum + g.length, 0); let vIdx = 0; for (let i = 0; i < groupIdx; i++) vIdx += getAllVideos()[i].length; const itemVideoIdx = videoItems.indexOf(item); vIdx += (itemVideoIdx >= 0 ? itemVideoIdx : 0); setActiveVideoUrl(item.url); navigate(`/portfolio/${slug}/video/${vIdx}`, { replace: true }); } else { const photoItems = items.filter(i => !(i.type === 'video' || i.url?.match(/\.(mp4|webm|ogg)$/i))); const photoIdx = photoItems.indexOf(item); setLightboxGroupIndex(groupIdx); setLightboxSectionItems(photoItems); const totalPhotos = getAllPhotos().reduce((sum, g) => sum + g.length, 0); let flatIndex = 0; for (let i = 0; i < groupIdx; i++) flatIndex += getAllPhotos()[i].length; flatIndex += (photoIdx >= 0 ? photoIdx : 0); setLightboxPhoto({ url: item.url, title: getCaption(item, isArabic ? `لقطة #${flatIndex + 1}` : `Photo #${flatIndex + 1}`), index: photoIdx >= 0 ? photoIdx : 0, flatIndex, totalPhotos }); navigate(`/portfolio/${slug}/photo/${flatIndex}`, { replace: true }); } }} className={`group relative bg-neutral-950 rounded-[2px] overflow-hidden border border-neutral-200 hover:border-red-500 transition-all cursor-pointer ${getAspectClass(item.url)} shadow-2xs touch-action-manipulation`}>
                             {isVideo ? (
                               <>
                                 <video src={item.url} muted loop playsInline poster={item.thumbnail} onLoadedMetadata={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover" />
@@ -652,8 +755,8 @@ const ProjectDetail = () => {
 
       {/* LIGHTBOX */}
       {lightboxPhoto && (
-        <div onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center sm:p-4 select-none safe-area-inset">
-          <button onClick={() => { setLightboxPhoto(null); resetZoom(); }} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
+        <div onClick={() => { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center sm:p-4 select-none safe-area-inset" style={{ overflow: zoomLevel > 1 ? 'visible' : 'hidden' }}>
+          <button onClick={() => { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
           <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-70 bg-neutral-900/90 text-white text-xs font-extrabold px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl backdrop-blur-md border border-neutral-700 flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-8rem)]">
             <span className="shrink-0">{`${currentFlatIndex}/${totalLightboxPhotos}`}</span>
             <span className="text-neutral-300 max-w-[120px] sm:max-w-xs truncate hidden sm:inline">| {lightboxPhoto.title}</span>
@@ -666,17 +769,20 @@ const ProjectDetail = () => {
             onTouchStart={handleLightboxSwipeStart}
             onTouchEnd={handleLightboxSwipeEnd}
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-6xl max-h-[88vh] flex items-center justify-center overflow-hidden"
+            className="relative flex items-center justify-center"
+            style={{ maxWidth: '100%', maxHeight: zoomLevel > 1 ? 'none' : '88vh', overflow: zoomLevel > 1 ? 'visible' : 'hidden' }}
           >
             <img
               ref={lightboxImgRef}
               src={lightboxPhoto.url}
               alt={lightboxPhoto.title}
-              className="max-w-full max-h-[88vh] object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10"
+              className={`object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10 ${zoomLevel > 1 ? '' : 'max-w-full max-h-[88vh]'}`}
               style={{
                 transform: `scale(${zoomLevel}) translate(${zoomPosition.x}%, ${zoomPosition.y}%)`,
                 transition: isDragging ? 'none' : 'transform 0.2s ease-out',
                 cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                maxWidth: zoomLevel > 1 ? 'none' : undefined,
+                maxHeight: zoomLevel > 1 ? 'none' : undefined,
               }}
               onWheel={handleWheelZoom}
               onDoubleClick={handleDoubleClick}
@@ -699,8 +805,8 @@ const ProjectDetail = () => {
 
       {/* VIDEO MODAL */}
       {activeVideoUrl && (
-        <div onClick={() => setActiveVideoUrl(null)} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 safe-area-inset">
-          <button onClick={() => setActiveVideoUrl(null)} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
+        <div onClick={() => { setActiveVideoUrl(null); navigate(`/portfolio/${slug}`, { replace: true }); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 safe-area-inset">
+          <button onClick={() => { setActiveVideoUrl(null); navigate(`/portfolio/${slug}`, { replace: true }); }} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm aspect-9/16 max-h-[85vh] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10">
             {activeVideoUrl.match(/\.(mp4|webm|ogg)$/i) ? (
               <video src={activeVideoUrl} controls autoPlay className="w-full h-full object-contain" />

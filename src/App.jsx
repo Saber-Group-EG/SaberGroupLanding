@@ -34,6 +34,9 @@ function App() {
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/portfolio" element={<Portfolio />} />
         <Route path="/portfolio/:slug" element={<ProjectDetail />} />
+        <Route path="/portfolio/:slug/cover" element={<ProjectDetail />} />
+        <Route path="/portfolio/:slug/photo/:photoIndex" element={<ProjectDetail />} />
+        <Route path="/portfolio/:slug/video/:videoIndex" element={<ProjectDetail />} />
         <Route path="/join-us" element={<JoinUs />} />
         <Route path="/join-us/:slug" element={<JobApplicationForm />} />
         <Route
