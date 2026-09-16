@@ -55,16 +55,25 @@ function isVideoUrl(url) {
   return /\.(mp4|webm|ogg)$/i.test(url);
 }
 
+function resolveItemCaption(item, parentCaption) {
+  return resolveBilingual(item?.caption) || resolveBilingual(item?.label) || parentCaption || '';
+}
+
 function getAllPhotoItems(raw) {
   const items = [];
-  const mediaGroups = raw.mediaGroups || [];
-  for (const group of mediaGroups) {
-    if (group.type === 'before_after') continue;
-    if (group.type !== 'bulk' && group.type !== 'photo') continue;
-    for (const item of (group.items || [])) {
-      if (!isVideoUrl(item.url) && item.type !== 'video') {
-        items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveBilingual(item.caption) || resolveBilingual(item.name) || '' });
+  const material = raw.material || [];
+  for (const mat of material) {
+    if (mat.type === 'before_after') continue;
+    if (mat.type === 'bulk' && Array.isArray(mat.items)) {
+      const parentCaption = resolveBilingual(mat.caption);
+      for (const item of mat.items) {
+        const itemType = item.type || (isVideoUrl(item.url) ? 'video' : 'photo');
+        if (itemType !== 'video') {
+          items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveItemCaption(item, parentCaption) });
+        }
       }
+    } else if (mat.type === 'photo' && mat.url) {
+      items.push({ url: mat.url, thumbnail: mat.thumbnail || mat.url, caption: resolveBilingual(mat.caption) || '' });
     }
   }
   return items;
@@ -72,14 +81,19 @@ function getAllPhotoItems(raw) {
 
 function getAllVideoItems(raw) {
   const items = [];
-  const mediaGroups = raw.mediaGroups || [];
-  for (const group of mediaGroups) {
-    if (group.type === 'before_after') continue;
-    if (group.type !== 'bulk' && group.type !== 'photo') continue;
-    for (const item of (group.items || [])) {
-      if (isVideoUrl(item.url) || item.type === 'video') {
-        items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveBilingual(item.caption) || resolveBilingual(item.name) || '' });
+  const material = raw.material || [];
+  for (const mat of material) {
+    if (mat.type === 'before_after') continue;
+    if (mat.type === 'bulk' && Array.isArray(mat.items)) {
+      const parentCaption = resolveBilingual(mat.caption);
+      for (const item of mat.items) {
+        const itemType = item.type || (isVideoUrl(item.url) ? 'video' : 'photo');
+        if (itemType === 'video') {
+          items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveItemCaption(item, parentCaption) });
+        }
       }
+    } else if (mat.type === 'video' && mat.url) {
+      items.push({ url: mat.url, thumbnail: mat.thumbnail || '', caption: resolveBilingual(mat.caption) || '' });
     }
   }
   return items;
