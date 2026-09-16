@@ -51,15 +51,18 @@ function getEnSlug(raw) {
   return String(raw._id || '').replace(/[^a-z0-9-]/gi, '-');
 }
 
-function getAllMediaItems(raw) {
+function isVideoUrl(url) {
+  return /\.(mp4|webm|ogg)$/i.test(url);
+}
+
+function getAllPhotoItems(raw) {
   const items = [];
   const mediaGroups = raw.mediaGroups || [];
   for (const group of mediaGroups) {
-    if (group.type === 'before_after') {
-      if (group.before?.url) items.push({ url: group.before.url, thumbnail: group.before.thumbnail || group.before.url, caption: resolveBilingual(group.before.caption) || resolveBilingual(group.before.name) || '' });
-      if (group.after?.url) items.push({ url: group.after.url, thumbnail: group.after.thumbnail || group.after.url, caption: resolveBilingual(group.after.caption) || resolveBilingual(group.after.name) || '' });
-    } else if (group.items?.length) {
-      for (const item of group.items) {
+    if (group.type === 'before_after') continue;
+    if (group.type !== 'bulk' && group.type !== 'photo') continue;
+    for (const item of (group.items || [])) {
+      if (!isVideoUrl(item.url) && item.type !== 'video') {
         items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveBilingual(item.caption) || resolveBilingual(item.name) || '' });
       }
     }
@@ -67,8 +70,19 @@ function getAllMediaItems(raw) {
   return items;
 }
 
-function isVideoUrl(url) {
-  return /\.(mp4|webm|ogg)$/i.test(url);
+function getAllVideoItems(raw) {
+  const items = [];
+  const mediaGroups = raw.mediaGroups || [];
+  for (const group of mediaGroups) {
+    if (group.type === 'before_after') continue;
+    if (group.type !== 'bulk' && group.type !== 'photo') continue;
+    for (const item of (group.items || [])) {
+      if (isVideoUrl(item.url) || item.type === 'video') {
+        items.push({ url: item.url, thumbnail: item.thumbnail || item.url, caption: resolveBilingual(item.caption) || resolveBilingual(item.name) || '' });
+      }
+    }
+  }
+  return items;
 }
 
 function parseMediaRoute(pathname) {
@@ -126,9 +140,8 @@ export default async function middleware(request) {
       mediaUrl = `${SITE_URL}/portfolio/${slug}/cover`;
       ogTitle = `${projectName} | Saber Group`;
     } else if (type === 'photo' || type === 'video') {
-      const allMedia = getAllMediaItems(raw);
-      const videoItems = allMedia.filter((m) => isVideoUrl(m.url));
-      const photoItems = allMedia.filter((m) => !isVideoUrl(m.url));
+      const photoItems = type === 'photo' ? getAllPhotoItems(raw) : [];
+      const videoItems = type === 'video' ? getAllVideoItems(raw) : [];
 
       let mediaItem = null;
       if (type === 'photo' && index >= 0 && index < photoItems.length) {
