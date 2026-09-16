@@ -69,6 +69,7 @@ const ProjectDetail = () => {
   const lastTouchDistRef = useRef(0);
   const lightboxImgRef = useRef(null);
   const swipeStartRef = useRef({ x: 0, y: 0, time: 0 });
+  const lastZoomTimeRef = useRef(0);
   const [aspectRatios, setAspectRatios] = useState({});
 
   const getAspectClass = (url) => {
@@ -164,7 +165,10 @@ const ProjectDetail = () => {
 
   const handleWheelZoom = (e) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    const now = Date.now();
+    if (now - lastZoomTimeRef.current < 80) return;
+    lastZoomTimeRef.current = now;
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
     setZoomLevel((prev) => {
       const next = Math.max(1, Math.min(4, prev + delta));
       if (next === 1) setZoomPosition({ x: 0, y: 0 });
@@ -776,13 +780,11 @@ const ProjectDetail = () => {
               ref={lightboxImgRef}
               src={lightboxPhoto.url}
               alt={lightboxPhoto.title}
-              className={`object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10 ${zoomLevel > 1 ? '' : 'max-w-full max-h-[88vh]'}`}
+              className="object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10 max-w-full max-h-[88vh]"
               style={{
                 transform: `scale(${zoomLevel}) translate(${zoomPosition.x}%, ${zoomPosition.y}%)`,
-                transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+                transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
-                maxWidth: zoomLevel > 1 ? 'none' : undefined,
-                maxHeight: zoomLevel > 1 ? 'none' : undefined,
               }}
               onWheel={handleWheelZoom}
               onDoubleClick={handleDoubleClick}
