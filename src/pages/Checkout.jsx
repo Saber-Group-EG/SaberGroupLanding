@@ -477,6 +477,7 @@ const CheckoutPage = () => {
     isContactValid,
     appliedPromo,
     loadErrorText,
+    agreedToTerms,
   ]);
 
   const handlePaySuccess = useCallback(() => {
