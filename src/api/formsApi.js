@@ -107,10 +107,19 @@ export async function startCheckout(payload) {
   return res.data;
 }
 
+export async function previewPromo(promoCode, planId) {
+  const res = await formClient.post('/public/promos/preview', {
+    promoCode,
+    planId,
+  });
+  return res.data;
+}
+
 export default {
   submitApplicant,
   checkExistingApplicant,
   getApiErrorMessage,
   getPlans,
   startCheckout,
+  previewPromo,
 };

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import { getPlans, startCheckout, getApiErrorMessage } from '../api/formsApi';
+import {
+  getPlans,
+  startCheckout,
+  getApiErrorMessage,
+  previewPromo,
+} from '../api/formsApi';
 import { parsePaymobCheckoutUrl } from '../api/paymobApi';
 import PaymobCardForm from '../components/PaymobCardForm';
 // ⚠️ adjust these two paths to wherever your content files actually live
@@ -191,6 +196,8 @@ const CheckoutPage = () => {
   const [promoInput, setPromoInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
   const [promoError, setPromoError] = useState('');
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promoDiscount, setPromoDiscount] = useState(null);
 
   useEffect(() => {
     try {
@@ -248,8 +255,12 @@ const CheckoutPage = () => {
 
   const features = PLAN_FEATURES[tierKey]?.[lang] || [];
   // Price already includes VAT — no separate VAT line/calc.
-  const egp = plan ? plan.priceCents / 100 : 0;
-  const total = egp;
+  const standardEgp = plan ? plan.priceCents / 100 : 0;
+  const discountedEgp = promoDiscount
+    ? promoDiscount.discountedAmountCents / 100
+    : null;
+  const savingsEgp = discountedEgp !== null ? standardEgp - discountedEgp : 0;
+  const total = discountedEgp ?? standardEgp;
 
   const t = {
     breadcrumb: isArabic ? 'الخدمات' : 'Services',
@@ -265,7 +276,7 @@ const CheckoutPage = () => {
     phone: isArabic ? 'تليفون / واتساب' : 'Phone / WhatsApp',
     redirectNote: isArabic
       ? 'بيانات بطاقتك بتتم معالجتها بأمان عبر Paymob. إحنا مش بنشوف أو بنخزن بيانات بطاقتك.'
-      : "Your card details are processed securely by Paymob. We never see or store your card information.",
+      : 'Your card details are processed securely by Paymob. We never see or store your card information.',
     paymentPrompt: isArabic
       ? 'أدخل بيانات بطاقتك بأمان لإتمام الدفع.'
       : 'Enter your card details securely to complete payment.',
@@ -294,6 +305,9 @@ const CheckoutPage = () => {
     fieldRequired: isArabic ? 'هذا الحقل مطلوب' : 'Required',
     invalidEmail: isArabic ? 'إيميل غير صحيح' : 'Invalid email',
     productLabel: product.toUpperCase(),
+    subtotal: isArabic ? 'السعر الأساسي' : 'Subtotal',
+    promoDiscount: isArabic ? 'خصم الكود' : 'Promo discount',
+    youSave: isArabic ? 'وفرت' : 'You save',
     loadingPlan: isArabic ? 'جاري تحميل الباقة…' : 'Loading plan…',
     planUnavailableTitle: isArabic ? 'الباقة غير متاحة' : 'Plan unavailable',
     planUnavailableMsg: isArabic
@@ -343,26 +357,45 @@ const CheckoutPage = () => {
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
 
-  const handleApplyPromo = () => {
+  const handleApplyPromo = async () => {
     const code = promoInput.trim();
     if (!code) {
       setPromoError(t.promoEmpty);
       return;
     }
-    setAppliedPromo(code);
-    setPromoInput('');
+    if (!plan) return; // shouldn't happen once planStatus === 'ready', but guard anyway
+
+    setPromoChecking(true);
     setPromoError('');
-    // The started intention (if any) is for the non-discounted amount, so
-    // invalidate it — the user re-confirms once the discounted plan is resolved.
-    if (session) {
-      setSession(null);
-      setFailed(false);
-      setFailedMessage('');
+    try {
+      const result = await previewPromo(code, plan._id);
+      if (!result.valid) {
+        setPromoError(result.error || t.promoEmpty);
+        return;
+      }
+      setPromoDiscount({
+        discountedAmountCents: result.discountedAmountCents,
+        currency: result.currency,
+      });
+      setAppliedPromo(code);
+      setPromoInput('');
+      // Invalidate any already-started session — its intention was created
+      // (or would be created) against the wrong amount.
+      if (session) {
+        setSession(null);
+        setFailed(false);
+        setFailedMessage('');
+      }
+    } catch (err) {
+      setPromoError(getApiErrorMessage(err) || t.promoEmpty);
+    } finally {
+      setPromoChecking(false);
     }
   };
 
   const handleRemovePromo = () => {
     setAppliedPromo('');
+    setPromoDiscount(null);
     setPromoError('');
     if (session) {
       setSession(null);
@@ -375,9 +408,9 @@ const CheckoutPage = () => {
     () =>
       Boolean(
         form.name.trim() &&
-          form.company.trim() &&
-          EMAIL_RE.test(form.email.trim()) &&
-          form.phone.trim()
+        form.company.trim() &&
+        EMAIL_RE.test(form.email.trim()) &&
+        form.phone.trim()
       ),
     [form]
   );
@@ -398,6 +431,10 @@ const CheckoutPage = () => {
   const handleStartPayment = useCallback(async () => {
     if (planStatus !== 'ready' || !plan || session || starting) return;
     if (!isContactValid()) return;
+    if (!agreedToTerms) {
+      setErrors((p) => ({ ...p, terms: t.termsRequired }));
+      return;
+    }
     setStarting(true);
     setFailed(false);
     setFailedMessage('');
@@ -431,7 +468,16 @@ const CheckoutPage = () => {
     } finally {
       setStarting(false);
     }
-  }, [planStatus, plan, session, starting, form, isContactValid, appliedPromo, loadErrorText]);
+  }, [
+    planStatus,
+    plan,
+    session,
+    starting,
+    form,
+    isContactValid,
+    appliedPromo,
+    loadErrorText,
+  ]);
 
   const handlePaySuccess = useCallback(() => {
     // Payment is captured, but activation is confirmed asynchronously by
@@ -552,7 +598,16 @@ const CheckoutPage = () => {
           </div>
           <div className={isArabic ? 'text-start' : 'text-end'}>
             <div className="text-xl font-bold text-light-900 dark:text-white">
-              {egp.toLocaleString()}{' '}
+              {discountedEgp !== null ? (
+                <>
+                  <span className="text-xs font-normal line-through text-light-400 me-1.5">
+                    {standardEgp.toLocaleString()}
+                  </span>
+                  {discountedEgp.toLocaleString()}{' '}
+                </>
+              ) : (
+                <>{standardEgp.toLocaleString()} </>
+              )}
               <span className="text-xs font-normal text-light-400">
                 {plan?.currency || 'EGP'}
               </span>
@@ -604,6 +659,162 @@ const CheckoutPage = () => {
         </div>
 
         <form onSubmit={(e) => e.preventDefault()} noValidate>
+          {/* Order summary */}
+          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-4">
+              {t.orderTitle}
+            </p>
+
+            {/* Promo code */}
+            <div className="mb-5">
+              {appliedPromo ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-500/40 bg-primary-500/10 px-4 py-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg
+                      className="size-4 shrink-0 text-primary-500"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9z" />
+                      <path d="M13 5v2m0 10v2M9 7l6 10" />
+                    </svg>
+                    <span className="text-sm font-bold text-primary-500 truncate">
+                      {appliedPromo}
+                    </span>
+                    <span className="text-xs text-light-500 dark:text-light-400 shrink-0">
+                      {t.promoAppliedNote}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="text-xs font-semibold text-light-400 hover:text-danger-500 transition-colors shrink-0"
+                  >
+                    {t.promoRemove}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    name="promoCode"
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => {
+                      setPromoInput(e.target.value);
+                      if (promoError) setPromoError('');
+                    }}
+                    placeholder={t.promoPlaceholder}
+                    className={inputCls('promoCode')}
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={promoChecking}
+                    className="shrink-0 rounded-xl bg-light-900 dark:bg-white px-5 py-3 text-sm font-semibold text-white dark:text-dark-900 transition hover:bg-primary-500 dark:hover:bg-primary-500 dark:hover:text-white disabled:opacity-60"
+                  >
+                    {promoChecking ? '...' : t.promoApply}
+                  </button>
+                </div>
+              )}
+              {promoError && (
+                <p className="mt-1.5 text-xs text-danger-500 flex items-center gap-1.5">
+                  <svg
+                    className="size-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 9v4m0 4h.01" />
+                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                  </svg>
+                  {promoError}
+                </p>
+              )}
+              {!promoError && !appliedPromo && (
+                <p className="mt-1.5 text-[10px] text-light-400 dark:text-light-500">
+                  {t.promoHint}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {/* Plan line */}
+              <div className="flex justify-between text-sm border-b border-light-100 dark:border-dark-700 pb-3">
+                <span className="text-light-500 dark:text-light-400">
+                  {t.productLabel} — {tierKey}
+                </span>
+                <span className="font-semibold text-light-900 dark:text-white">
+                  {standardEgp.toLocaleString()} {plan?.currency || 'EGP'}
+                </span>
+              </div>
+
+              {/* Discount line — only when a promo is actually applied */}
+              {discountedEgp !== null && (
+                <div className="flex justify-between text-sm border-b border-light-100 dark:border-dark-700 pb-3">
+                  <span className="text-light-500 dark:text-light-400 flex items-center gap-1.5">
+                    {t.promoDiscount}
+                    <span className="text-[10px] font-bold text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded">
+                      {appliedPromo}
+                    </span>
+                  </span>
+                  <span className="font-semibold text-primary-500">
+                    −{savingsEgp.toLocaleString()} {plan?.currency || 'EGP'}
+                  </span>
+                </div>
+              )}
+
+              {/* Remaining simple rows — setup fee etc. */}
+              {[{ label: t.setupFee, value: t.free, green: true }].map(
+                ({ label, value, green }) => (
+                  <div
+                    key={label}
+                    className="flex justify-between text-sm border-b border-light-100 dark:border-dark-700 pb-3 last:border-none last:pb-0"
+                  >
+                    <span className="text-light-500 dark:text-light-400">
+                      {label}
+                    </span>
+                    <span
+                      className={`font-semibold ${green ? 'text-primary-500' : 'text-light-900 dark:text-white'}`}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                )
+              )}
+
+              <div className="flex justify-between items-center pt-2">
+                <span className="font-bold text-light-900 dark:text-white">
+                  {t.totalDue}
+                </span>
+                <div className={isArabic ? 'text-start' : 'text-end'}>
+                  <span className="text-lg font-bold text-primary-500">
+                    {total.toLocaleString()} {plan?.currency || 'EGP'}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-light-400 dark:text-light-500">
+                {t.vatIncludedNote}
+              </p>
+            </div>
+
+            {/* Feature chips */}
+            <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-light-100 dark:border-dark-700">
+              {features.map((f) => (
+                <span
+                  key={f}
+                  className="text-[11px] text-light-600 dark:text-light-400 bg-light-50 dark:bg-dark-700 px-3 py-1 rounded-full before:content-['✓_'] before:text-primary-500 before:font-bold"
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+
           {/* Contact details */}
           <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
             <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-5">
@@ -700,7 +911,6 @@ const CheckoutPage = () => {
               <p className="mt-2 text-xs text-danger-500">{errors.terms}</p>
             )}
           </div>
-
           {/* Payment */}
           <div
             id="payment-section"
@@ -804,135 +1014,6 @@ const CheckoutPage = () => {
                 <LockIcon />
                 <span>{t.redirectNote}</span>
               </div>
-            </div>
-          </div>
-
-          {/* Order summary */}
-          <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 mb-4">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-4">
-              {t.orderTitle}
-            </p>
-
-            {/* Promo code */}
-            <div className="mb-5">
-              {appliedPromo ? (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-500/40 bg-primary-500/10 px-4 py-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <svg
-                      className="size-4 shrink-0 text-primary-500"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9z" />
-                      <path d="M13 5v2m0 10v2M9 7l6 10" />
-                    </svg>
-                    <span className="text-sm font-bold text-primary-500 truncate">
-                      {appliedPromo}
-                    </span>
-                    <span className="text-xs text-light-500 dark:text-light-400 shrink-0">
-                      {t.promoAppliedNote}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRemovePromo}
-                    className="text-xs font-semibold text-light-400 hover:text-danger-500 transition-colors shrink-0"
-                  >
-                    {t.promoRemove}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    name="promoCode"
-                    type="text"
-                    value={promoInput}
-                    onChange={(e) => {
-                      setPromoInput(e.target.value);
-                      if (promoError) setPromoError('');
-                    }}
-                    placeholder={t.promoPlaceholder}
-                    className={inputCls('promoCode')}
-                    dir="ltr"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyPromo}
-                    className="shrink-0 rounded-xl bg-light-900 dark:bg-white px-5 py-3 text-sm font-semibold text-white dark:text-dark-900 transition hover:bg-primary-500 dark:hover:bg-primary-500 dark:hover:text-white"
-                  >
-                    {t.promoApply}
-                  </button>
-                </div>
-              )}
-              {promoError && (
-                <p className="mt-1.5 text-xs text-danger-500 flex items-center gap-1.5">
-                  <svg
-                    className="size-3.5 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 9v4m0 4h.01" />
-                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-                  </svg>
-                  {promoError}
-                </p>
-              )}
-              {!promoError && !appliedPromo && (
-                <p className="mt-1.5 text-[10px] text-light-400 dark:text-light-500">
-                  {t.promoHint}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              {[
-                {
-                  label: `${t.productLabel} — ${tierKey}`,
-                  value: `${egp.toLocaleString()} ${plan?.currency || 'EGP'}`,
-                },
-                { label: t.setupFee, value: t.free, green: true },
-              ].map(({ label, value, green }) => (
-                <div
-                  key={label}
-                  className="flex justify-between text-sm border-b border-light-100 dark:border-dark-700 pb-3 last:border-none last:pb-0"
-                >
-                  <span className="text-light-500 dark:text-light-400">
-                    {label}
-                  </span>
-                  <span
-                    className={`font-semibold ${green ? 'text-primary-500' : 'text-light-900 dark:text-white'}`}
-                  >
-                    {value}
-                  </span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center pt-2">
-                <span className="font-bold text-light-900 dark:text-white">
-                  {t.totalDue}
-                </span>
-                <span className="text-lg font-bold text-primary-500">
-                  {total.toLocaleString()} {plan?.currency || 'EGP'}
-                </span>
-              </div>
-              <p className="text-[10px] text-light-400 dark:text-light-500">
-                {t.vatIncludedNote}
-              </p>
-            </div>
-
-            {/* Feature chips */}
-            <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-light-100 dark:border-dark-700">
-              {features.map((f) => (
-                <span
-                  key={f}
-                  className="text-[11px] text-light-600 dark:text-light-400 bg-light-50 dark:bg-dark-700 px-3 py-1 rounded-full before:content-['✓_'] before:text-primary-500 before:font-bold"
-                >
-                  {f}
-                </span>
-              ))}
             </div>
           </div>
 
