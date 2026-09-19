@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import { getPlans, startCheckout } from '../api/formsApi';
+import { getPlans, startCheckout, getApiErrorMessage } from '../api/formsApi';
 import { parsePaymobCheckoutUrl } from '../api/paymobApi';
 import PaymobCardForm from '../components/PaymobCardForm';
 // ⚠️ adjust these two paths to wherever your content files actually live
@@ -185,7 +185,12 @@ const CheckoutPage = () => {
   const [errors, setErrors] = useState({});
   const [session, setSession] = useState(null); // { publicKey, clientSecret, checkoutUrl } | null
   const [failed, setFailed] = useState(false);
+  const [failedMessage, setFailedMessage] = useState('');
   const [starting, setStarting] = useState(false);
+
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState('');
+  const [promoError, setPromoError] = useState('');
 
   useEffect(() => {
     try {
@@ -311,6 +316,15 @@ const CheckoutPage = () => {
     modalClose: isArabic ? 'إغلاق' : 'Close',
     termsModalTitle: isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
     privacyModalTitle: isArabic ? 'سياسة الخصوصية' : 'Privacy Policy',
+    promoLabel: isArabic ? 'كود الخصم' : 'Promo code',
+    promoPlaceholder: isArabic ? 'مثال: WELCOME10' : 'e.g. WELCOME10',
+    promoApply: isArabic ? 'تطبيق' : 'Apply',
+    promoRemove: isArabic ? 'إزالة' : 'Remove',
+    promoAppliedNote: isArabic ? 'تم التطبيق' : 'applied',
+    promoEmpty: isArabic ? 'اكتب كود الخصم الأول' : 'Enter a promo code first',
+    promoHint: isArabic
+      ? 'الخصم بيتطبق عند تأكيد الدفع.'
+      : 'Discount is applied when you confirm payment.',
   };
 
   const inputCls = (field) =>
@@ -329,6 +343,34 @@ const CheckoutPage = () => {
     if (errors[name]) setErrors((p) => ({ ...p, [name]: '' }));
   };
 
+  const handleApplyPromo = () => {
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoError(t.promoEmpty);
+      return;
+    }
+    setAppliedPromo(code);
+    setPromoInput('');
+    setPromoError('');
+    // The started intention (if any) is for the non-discounted amount, so
+    // invalidate it — the user re-confirms once the discounted plan is resolved.
+    if (session) {
+      setSession(null);
+      setFailed(false);
+      setFailedMessage('');
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo('');
+    setPromoError('');
+    if (session) {
+      setSession(null);
+      setFailed(false);
+      setFailedMessage('');
+    }
+  };
+
   const isContactValid = useCallback(
     () =>
       Boolean(
@@ -342,9 +384,12 @@ const CheckoutPage = () => {
 
   const contactDone = isContactValid();
 
+  const loadErrorText = t.pixelLoadError;
+
   const handleRetry = useCallback(() => {
     if (plan) clearIntentionCache(plan._id);
     setFailed(false);
+    setFailedMessage('');
     setSession(null);
   }, [plan]);
 
@@ -355,6 +400,7 @@ const CheckoutPage = () => {
     if (!isContactValid()) return;
     setStarting(true);
     setFailed(false);
+    setFailedMessage('');
     try {
       const intent = await getIntention({
         fullName: form.name.trim(),
@@ -362,6 +408,7 @@ const CheckoutPage = () => {
         workEmail: form.email.trim(),
         phone: form.phone.trim(),
         planId: plan._id,
+        promoCode: appliedPromo || undefined,
       });
       setSession({
         publicKey: intent.publicKey,
@@ -370,11 +417,21 @@ const CheckoutPage = () => {
       });
     } catch (err) {
       console.error('Failed to start payment session:', err);
-      setFailed(true);
+      const message = getApiErrorMessage(err);
+      // A bad/expired promo code is rejected up front by the backend, so
+      // surface it on the promo field instead of the generic payment error.
+      if (appliedPromo && /promo|code|كود|خصم/i.test(message)) {
+        setPromoError(message || loadErrorText);
+        setFailed(false);
+      } else {
+        setPromoError('');
+        setFailedMessage(message || loadErrorText);
+        setFailed(true);
+      }
     } finally {
       setStarting(false);
     }
-  }, [planStatus, plan, session, starting, form, isContactValid]);
+  }, [planStatus, plan, session, starting, form, isContactValid, appliedPromo, loadErrorText]);
 
   const handlePaySuccess = useCallback(() => {
     // Payment is captured, but activation is confirmed asynchronously by
@@ -677,7 +734,7 @@ const CheckoutPage = () => {
                       <path d="M12 9v4m0 4h.01" />
                       <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
                     </svg>
-                    {t.pixelLoadError}
+                    {failedMessage || t.pixelLoadError}
                   </p>
                   <button
                     type="button"
@@ -755,6 +812,81 @@ const CheckoutPage = () => {
             <p className="text-[11px] font-bold uppercase tracking-widest text-light-400 dark:text-light-500 mb-4">
               {t.orderTitle}
             </p>
+
+            {/* Promo code */}
+            <div className="mb-5">
+              {appliedPromo ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-primary-500/40 bg-primary-500/10 px-4 py-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg
+                      className="size-4 shrink-0 text-primary-500"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9z" />
+                      <path d="M13 5v2m0 10v2M9 7l6 10" />
+                    </svg>
+                    <span className="text-sm font-bold text-primary-500 truncate">
+                      {appliedPromo}
+                    </span>
+                    <span className="text-xs text-light-500 dark:text-light-400 shrink-0">
+                      {t.promoAppliedNote}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="text-xs font-semibold text-light-400 hover:text-danger-500 transition-colors shrink-0"
+                  >
+                    {t.promoRemove}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    name="promoCode"
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => {
+                      setPromoInput(e.target.value);
+                      if (promoError) setPromoError('');
+                    }}
+                    placeholder={t.promoPlaceholder}
+                    className={inputCls('promoCode')}
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    className="shrink-0 rounded-xl bg-light-900 dark:bg-white px-5 py-3 text-sm font-semibold text-white dark:text-dark-900 transition hover:bg-primary-500 dark:hover:bg-primary-500 dark:hover:text-white"
+                  >
+                    {t.promoApply}
+                  </button>
+                </div>
+              )}
+              {promoError && (
+                <p className="mt-1.5 text-xs text-danger-500 flex items-center gap-1.5">
+                  <svg
+                    className="size-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 9v4m0 4h.01" />
+                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                  </svg>
+                  {promoError}
+                </p>
+              )}
+              {!promoError && !appliedPromo && (
+                <p className="mt-1.5 text-[10px] text-light-400 dark:text-light-500">
+                  {t.promoHint}
+                </p>
+              )}
+            </div>
 
             <div className="space-y-3">
               {[
