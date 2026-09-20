@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { getPlans, getApiErrorMessage, previewPromo } from '../api/formsApi';
 import {
-  getPlans,
-  startCheckout,
-  getApiErrorMessage,
-  previewPromo,
-} from '../api/formsApi';
-import { parsePaymobCheckoutUrl } from '../api/paymobApi';
-import PaymobCardForm from '../components/PaymobCardForm';
+  readSavedContact,
+  writeSavedContact,
+  writeCheckoutSession,
+} from '../api/checkoutSession';
 // ⚠️ adjust these two paths to wherever your content files actually live
 import termsContent from '../content/TermsContent';
 import { privacyContent } from '../content/PoliciesContent';
@@ -52,93 +50,7 @@ const PLAN_FEATURES = {
   },
 };
 
-// The backend returns a { checkoutUrl } (unified checkout URL) carrying
-// publicKey + clientSecret. We parse those out and render our own styled
-// card form (PaymobCardForm) instead of Paymob's hosted page.
-const createIntention = async (payload) => {
-  const res = await startCheckout(payload);
-  const parsed =
-    typeof res.checkoutUrl === 'string'
-      ? parsePaymobCheckoutUrl(res.checkoutUrl)
-      : null;
-  if (parsed) return parsed;
-  throw new Error('No payment session returned');
-};
-
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
-
-const CONTACT_CACHE_KEY = 'checkout_contact';
-
-const readSavedContact = () => {
-  try {
-    const raw = sessionStorage.getItem(CONTACT_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-// One cached intention per plan + payload hash, so the pre-create never
-// spams Paymob with duplicate orders — every reload (and React StrictMode
-// double-fire) used to create a brand-new order, which got us 400s.
-const INTENTION_CACHE_PREFIX = 'paymob_intention_';
-const INTENTION_CACHE_TTL = 30 * 60 * 1000; // 30 min
-
-const readIntentionCache = (planId) => {
-  try {
-    const raw = sessionStorage.getItem(INTENTION_CACHE_PREFIX + planId);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const writeIntentionCache = (planId, entry) => {
-  try {
-    sessionStorage.setItem(
-      INTENTION_CACHE_PREFIX + planId,
-      JSON.stringify(entry)
-    );
-  } catch {
-    // storage unavailable — the session will just be re-created
-  }
-};
-
-const clearIntentionCache = (planId) => {
-  try {
-    sessionStorage.removeItem(INTENTION_CACHE_PREFIX + planId);
-  } catch {
-    // noop
-  }
-};
-
-let intentionInFlight = null; // { hash, promise } — dedupe concurrent creates
-
-const getIntention = async (payload) => {
-  const hash = JSON.stringify(payload);
-  if (intentionInFlight && intentionInFlight.hash === hash) {
-    return intentionInFlight.promise;
-  }
-  const cached = readIntentionCache(payload.planId);
-  if (
-    cached &&
-    cached.payloadHash === hash &&
-    Date.now() - cached.createdAt < INTENTION_CACHE_TTL
-  ) {
-    return cached;
-  }
-  const promise = createIntention(payload).then((r) => {
-    const entry = { ...r, payloadHash: hash, createdAt: Date.now() };
-    writeIntentionCache(payload.planId, entry);
-    return entry;
-  });
-  intentionInFlight = { hash, promise };
-  try {
-    return await promise;
-  } finally {
-    if (intentionInFlight?.hash === hash) intentionInFlight = null;
-  }
-};
 
 const LockIcon = () => (
   <svg
@@ -150,18 +62,6 @@ const LockIcon = () => (
   >
     <rect x="3" y="11" width="18" height="11" rx="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-
-const ShieldIcon = () => (
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    viewBox="0 0 24 24"
-  >
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
 
@@ -188,10 +88,6 @@ const CheckoutPage = () => {
       }
   );
   const [errors, setErrors] = useState({});
-  const [session, setSession] = useState(null); // { publicKey, clientSecret, checkoutUrl } | null
-  const [failed, setFailed] = useState(false);
-  const [failedMessage, setFailedMessage] = useState('');
-  const [starting, setStarting] = useState(false);
 
   const [promoInput, setPromoInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
@@ -199,18 +95,13 @@ const CheckoutPage = () => {
   const [promoChecking, setPromoChecking] = useState(false);
   const [promoDiscount, setPromoDiscount] = useState(null);
 
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(CONTACT_CACHE_KEY, JSON.stringify(form));
-    } catch {
-      // storage unavailable — the form just won't be restored on reload
-    }
-  }, [form]);
-
-  // ── Terms/Privacy agreement ────────────────────────────────────────────
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModal, setLegalModal] = useState(null); // null | 'terms' | 'privacy'
   const [canAgreeInModal, setCanAgreeInModal] = useState(false);
+
+  useEffect(() => {
+    writeSavedContact(form);
+  }, [form]);
 
   useEffect(() => {
     let cancelled = false;
@@ -248,11 +139,6 @@ const CheckoutPage = () => {
     };
   }, [tierKey]);
 
-  // The payment session is only started once the user fills in the four
-  // contact fields and confirms — no placeholder billing is ever sent.
-  // `getIntention` dedupes concurrent requests and caches per payload, so
-  // reloads or double-clicks never create a duplicate Paymob order.
-
   const features = PLAN_FEATURES[tierKey]?.[lang] || [];
   // Price already includes VAT — no separate VAT line/calc.
   const standardEgp = plan ? plan.priceCents / 100 : 0;
@@ -277,19 +163,9 @@ const CheckoutPage = () => {
     redirectNote: isArabic
       ? 'بيانات بطاقتك بتتم معالجتها بأمان عبر Paymob. إحنا مش بنشوف أو بنخزن بيانات بطاقتك.'
       : 'Your card details are processed securely by Paymob. We never see or store your card information.',
-    paymentPrompt: isArabic
-      ? 'أدخل بيانات بطاقتك بأمان لإتمام الدفع.'
-      : 'Enter your card details securely to complete payment.',
-    confirmStart: isArabic
-      ? 'تأكيد وبدء الدفع الآمن'
-      : 'Confirm & start secure payment',
-    fillDetailsFirst: isArabic
-      ? 'أكمل بياناتك الأربعة أعلاه ليظهر نموذج الدفع.'
-      : 'Fill in your details above to see the payment form.',
-    pixelLoadError: isArabic
-      ? 'تعذر تحميل نموذج الدفع. حاول مرة أخرى.'
-      : 'Unable to load the payment form. Please try again.',
-    retry: isArabic ? 'حاول مرة أخرى' : 'Try again',
+    continueBtn: isArabic
+      ? 'المتابعة للدفع الآمن'
+      : 'Continue to secure payment',
     orderTitle: isArabic ? 'ملخص الطلب' : 'Order summary',
     setupFee: isArabic ? 'رسوم الإعداد' : 'Setup fee',
     free: isArabic ? 'مجانًا' : 'Free',
@@ -297,25 +173,17 @@ const CheckoutPage = () => {
       ? 'السعر شامل ضريبة القيمة المضافة'
       : 'Price includes VAT',
     totalDue: isArabic ? 'الإجمالي اليوم' : 'Total due today',
-    payBtn: isArabic ? 'ادفع الآن' : 'Pay now',
-    processing: isArabic ? 'جاري التجهيز…' : 'Preparing payment…',
     termsNote: isArabic
       ? 'الاشتراك يتجدد شهريًا ويمكن إلغاؤه في أي وقت.'
       : 'Subscription renews monthly. Cancel any time.',
-    fieldRequired: isArabic ? 'هذا الحقل مطلوب' : 'Required',
-    invalidEmail: isArabic ? 'إيميل غير صحيح' : 'Invalid email',
     productLabel: product.toUpperCase(),
-    subtotal: isArabic ? 'السعر الأساسي' : 'Subtotal',
     promoDiscount: isArabic ? 'خصم الكود' : 'Promo discount',
-    youSave: isArabic ? 'وفرت' : 'You save',
     loadingPlan: isArabic ? 'جاري تحميل الباقة…' : 'Loading plan…',
     planUnavailableTitle: isArabic ? 'الباقة غير متاحة' : 'Plan unavailable',
     planUnavailableMsg: isArabic
       ? 'الباقة المختارة غير متاحة حاليًا. من فضلك ارجع لصفحة الخدمات واختار باقة تانية.'
       : "This plan isn't available right now. Please go back to Services and pick another plan.",
     backToServices: isArabic ? 'الرجوع للخدمات' : 'Back to Services',
-    genericErrorTitle: isArabic ? 'حصل خطأ' : 'Something went wrong',
-    // Legal agreement
     legalCheckboxPrefix: isArabic ? 'أوافق على' : 'I agree to the',
     and: isArabic ? 'و' : 'and',
     termsLink: isArabic ? 'الشروط والأحكام' : 'Terms & Conditions',
@@ -339,6 +207,9 @@ const CheckoutPage = () => {
     promoHint: isArabic
       ? 'الخصم بيتطبق عند تأكيد الدفع.'
       : 'Discount is applied when you confirm payment.',
+    fillDetailsFirst: isArabic
+      ? 'أكمل بياناتك الأربعة أعلاه للمتابعة للدفع.'
+      : 'Fill in your details above to continue to payment.',
   };
 
   const inputCls = (field) =>
@@ -363,7 +234,7 @@ const CheckoutPage = () => {
       setPromoError(t.promoEmpty);
       return;
     }
-    if (!plan) return; // shouldn't happen once planStatus === 'ready', but guard anyway
+    if (!plan) return;
 
     setPromoChecking(true);
     setPromoError('');
@@ -379,13 +250,6 @@ const CheckoutPage = () => {
       });
       setAppliedPromo(code);
       setPromoInput('');
-      // Invalidate any already-started session — its intention was created
-      // (or would be created) against the wrong amount.
-      if (session) {
-        setSession(null);
-        setFailed(false);
-        setFailedMessage('');
-      }
     } catch (err) {
       setPromoError(getApiErrorMessage(err) || t.promoEmpty);
     } finally {
@@ -397,11 +261,6 @@ const CheckoutPage = () => {
     setAppliedPromo('');
     setPromoDiscount(null);
     setPromoError('');
-    if (session) {
-      setSession(null);
-      setFailed(false);
-      setFailedMessage('');
-    }
   };
 
   const isContactValid = useCallback(
@@ -417,94 +276,54 @@ const CheckoutPage = () => {
 
   const contactDone = isContactValid();
 
-  const loadErrorText = t.pixelLoadError;
+  // Validates contact + terms, then hands off the exact confirmed plan,
+  // promo, and total to /checkout/payment. The Payment page never
+  // re-derives the amount — it only creates the Paymob intention from
+  // what was agreed to here.
+  const handleContinue = useCallback(() => {
+    const fieldErrors = {};
+    if (!form.name.trim()) fieldErrors.name = isArabic ? 'مطلوب' : 'Required';
+    if (!form.company.trim())
+      fieldErrors.company = isArabic ? 'مطلوب' : 'Required';
+    if (!EMAIL_RE.test(form.email.trim()))
+      fieldErrors.email =
+        t.invalidEmail || (isArabic ? 'إيميل غير صحيح' : 'Invalid email');
+    if (!form.phone.trim()) fieldErrors.phone = isArabic ? 'مطلوب' : 'Required';
+    if (!agreedToTerms) fieldErrors.terms = t.termsRequired;
 
-  const handleRetry = useCallback(() => {
-    if (plan) clearIntentionCache(plan._id);
-    setFailed(false);
-    setFailedMessage('');
-    setSession(null);
-  }, [plan]);
-
-  // Waits for the four contact fields, then starts the payment session
-  // with the real billing data — no placeholder billing is ever sent.
-  const handleStartPayment = useCallback(async () => {
-    if (planStatus !== 'ready' || !plan || session || starting) return;
-    if (!isContactValid()) return;
-    if (!agreedToTerms) {
-      setErrors((p) => ({ ...p, terms: t.termsRequired }));
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
       return;
     }
-    setStarting(true);
-    setFailed(false);
-    setFailedMessage('');
-    try {
-      const intent = await getIntention({
-        fullName: form.name.trim(),
-        companyName: form.company.trim(),
-        workEmail: form.email.trim(),
-        phone: form.phone.trim(),
-        planId: plan._id,
-        promoCode: appliedPromo || undefined,
-      });
-      setSession({
-        publicKey: intent.publicKey,
-        clientSecret: intent.clientSecret,
-        checkoutUrl: intent.checkoutUrl,
-      });
-    } catch (err) {
-      console.error('Failed to start payment session:', err);
-      const message = getApiErrorMessage(err);
-      // A bad/expired promo code is rejected up front by the backend, so
-      // surface it on the promo field instead of the generic payment error.
-      if (appliedPromo && /promo|code|كود|خصم/i.test(message)) {
-        setPromoError(message || loadErrorText);
-        setFailed(false);
-      } else {
-        setPromoError('');
-        setFailedMessage(message || loadErrorText);
-        setFailed(true);
-      }
-    } finally {
-      setStarting(false);
-    }
+
+    const session = {
+      product,
+      tierKey,
+      tierIndex,
+      plan,
+      form,
+      appliedPromo,
+      promoDiscount,
+      total,
+      currency: plan?.currency || 'EGP',
+    };
+    writeCheckoutSession(session);
+    navigate('/checkout/payment', { state: session });
   }, [
-    planStatus,
-    plan,
-    session,
-    starting,
     form,
-    isContactValid,
-    appliedPromo,
-    loadErrorText,
     agreedToTerms,
+    product,
+    tierKey,
+    tierIndex,
+    plan,
+    appliedPromo,
+    promoDiscount,
+    total,
+    navigate,
+    isArabic,
+    t.termsRequired,
+    t.invalidEmail,
   ]);
-
-  const handlePaySuccess = useCallback(() => {
-    // Payment is captured, but activation is confirmed asynchronously by
-    // the backend webhook (it emails the temporary password) — so show
-    // the "waiting for confirmation" state instead of claiming success.
-    navigate('/checkout/complete?pending=true');
-  }, [navigate]);
-
-  // Bank 3DS step. Open it in a new tab so the customer returns into the
-  // app — the original tab switches to the confirmation-waiting page.
-  // If the popup is blocked, fall back to navigating the current tab.
-  const handlePayPending = useCallback(
-    (redirectUrl) => {
-      const win = window.open(redirectUrl, '_blank');
-      if (win) {
-        navigate('/checkout/complete?pending=true');
-      } else {
-        window.location.assign(redirectUrl);
-      }
-    },
-    [navigate]
-  );
-
-  const handlePayCancel = useCallback(() => {
-    navigate(-1);
-  }, [navigate]);
 
   const openLegalModal = (which) => {
     setCanAgreeInModal(false);
@@ -624,7 +443,7 @@ const CheckoutPage = () => {
           {[
             { label: t.stepPlan, state: 'done' },
             { label: t.stepContact, state: contactDone ? 'done' : 'active' },
-            { label: t.stepPay, state: session ? 'active' : 'idle' },
+            { label: t.stepPay, state: 'idle' },
           ].map((step, i, arr) => (
             <div
               key={step.label}
@@ -722,16 +541,6 @@ const CheckoutPage = () => {
               )}
               {promoError && (
                 <p className="mt-1.5 text-xs text-danger-500 flex items-center gap-1.5">
-                  <svg
-                    className="size-3.5 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 9v4m0 4h.01" />
-                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-                  </svg>
                   {promoError}
                 </p>
               )}
@@ -743,7 +552,6 @@ const CheckoutPage = () => {
             </div>
 
             <div className="space-y-3">
-              {/* Plan line */}
               <div className="flex justify-between text-sm border-b border-light-100 dark:border-dark-700 pb-3">
                 <span className="text-light-500 dark:text-light-400">
                   {t.productLabel} — {tierKey}
@@ -753,7 +561,6 @@ const CheckoutPage = () => {
                 </span>
               </div>
 
-              {/* Discount line — only when a promo is actually applied */}
               {discountedEgp !== null && (
                 <div className="flex justify-between text-sm border-b border-light-100 dark:border-dark-700 pb-3">
                   <span className="text-light-500 dark:text-light-400 flex items-center gap-1.5">
@@ -768,7 +575,6 @@ const CheckoutPage = () => {
                 </div>
               )}
 
-              {/* Remaining simple rows — setup fee etc. */}
               {[{ label: t.setupFee, value: t.free, green: true }].map(
                 ({ label, value, green }) => (
                   <div
@@ -803,7 +609,6 @@ const CheckoutPage = () => {
               </p>
             </div>
 
-            {/* Feature chips */}
             <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-light-100 dark:border-dark-700">
               {features.map((f) => (
                 <span
@@ -912,111 +717,20 @@ const CheckoutPage = () => {
               <p className="mt-2 text-xs text-danger-500">{errors.terms}</p>
             )}
           </div>
-          {/* Payment */}
-          <div
-            id="payment-section"
-            className="overflow-hidden rounded-2xl border border-light-200/50 dark:border-dark-700/50 bg-white/80 dark:bg-dark-800/80 mb-4"
+
+          {/* Continue -> /checkout/payment */}
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-primary-600"
           >
-            <div className="flex items-center gap-3 border-b border-light-100 dark:border-dark-700 px-6 py-5">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500 shrink-0">
-                <ShieldIcon />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-light-900 dark:text-white">
-                  {t.stepPay}
-                </h2>
-                <p className="mt-0.5 text-sm text-light-500 dark:text-light-400">
-                  {t.paymentPrompt}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-6">
-              {failed && (
-                <div className="space-y-3">
-                  <p className="flex items-center gap-2 rounded-xl border border-danger-500/30 bg-danger-500/10 px-4 py-3 text-sm text-danger-500">
-                    <svg
-                      className="size-4 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 9v4m0 4h.01" />
-                      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-                    </svg>
-                    {failedMessage || t.pixelLoadError}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleRetry}
-                    className="w-full rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-600"
-                  >
-                    {t.retry}
-                  </button>
-                </div>
-              )}
-
-              {!failed && session && (
-                <PaymobCardForm
-                  key={session.clientSecret}
-                  publicKey={session.publicKey}
-                  clientSecret={session.clientSecret}
-                  checkoutUrl={session.checkoutUrl}
-                  payButtonLabel={t.payBtn}
-                  onSuccess={handlePaySuccess}
-                  onPending={handlePayPending}
-                  onRetry={handleRetry}
-                  onCancel={handlePayCancel}
-                />
-              )}
-
-              {!failed && !session && planStatus === 'ready' && (
-                <div>
-                  {isContactValid() ? (
-                    <button
-                      type="button"
-                      onClick={handleStartPayment}
-                      disabled={starting}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-primary-600 disabled:opacity-70"
-                    >
-                      {starting && (
-                        <svg
-                          className="size-4 animate-spin"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
-                          />
-                        </svg>
-                      )}
-                      {starting ? t.processing : t.confirmStart}
-                    </button>
-                  ) : (
-                    <p className="text-sm text-light-400 dark:text-light-500">
-                      {t.fillDetailsFirst}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 mt-5 text-xs text-light-400 dark:text-light-500">
-                <LockIcon />
-                <span>{t.redirectNote}</span>
-              </div>
-            </div>
-          </div>
+            {t.continueBtn}
+          </button>
+          {!contactDone && (
+            <p className="text-xs text-light-400 dark:text-light-500 text-center mt-2">
+              {t.fillDetailsFirst}
+            </p>
+          )}
 
           <p className="text-[11px] text-light-400 dark:text-light-500 text-center mt-4 leading-relaxed px-4">
             {t.termsNote}
