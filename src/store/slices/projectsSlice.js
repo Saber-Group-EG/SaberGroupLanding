@@ -4,7 +4,7 @@ import { getEnSlug } from '../../utils/slug';
 import { getProxiedCoverUrl } from '../../utils/imageProxy';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
-const CACHE_KEY = 'saber_projects_cache_v3';
+const CACHE_KEY = 'saber_projects_cache_v6';
 
 const loadFromCache = () => {
   try {
@@ -98,7 +98,7 @@ const transformProject = (raw) => {
   }
 
   const rawCoverUrl = raw.mainCover?.url || (photos.length > 0 ? photos[0].url : '');
-  const coverImage = getProxiedCoverUrl(rawCoverUrl, { width: 400, quality: 50 });
+  const coverImage = getProxiedCoverUrl(rawCoverUrl, { width: 900, quality: 80 });
   const mainCover = rawCoverUrl;
   const fullMainCover = raw.fullMainCover || null;
   const galleryImages = photos.map((p) => p.url);
@@ -138,10 +138,14 @@ const transformProject = (raw) => {
     categoryId: raw.categories?.[0]?._id || '',
     categoryNameEn: raw.categories?.[0]?.name?.en || (typeof raw.categories?.[0] === 'string' ? raw.categories[0] : ''),
     categoryNameAr: raw.categories?.[0]?.name?.ar || '',
-    featured: raw.order === 1,
+    featured: raw.isFeatured === true || raw.order === 1,
+    isFeatured: raw.isFeatured === true,
+    isHero: raw.isHero === true,
+    icon: raw.icon || '',
     order: raw.order != null ? raw.order : 999,
     photosCount: photos.length,
     videosCount: videos.length,
+    viewsCount: raw.viewsCount || raw.views || 0,
     reelsCount: videos.length,
     shootedAt: resolveBilingual(raw.shootedAt) || raw.shootedAt || '',
     cast: (raw.cast || []).map((c) => {

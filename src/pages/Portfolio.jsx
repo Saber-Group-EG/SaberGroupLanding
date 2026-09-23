@@ -6,11 +6,19 @@ import { getProjects, selectAllProjects, selectProjectsLoading } from '../store/
 import {
   Camera,
   Film,
+  Eye,
   Layers,
   ArrowRight,
   ArrowLeft,
+  ArrowUpRight,
+  ArrowUpLeft,
+  BadgeCheck,
   ChevronDown,
 } from 'lucide-react';
+import DynamicIcon, { iconNames } from 'lucide-react/dist/esm/DynamicIcon.mjs';
+
+const toLucideKey = (value) =>
+  String(value).trim().replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
 const Portfolio = () => {
   const { t: tFn, isArabic } = useTranslation();
@@ -150,6 +158,79 @@ const Portfolio = () => {
   const featuredMasterProject = publishedProjects.length > 0
     ? publishedProjects.find((p) => p.featured) || publishedProjects[0]
     : null;
+
+  const renderProjectIcon = (proj) => {
+    const rawIcon = (proj.icon || '').trim();
+    const isUrlIcon = /^(https?:\/\/|\/|data:)/i.test(rawIcon);
+    const iconKey = isUrlIcon ? '' : toLucideKey(rawIcon);
+    const hasLucideIcon = iconKey && iconNames.includes(iconKey);
+    if (!proj.isFeatured && !isUrlIcon && !hasLucideIcon) return null;
+    return (
+      <div className={`absolute top-3.5 sm:top-5 z-10 ${isRtl ? 'right-3.5 sm:right-5' : 'left-3.5 sm:left-5'}`}>
+        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-sm">
+          {proj.isFeatured ? (
+            <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.5]" />
+          ) : isUrlIcon ? (
+            <img src={rawIcon} alt="" className="w-4 h-4 sm:w-5 sm:h-5 object-contain" />
+          ) : (
+            <DynamicIcon
+              name={iconKey}
+              className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.5]"
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCounts = (proj, stagger) => {
+    const photosCount = proj.photosCount || 0;
+    const videosCount = proj.videosCount || 0;
+    const viewsCount = proj.viewsCount || 0;
+    return (
+      <div className={`flex items-center gap-2.5 sm:gap-3 min-w-0 text-[9.5px] sm:text-[10.5px] uppercase tracking-wide text-white/80 ${stagger ? 'transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-300 lg:group-hover:opacity-100 lg:group-hover:translate-y-0' : ''}`}>
+        {photosCount > 0 && (
+          <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
+            <Camera className="w-3.5 h-3.5 shrink-0 text-white/90" />
+            <span><span className="font-bold text-white">{photosCount}</span></span>
+          </span>
+        )}
+        {photosCount > 0 && videosCount > 0 && (
+          <span className="w-px h-3 bg-white/30 shrink-0" />
+        )}
+        {videosCount > 0 && (
+          <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
+            <Film className="w-3.5 h-3.5 shrink-0 text-white/90" />
+            <span><span className="font-bold text-white">{videosCount}</span></span>
+          </span>
+        )}
+        {viewsCount > 0 && (photosCount > 0 || videosCount > 0) && (
+          <span className="w-px h-3 bg-white/30 shrink-0" />
+        )}
+        {viewsCount > 0 && (
+          <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
+            <Eye className="w-3.5 h-3.5 shrink-0 text-white/90" />
+            <span><span className="font-bold text-white">{viewsCount}</span></span>
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const renderViewButton = () => (
+    <span className="shrink-0 relative inline-flex items-center gap-0 cursor-pointer whitespace-nowrap transition-all duration-300 group group-hover:-translate-y-0.5">
+      <span className="relative py-0.5 text-[8.5px] sm:text-[9px] font-medium text-white transition-all duration-300 group-hover:bg-white group-hover:text-neutral-950 group-hover:border-white rounded-s-full border-y-[0.5px] border-s-[0.5px] border-white/40 ps-1 sm:ps-1.5 pe-1.5">
+        {t('viewFullProject', 'View Full Project')}
+      </span>
+      <span className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full border-[0.5px] border-white/60 overflow-hidden flex items-center justify-center text-white transition-all duration-300 group-hover:bg-white group-hover:border-white group-hover:text-neutral-950 shrink-0 -ms-1">
+        {isRtl ? (
+          <ArrowUpLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover:rotate-180" />
+        ) : (
+          <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover:rotate-180" />
+        )}
+      </span>
+    </span>
+  );
 
   // Portfolio list
   return (
@@ -351,52 +432,88 @@ const Portfolio = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {sortedProjects.map((proj) => {
-                const photosCount = proj.photosCount || 0;
-                const videosCount = proj.videosCount || 0;
-                return (
-                  <Link to={`/portfolio/${proj.slug}`} key={proj.id} className="group bg-white border border-neutral-200 rounded-[4px] overflow-hidden grid grid-cols-1 sm:grid-cols-[48%_1fr] hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer">
-                    <div className="relative aspect-square sm:aspect-[4/5] overflow-hidden bg-neutral-900">
-                      <img src={proj.coverImage} alt={isArabic ? proj.titleAr : proj.titleEn} className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500" loading="lazy" />
-                    </div>
-                    <div className="relative sm:h-full sm:overflow-hidden">
-                      <div className="p-2.5 sm:p-4 h-full flex flex-col justify-between sm:justify-center gap-1.5 sm:gap-1">
-                        <div className="sm:overflow-hidden">
-                          <h3 className="text-xs sm:text-xl font-black uppercase text-neutral-950 group-hover:text-red-600 transition-colors leading-tight line-clamp-2 tracking-tight font-sans-en">
-                            {isArabic ? proj.titleAr : proj.titleEn}
+                const fullTitle = ((isArabic ? proj.titleAr : proj.titleEn) || '').trim();
+                const titleParts = fullTitle.split(/\s+/).filter(Boolean);
+                const firstWord = titleParts[0] || '';
+                const restTitle = titleParts.slice(1).join(' ');
+                const description = isArabic ? proj.descriptionAr : proj.descriptionEn;
+
+                if (proj.isHero) {
+                  return (
+                    <Link
+                      to={`/portfolio/${proj.slug}`}
+                      key={proj.id}
+                      className="group relative block sm:col-span-2 lg:col-span-3 aspect-[19/6] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer"
+                    >
+                      <img
+                        src={proj.coverImage}
+                        alt={fullTitle}
+                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className={`absolute inset-0 ${isRtl ? 'bg-gradient-to-l from-black/90 via-black/45 to-black/10' : 'bg-gradient-to-r from-black/90 via-black/45 to-black/10'}`} />
+                      {renderProjectIcon(proj)}
+                      <div className="absolute inset-0 flex flex-col justify-between p-4 sm:p-5 lg:p-7">
+                        <div className="h-8 sm:h-10 shrink-0" />
+                        <div className={`flex flex-col my-auto ${isArabic ? 'text-right' : 'text-left'}`}>
+                          <h3 className={`text-xl sm:text-2xl lg:text-[40px] font-black uppercase text-white leading-none tracking-tight line-clamp-2 drop-shadow-sm ${!isArabic ? 'font-sans-en' : ''}`}>
+                            {fullTitle}
                           </h3>
-                          <div className="hidden sm:block h-[1px] bg-neutral-200/70 my-2 w-full" />
-                          <p className="text-[10px] sm:text-[10.5px] font-semibold text-neutral-500">{isArabic ? proj.clientNameAr : proj.clientName || ''}</p>
-                          <p className="hidden sm:block text-[11px] text-neutral-500 leading-relaxed mt-1.5 font-normal" style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                            {isArabic ? proj.descriptionAr : proj.descriptionEn}
+                          <span className="block w-7 sm:w-8 h-[2px] bg-red-800 rounded-full my-1.5 sm:my-2" />
+                          {description && (
+                            <p className="text-[9.5px] sm:text-[11px] lg:text-xs text-white/75 leading-snug line-clamp-2 max-w-[85%] sm:max-w-md">
+                              {description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 shrink-0">
+                          {renderCounts(proj, false)}
+                          {renderViewButton()}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                }
+
+                return (
+                  <Link
+                    to={`/portfolio/${proj.slug}`}
+                    key={proj.id}
+                    className="group relative block aspect-[4/5] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer"
+                  >
+                    <img
+                      src={proj.coverImage}
+                      alt={fullTitle}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-104 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+
+                    {renderProjectIcon(proj)}
+
+                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6">
+                      <div className={isArabic ? 'text-right' : 'text-left'}>
+                        <h3 className={`text-xl sm:text-2xl lg:text-[30px] font-black uppercase text-white leading-none tracking-tight line-clamp-1 drop-shadow-sm transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
+                          {firstWord}
+                        </h3>
+                        {restTitle && (
+                          <p className={`mt-1 text-[8.5px] sm:text-[9.5px] font-medium uppercase tracking-[0.14em] text-white/70 line-clamp-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-75 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
+                            {restTitle}
                           </p>
-                        </div>
-                        <div className="space-y-2 sm:space-y-2.5 pt-2 border-t border-neutral-100 sm:border-t-0 shrink-0">
-                          <div className="flex items-center justify-center sm:justify-around bg-neutral-50 sm:bg-transparent border sm:border-0 border-neutral-100 rounded-xs px-3 py-1.5 sm:p-0 text-neutral-700">
-                            {photosCount > 0 && (
-                              <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-                                <Camera className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                <span className="font-bold text-neutral-950">{photosCount}</span>
-                                <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('photosLabel', 'Photos')}</span>
-                              </div>
-                            )}
-                            {photosCount > 0 && videosCount > 0 && (
-                              <span className="text-neutral-300">|</span>
-                            )}
-                            {videosCount > 0 && (
-                              <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-                                <Film className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
-                                <span className="font-bold text-neutral-950">{videosCount}</span>
-                                <span className="hidden sm:inline text-[10.5px] text-neutral-500">{t('videosLabel', 'Videos')}</span>
-                              </div>
-                            )}
-                          </div>
-                          <span className="w-full py-2 sm:py-2 px-2 sm:px-3 text-[10px] sm:text-xs font-bold rounded-[2px] flex items-center justify-center gap-1 sm:gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
-                            <span>{t('viewProject', 'View Project')}</span>
-                            {isRtl ? <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                          </span>
-                        </div>
+                        )}
+                        <span className="block w-7 h-[2px] bg-red-800 rounded-full my-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-150 lg:group-hover:opacity-100 lg:group-hover:translate-y-0" />
+                        {description && (
+                          <p className="text-[9.5px] sm:text-[10px] text-white/75 leading-snug line-clamp-3 max-w-[55%] transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-225 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
+                            {description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 mt-0.5 sm:mt-1">
+                        {renderCounts(proj, true)}
+                        {renderViewButton()}
                       </div>
                     </div>
                   </Link>
