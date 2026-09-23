@@ -164,11 +164,10 @@ const Portfolio = () => {
     const isUrlIcon = /^(https?:\/\/|\/|data:)/i.test(rawIcon);
     const iconKey = isUrlIcon ? '' : toLucideKey(rawIcon);
     const hasLucideIcon = iconKey && iconNames.includes(iconKey);
-    if (!proj.isFeatured && !isUrlIcon && !hasLucideIcon) return null;
     return (
       <div className={`absolute top-3.5 sm:top-5 z-10 ${isRtl ? 'right-3.5 sm:right-5' : 'left-3.5 sm:left-5'}`}>
         <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-sm">
-          {proj.isFeatured ? (
+          {proj.isFeatured || (!isUrlIcon && !hasLucideIcon) ? (
             <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.5]" />
           ) : isUrlIcon ? (
             <img src={rawIcon} alt="" className="w-4 h-4 sm:w-5 sm:h-5 object-contain" />
