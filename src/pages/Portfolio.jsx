@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getProjects, selectAllProjects, selectProjectsLoading } from '../store/slices/projectsSlice';
@@ -14,6 +14,7 @@ import {
   ArrowUpLeft,
   BadgeCheck,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import DynamicIcon, { iconNames } from 'lucide-react/dist/esm/DynamicIcon.mjs';
 
@@ -25,6 +26,7 @@ const Portfolio = () => {
   const dir = isArabic ? 'rtl' : 'ltr';
   const isRtl = dir === 'rtl';
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const allProjects = useSelector(selectAllProjects);
   const loading = useSelector(selectProjectsLoading);
 
@@ -58,11 +60,62 @@ const Portfolio = () => {
   const [selectedSectorId, setSelectedSectorId] = useState('all');
   const [selectedTags, setSelectedTags] = useState([]);
   const [sortBy, setSortBy] = useState('newest');
+  const [preview, setPreview] = useState(null);
+  const [revealed, setRevealed] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [categoryOverflow, setCategoryOverflow] = useState(false);
   const [tagOverflow, setTagOverflow] = useState(false);
 
   const categoryScrollRef = useRef(null);
   const tagScrollRef = useRef(null);
+  const closeTimerRef = useRef(null);
+  const openTimerRef = useRef(null);
+  const closingRef = useRef(false);
+
+  const openPreview = (proj) => {
+    setPreview(proj);
+    setRevealed(false);
+    setClosing(false);
+    closingRef.current = false;
+    clearTimeout(openTimerRef.current);
+    openTimerRef.current = setTimeout(() => setRevealed(true), 90);
+  };
+
+  const closePreview = () => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    closeTimerRef.current = setTimeout(() => {
+      setPreview(null);
+      setRevealed(false);
+      setClosing(false);
+      closingRef.current = false;
+    }, 500);
+  };
+
+  useEffect(() => () => {
+    clearTimeout(closeTimerRef.current);
+    clearTimeout(openTimerRef.current);
+  }, []);
+
+  const handleCardClick = (e, proj) => {
+    if (window.innerWidth < 640) {
+      e.preventDefault();
+      openPreview(proj);
+    }
+  };
+
+  useEffect(() => {
+    if (!preview) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') closePreview();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [preview]);
+
+  const popupReveal = (delay = '') =>
+    `transition-all duration-400 ease-out ${!closing && revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'} ${delay}`;
 
   const sectorProjects = selectedSectorId === 'all'
     ? publishedProjects
@@ -155,42 +208,190 @@ const Portfolio = () => {
     return (a.order != null ? a.order : 999) - (b.order != null ? b.order : 999);
   });
 
+  // Scroll-reveal for project cards
+  const cardsRef = useRef(new Map());
+  const revealedRef = useRef(new Set());
+  const [visibleCardIds, setVisibleCardIds] = useState(() => new Set());
+  const [skipAnimIds, setSkipAnimIds] = useState(() => new Set());
+  const sortedProjectIds = sortedProjects.map((p) => p.id).join('|');
+
+  const registerCard = (id) => (el) => {
+    const key = String(id);
+    if (el) cardsRef.current.set(key, el);
+    else cardsRef.current.delete(key);
+  };
+
+  const cardRevealCls = (id) => {
+    const key = String(id);
+    if (!visibleCardIds.has(key)) return 'opacity-0';
+    return skipAnimIds.has(key) ? '' : 'animate-portfolio-card-in';
+  };
+
+  const cardImgRevealCls = (id) => {
+    const key = String(id);
+    return visibleCardIds.has(key) && !skipAnimIds.has(key)
+      ? 'animate-portfolio-card-img'
+      : '';
+  };
+
+  useEffect(() => {
+    const fastRef = { current: false };
+    let lastY = window.scrollY;
+    let lastT = 0;
+
+    const flush = (animIds, instantIds) => {
+      const all = animIds.concat(instantIds);
+      if (all.length === 0) return;
+      setVisibleCardIds((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        all.forEach((id) => {
+          if (!next.has(id)) {
+            next.add(id);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+      if (instantIds.length > 0) {
+        setSkipAnimIds((prev) => {
+          let changed = false;
+          const next = new Set(prev);
+          instantIds.forEach((id) => {
+            if (!next.has(id)) {
+              next.add(id);
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+      }
+    };
+
+    const collectNearViewport = (t) => {
+      const y = window.scrollY;
+      const dt = Math.max(t - lastT, 16);
+      const delta = Math.abs(y - lastY);
+      const velocity = delta / dt;
+      // Fast flings / big jumps reveal instantly instead of animating in
+      fastRef.current = velocity > 0.8 || delta > window.innerHeight * 0.5;
+      lastY = y;
+      lastT = t;
+
+      const animIds = [];
+      const instantIds = [];
+      cardsRef.current.forEach((el, key) => {
+        if (revealedRef.current.has(key)) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight + 100 && rect.bottom > -200) {
+          revealedRef.current.add(key);
+          // Anything that skipped the entry zone (already meaningfully
+          // on-screen) shows immediately; only edge-entry cards animate.
+          if (fastRef.current || rect.top < window.innerHeight - 150) {
+            instantIds.push(key);
+          } else {
+            animIds.push(key);
+          }
+        }
+      });
+      flush(animIds, instantIds);
+    };
+
+    let rafId = null;
+    const scheduleCheck = () => {
+      if (rafId != null) return;
+      rafId = requestAnimationFrame((t) => {
+        rafId = null;
+        collectNearViewport(t);
+      });
+    };
+
+    // Mobile browsers can delay IntersectionObserver until scroll momentum
+    // settles, so also check card positions on every scroll frame.
+    window.addEventListener('scroll', scheduleCheck, { passive: true });
+
+    let observer = null;
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const animIds = [];
+          const instantIds = [];
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const key = entry.target.dataset.pid;
+              observer.unobserve(entry.target);
+              if (key && !revealedRef.current.has(key)) {
+                revealedRef.current.add(key);
+                if (fastRef.current || entry.boundingClientRect.top < window.innerHeight - 150) {
+                  instantIds.push(key);
+                } else {
+                  animIds.push(key);
+                }
+              }
+            }
+          });
+          flush(animIds, instantIds);
+        },
+        { threshold: 0, rootMargin: '0px 0px 100px 0px' }
+      );
+      cardsRef.current.forEach((el) => observer.observe(el));
+    } else {
+      scheduleCheck();
+    }
+
+    scheduleCheck();
+
+    return () => {
+      window.removeEventListener('scroll', scheduleCheck);
+      if (rafId != null) cancelAnimationFrame(rafId);
+      if (observer) observer.disconnect();
+    };
+  }, [sortedProjectIds]);
+
   const featuredMasterProject = publishedProjects.length > 0
     ? publishedProjects.find((p) => p.featured) || publishedProjects[0]
     : null;
 
-  const renderProjectIcon = (proj) => {
+  const renderIconCircle = (proj) => {
     const rawIcon = (proj.icon || '').trim();
     const isUrlIcon = /^(https?:\/\/|\/|data:)/i.test(rawIcon);
     const iconKey = isUrlIcon ? '' : toLucideKey(rawIcon);
     const hasLucideIcon = iconKey && iconNames.includes(iconKey);
     return (
-      <div className={`absolute top-3.5 sm:top-5 z-10 ${isRtl ? 'right-3.5 sm:right-5' : 'left-3.5 sm:left-5'}`}>
-        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-sm">
-          {proj.isFeatured || (!isUrlIcon && !hasLucideIcon) ? (
-            <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.5]" />
-          ) : isUrlIcon ? (
-            <img src={rawIcon} alt="" className="w-4 h-4 sm:w-5 sm:h-5 object-contain" />
-          ) : (
-            <DynamicIcon
-              name={iconKey}
-              className="w-4 h-4 sm:w-5 sm:h-5 stroke-[1.5]"
-            />
-          )}
-        </div>
+      <div className="relative w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-sm">
+        {proj.isFeatured || (!isUrlIcon && !hasLucideIcon) ? (
+          <BadgeCheck className="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[1.5]" />
+        ) : isUrlIcon ? (
+          <img src={rawIcon} alt="" className="w-3.5 h-3.5 sm:w-5 sm:h-5 object-contain" />
+        ) : (
+          <DynamicIcon
+            name={iconKey}
+            className="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[1.5]"
+          />
+        )}
       </div>
     );
   };
 
-  const renderCounts = (proj, stagger) => {
+  const renderProjectIcon = (proj) => (
+    <div className={`hidden sm:block absolute top-3 sm:top-5 z-10 ${isRtl ? 'right-3 sm:right-5' : 'left-3 sm:left-5'}`}>
+      {renderIconCircle(proj)}
+    </div>
+  );
+
+  const renderCounts = (proj, stagger, big) => {
     const photosCount = proj.photosCount || 0;
     const videosCount = proj.videosCount || 0;
     const viewsCount = proj.viewsCount || 0;
+    const staggerCls = stagger ? 'transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-300 lg:group-hover:opacity-100 lg:group-hover:translate-y-0' : '';
+    const wrapCls = `flex items-center min-w-0 uppercase tracking-wide text-white/80 ${big ? 'gap-3 text-[10.5px]' : 'gap-1.5 sm:gap-3 text-[8.5px] sm:text-[10.5px]'} ${staggerCls}`;
+    const itemGap = big ? 'gap-1.5' : 'gap-1 sm:gap-1.5';
+    const iconCls = `shrink-0 text-white/90 ${big ? 'w-3.5 h-3.5' : 'w-3 h-3 sm:w-3.5 sm:h-3.5'}`;
     return (
-      <div className={`flex items-center gap-2.5 sm:gap-3 min-w-0 text-[9.5px] sm:text-[10.5px] uppercase tracking-wide text-white/80 ${stagger ? 'transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-300 lg:group-hover:opacity-100 lg:group-hover:translate-y-0' : ''}`}>
+      <div className={wrapCls}>
         {photosCount > 0 && (
-          <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
-            <Camera className="w-3.5 h-3.5 shrink-0 text-white/90" />
+          <span className={`flex items-center ${itemGap} font-medium whitespace-nowrap`}>
+            <Camera className={iconCls} />
             <span><span className="font-bold text-white">{photosCount}</span></span>
           </span>
         )}
@@ -198,30 +399,32 @@ const Portfolio = () => {
           <span className="w-px h-3 bg-white/30 shrink-0" />
         )}
         {videosCount > 0 && (
-          <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
-            <Film className="w-3.5 h-3.5 shrink-0 text-white/90" />
+          <span className={`flex items-center ${itemGap} font-medium whitespace-nowrap`}>
+            <Film className={iconCls} />
             <span><span className="font-bold text-white">{videosCount}</span></span>
           </span>
         )}
-        {viewsCount > 0 && (photosCount > 0 || videosCount > 0) && (
-          <span className="w-px h-3 bg-white/30 shrink-0" />
-        )}
-        {viewsCount > 0 && (
-          <span className="flex items-center gap-1.5 font-medium whitespace-nowrap">
-            <Eye className="w-3.5 h-3.5 shrink-0 text-white/90" />
-            <span><span className="font-bold text-white">{viewsCount}</span></span>
-          </span>
-        )}
+        <span className={big ? 'contents' : 'hidden sm:contents'}>
+          {viewsCount > 0 && (photosCount > 0 || videosCount > 0) && (
+            <span className="w-px h-3 bg-white/30 shrink-0" />
+          )}
+          {viewsCount > 0 && (
+            <span className={`flex items-center ${itemGap} font-medium whitespace-nowrap`}>
+              <Eye className={iconCls} />
+              <span><span className="font-bold text-white">{viewsCount}</span></span>
+            </span>
+          )}
+        </span>
       </div>
     );
   };
 
-  const renderViewButton = () => (
+  const renderViewButton = (showLabel) => (
     <span className="shrink-0 relative inline-flex items-center gap-0 cursor-pointer whitespace-nowrap transition-all duration-300 group group-hover:-translate-y-0.5">
-      <span className="relative py-0.5 text-[8.5px] sm:text-[9px] font-medium text-white transition-all duration-300 group-hover:bg-white group-hover:text-neutral-950 group-hover:border-white rounded-s-full border-y-[0.5px] border-s-[0.5px] border-white/40 ps-1 sm:ps-1.5 pe-1.5">
+      <span className={`${showLabel ? 'block' : 'hidden sm:block'} relative py-0.5 text-[8.5px] sm:text-[9px] font-medium text-white transition-all duration-300 group-hover:bg-white group-hover:text-neutral-950 group-hover:border-white rounded-s-full border-y-[0.5px] border-s-[0.5px] border-white/40 ps-1 sm:ps-1.5 pe-1.5`}>
         {t('viewFullProject', 'View Full Project')}
       </span>
-      <span className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-full border-[0.5px] border-white/60 overflow-hidden flex items-center justify-center text-white transition-all duration-300 group-hover:bg-white group-hover:border-white group-hover:text-neutral-950 shrink-0 -ms-1">
+      <span className={`relative w-6 h-6 sm:w-7 sm:h-7 rounded-full border-[0.5px] border-white/60 overflow-hidden flex items-center justify-center text-white transition-all duration-300 group-hover:bg-white group-hover:border-white group-hover:text-neutral-950 shrink-0 ${showLabel ? '-ms-1' : 'sm:-ms-1'}`}>
         {isRtl ? (
           <ArrowUpLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform duration-300 group-hover:rotate-180" />
         ) : (
@@ -431,7 +634,7 @@ const Portfolio = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
               {sortedProjects.map((proj) => {
                 const fullTitle = ((isArabic ? proj.titleAr : proj.titleEn) || '').trim();
                 const titleParts = fullTitle.split(/\s+/).filter(Boolean);
@@ -444,30 +647,33 @@ const Portfolio = () => {
                     <Link
                       to={`/portfolio/${proj.slug}`}
                       key={proj.id}
-                      className="group relative block sm:col-span-2 lg:col-span-3 aspect-[19/6] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer"
+                      ref={registerCard(proj.id)}
+                      data-pid={proj.id}
+                      onClick={(e) => handleCardClick(e, proj)}
+                      className={`group relative block col-span-3 sm:col-span-2 lg:col-span-3 aspect-[19/6] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer ${cardRevealCls(proj.id)}`}
                     >
                       <img
                         src={proj.coverImage}
                         alt={fullTitle}
-                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500"
+                        className={`absolute inset-0 w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500 ${cardImgRevealCls(proj.id)}`}
                         loading="lazy"
                       />
                       <div className={`absolute inset-0 ${isRtl ? 'bg-gradient-to-l from-black/90 via-black/45 to-black/10' : 'bg-gradient-to-r from-black/90 via-black/45 to-black/10'}`} />
                       {renderProjectIcon(proj)}
-                      <div className="absolute inset-0 flex flex-col justify-between p-4 sm:p-5 lg:p-7">
-                        <div className="h-8 sm:h-10 shrink-0" />
+                      <div className="hidden sm:flex absolute inset-0 flex-col justify-between p-3 sm:p-5 lg:p-7">
+                        <div className="h-7 sm:h-10 shrink-0" />
                         <div className={`flex flex-col my-auto ${isArabic ? 'text-right' : 'text-left'}`}>
-                          <h3 className={`text-xl sm:text-2xl lg:text-[40px] font-black uppercase text-white leading-none tracking-tight line-clamp-2 drop-shadow-sm ${!isArabic ? 'font-sans-en' : ''}`}>
+                          <h3 className={`text-base sm:text-2xl lg:text-[40px] font-black uppercase text-white leading-none tracking-tight line-clamp-2 drop-shadow-sm ${!isArabic ? 'font-sans-en' : ''}`}>
                             {fullTitle}
                           </h3>
-                          <span className="block w-7 sm:w-8 h-[2px] bg-red-800 rounded-full my-1.5 sm:my-2" />
+                          <span className="block w-6 sm:w-8 h-[2px] bg-red-800 rounded-full my-1 sm:my-2" />
                           {description && (
-                            <p className="text-[9.5px] sm:text-[11px] lg:text-xs text-white/75 leading-snug line-clamp-2 max-w-[85%] sm:max-w-md">
+                            <p className="text-[8.5px] sm:text-[11px] lg:text-xs text-white/75 leading-snug line-clamp-1 sm:line-clamp-2 max-w-[95%] sm:max-w-md">
                               {description}
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center justify-between gap-2 shrink-0">
+                        <div className="flex items-center justify-between gap-1 sm:gap-2 shrink-0">
                           {renderCounts(proj, false)}
                           {renderViewButton()}
                         </div>
@@ -480,37 +686,40 @@ const Portfolio = () => {
                   <Link
                     to={`/portfolio/${proj.slug}`}
                     key={proj.id}
-                    className="group relative block aspect-[4/5] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer"
+                    ref={registerCard(proj.id)}
+                    data-pid={proj.id}
+                    onClick={(e) => handleCardClick(e, proj)}
+                    className={`group relative block aspect-[4/5] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer ${cardRevealCls(proj.id)}`}
                   >
                     <img
                       src={proj.coverImage}
                       alt={fullTitle}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-104 transition-transform duration-500"
+                      className={`absolute inset-0 w-full h-full object-cover group-hover:scale-104 transition-transform duration-500 ${cardImgRevealCls(proj.id)}`}
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
 
                     {renderProjectIcon(proj)}
 
-                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6">
+                    <div className="hidden sm:block absolute inset-x-0 bottom-0 p-3 sm:p-5 lg:p-6">
                       <div className={isArabic ? 'text-right' : 'text-left'}>
-                        <h3 className={`text-xl sm:text-2xl lg:text-[30px] font-black uppercase text-white leading-none tracking-tight line-clamp-1 drop-shadow-sm transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
+                        <h3 className={`text-sm sm:text-2xl lg:text-[30px] font-black uppercase text-white leading-none tracking-tight line-clamp-1 drop-shadow-sm transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
                           {firstWord}
                         </h3>
                         {restTitle && (
-                          <p className={`mt-1 text-[8.5px] sm:text-[9.5px] font-medium uppercase tracking-[0.14em] text-white/70 line-clamp-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-75 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
+                          <p className={`mt-1 text-[7.5px] sm:text-[9.5px] font-medium uppercase tracking-[0.14em] text-white/70 line-clamp-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-75 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
                             {restTitle}
                           </p>
                         )}
-                        <span className="block w-7 h-[2px] bg-red-800 rounded-full my-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-150 lg:group-hover:opacity-100 lg:group-hover:translate-y-0" />
+                        <span className="block w-5 sm:w-7 h-[2px] bg-red-800 rounded-full my-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-150 lg:group-hover:opacity-100 lg:group-hover:translate-y-0" />
                         {description && (
-                          <p className="text-[9.5px] sm:text-[10px] text-white/75 leading-snug line-clamp-3 max-w-[55%] transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-225 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
+                          <p className="text-[8.5px] sm:text-[10px] text-white/75 leading-snug line-clamp-2 sm:line-clamp-3 max-w-full sm:max-w-[55%] transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-225 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
                             {description}
                           </p>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 mt-0.5 sm:mt-1">
+                      <div className="flex items-center justify-between gap-1 sm:gap-2 mt-0.5 sm:mt-1">
                         {renderCounts(proj, true)}
                         {renderViewButton()}
                       </div>
@@ -521,6 +730,74 @@ const Portfolio = () => {
             </div>
           )}
         </section>
+
+        {/* MOBILE PROJECT PREVIEW POPUP */}
+        {preview && (() => {
+          const full = ((isArabic ? preview.titleAr : preview.titleEn) || '').trim();
+          const parts = full.split(/\s+/).filter(Boolean);
+          const firstWord = parts[0] || '';
+          const restTitle = parts.slice(1).join(' ');
+          const description = isArabic ? preview.descriptionAr : preview.descriptionEn;
+          const backdropMotion = closing
+            ? 'opacity-0 ease-in'
+            : revealed ? 'opacity-100 ease-out' : 'opacity-0 ease-out';
+          const panelMotion = closing
+            ? 'opacity-0 scale-90 translate-y-6 ease-in'
+            : revealed ? 'opacity-100 scale-100 translate-y-0 ease-out' : 'opacity-0 scale-90 translate-y-6 ease-out';
+          return (
+            <div
+              className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 transition-opacity duration-400 ${backdropMotion}`}
+              onClick={closePreview}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className={`relative w-[min(94vw,72dvh)] aspect-[4/5] overflow-hidden rounded-[4px] bg-neutral-900 shadow-2xl cursor-pointer transition-all duration-500 ${panelMotion}`}
+                onClick={() => navigate(`/portfolio/${preview.slug}`)}
+              >
+                <img
+                  src={preview.coverImage}
+                  alt={full}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={(e) => { e.stopPropagation(); closePreview(); }}
+                  className="absolute top-3 end-3 z-30 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md border border-white/30 text-white flex items-center justify-center cursor-pointer hover:bg-black/60 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className={`absolute top-3 z-20 ${isRtl ? 'right-3' : 'left-3'}`}>
+                  {renderIconCircle(preview)}
+                </div>
+                <div className="absolute inset-x-0 bottom-0 z-10 p-4">
+                  <div className={isArabic ? 'text-right' : 'text-left'}>
+                    <h3 className={`${popupReveal('delay-350')} text-2xl font-black uppercase text-white leading-none tracking-tight drop-shadow-sm line-clamp-1 ${!isArabic ? 'font-sans-en' : ''}`}>
+                      {firstWord}
+                    </h3>
+                    {restTitle && (
+                      <p className={`${popupReveal('delay-450')} mt-1 text-[9.5px] font-medium uppercase tracking-[0.14em] text-white/70 line-clamp-1 ${!isArabic ? 'font-sans-en' : ''}`}>
+                        {restTitle}
+                      </p>
+                    )}
+                    <span className={`${popupReveal('delay-550')} block w-7 h-[2px] bg-red-800 rounded-full my-1`} />
+                    {description && (
+                      <p className={`${popupReveal('delay-650')} text-[10px] text-white/75 leading-snug line-clamp-3 max-w-[90%]`}>
+                        {description}
+                      </p>
+                    )}
+                  </div>
+                  <div className={`${popupReveal('delay-750')} flex items-center justify-between gap-3 mt-2`}>
+                    {renderCounts(preview, false, true)}
+                    {renderViewButton(true)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

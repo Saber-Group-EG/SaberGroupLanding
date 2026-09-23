@@ -165,3 +165,59 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Portfolio card scroll reveal — 3D lift-in with image settle */
+@keyframes portfolio-card-in {
+  from {
+    opacity: 0;
+    transform: perspective(900px) translateY(32px) rotateX(7deg) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) translateY(0) rotateX(0deg) scale(1);
+  }
+}
+
+.animate-portfolio-card-in {
+  animation: portfolio-card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transform-origin: center bottom;
+}
+
+@keyframes portfolio-card-img {
+  from {
+    transform: scale(1.14);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-portfolio-card-img {
+  animation: portfolio-card-img 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Mobile: lighter motion + layer promotion for silky frames */
+@media (max-width: 639px) {
+  @keyframes portfolio-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-portfolio-card-in {
+    animation-duration: 0.85s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+  }
+
+  .animate-portfolio-card-img {
+    animation-duration: 0.85s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+}
