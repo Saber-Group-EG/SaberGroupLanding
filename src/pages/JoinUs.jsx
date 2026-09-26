@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getJobPositions } from '../store/slices/jobPositionsSlice';
 import { getFullUrl, getDefaultOgImage, SITE_NAME } from '../utils/ogMeta';
-import Footer from '../components/footer';
 
 const JoinUs = () => {
   const navigate = useNavigate();
@@ -347,7 +346,6 @@ const JoinUs = () => {
         )}
       </div>
       </section>
-      <Footer />
     </>
   );
 };

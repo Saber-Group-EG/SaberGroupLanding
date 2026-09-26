@@ -1,163 +1,145 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+
+import { Hero } from '../components/home/Hero';
+import { StoriesSection } from '../components/home/StoriesSection';
+import { LatestProjectsSection } from '../components/home/LatestProjectsSection';
+import { SelectedProjects } from '../components/home/SelectedProjects';
+import { WhatWeDoSection } from '../components/home/WhatWeDoSection';
+import { ProductsSection } from '../components/home/ProductsSection';
+import { StatsSection } from '../components/home/StatsSection';
+import { TeamSection } from '../components/home/TeamSection';
+import { JoinTeamBlocksSection } from '../components/home/JoinTeamBlocksSection';
+import { ClientsSection } from '../components/home/ClientsSection';
+import { CtaSection } from '../components/home/CtaSection';
+import { InlineContactSection } from '../components/home/InlineContactSection';
+
+import { ShowreelModal } from '../components/home/ShowreelModal';
+import { StoryViewerModal } from '../components/home/StoryViewerModal';
+import { ProjectModal } from '../components/home/ProjectModal';
+import { ContactModal } from '../components/home/ContactModal';
+
+import { STORIES_DATA, SELECTED_PROJECTS } from '../content/home/saberData';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import content from '../content/HomeContent.js';
 
 const Home = () => {
+  const navigate = useNavigate();
   const { isArabic } = useTranslation();
-  const lang = isArabic ? 'ar' : 'en';
-  const { hero, software, agency, stats, closing } = content[lang];
+
+  const [isShowreelOpen, setIsShowreelOpen] = useState(false);
+  const [selectedStory, setSelectedStory] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+
+  const handleSelectStory = (story) => {
+    setSelectedStory(story);
+  };
+
+  const handleSelectProject = (project) => {
+    setSelectedProject(project);
+  };
+
+  const handleSelectProjectById = (projectId) => {
+    const proj = SELECTED_PROJECTS.find((p) => p.id === projectId);
+    if (proj) {
+      setSelectedProject(proj);
+    }
+  };
+
+  const handleViewAllStories = () => {
+    if (STORIES_DATA.length > 0) {
+      setSelectedStory(STORIES_DATA[0]);
+    }
+  };
+
+  const handleViewAllProjects = () => {
+    const el = document.getElementById('portfolio') || document.getElementById('our-work');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleJoinTeam = () => navigate('/join-us');
+
+  const handleOpenApply = () => navigate('/join-us');
 
   return (
     <section
       dir={isArabic ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-linear-to-br from-light-50 via-white to-light-100 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900"
+      className="pt-24 min-h-screen bg-[#f8f9fa] text-[#111315] selection:bg-[#E5192D] selection:text-white"
+      style={{
+        fontFamily: isArabic
+          ? "'Cairo', system-ui, sans-serif"
+          : "'Montserrat', system-ui, sans-serif",
+      }}
     >
-      {/* Hero — plain headline, no centerpiece, doesn't favor either half */}
-      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-28 pb-16 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-light-900 dark:text-white leading-tight mb-6">
-          {hero.title}
-        </h1>
-        <p className="text-lg text-light-600 dark:text-light-400 leading-relaxed max-w-xl mx-auto">
-          {hero.subtitle}
-        </p>
-      </div>
+      <Helmet>
+        {!isArabic && (
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap"
+          />
+        )}
+        {isArabic && (
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap"
+          />
+        )}
+      </Helmet>
 
-      {/* Agency section */}
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 border-t border-light-200/60 dark:border-dark-700/60">
-        <span className="text-xs font-semibold text-primary-500 uppercase tracking-wider">
-          {agency.eyebrow}
-        </span>
-        <h2 className="text-2xl md:text-3xl font-bold text-light-900 dark:text-white mt-3 mb-2 max-w-2xl">
-          {agency.title}
-        </h2>
-        <p className="text-light-600 dark:text-light-400 max-w-2xl mb-8">
-          {agency.subtitle}
-        </p>
+      <Hero
+        onOpenShowreel={() => setIsShowreelOpen(true)}
+        onSelectProject={handleSelectProjectById}
+      />
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {agency.items.map((s, i) => (
-            <div
-              key={i}
-              className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6"
-            >
-              <h3 className="font-bold text-light-900 dark:text-white mb-2">
-                {s.name}
-              </h3>
-              <p className="text-sm text-light-500 dark:text-light-400 leading-relaxed">
-                {s.desc}
-              </p>
-            </div>
-          ))}
-        </div>
+      <StoriesSection
+        onSelectStory={handleSelectStory}
+        onViewAllStories={handleViewAllStories}
+      />
 
-        <Link
-          to="/contact"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary-500 hover:gap-2.5 transition-all"
-        >
-          {agency.cta}
-          <svg
-            className="w-3.5 h-3.5 rtl:rotate-180"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14 5l7 7m0 0l-7 7m7-7H3"
-            />
-          </svg>
-        </Link>
-      </div>
-      
-      {/* Software section */}
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 border-t border-light-200/60 dark:border-dark-700/60">
-        <span className="text-xs font-semibold text-primary-500 uppercase tracking-wider">
-          {software.eyebrow}
-        </span>
-        <h2 className="text-2xl md:text-3xl font-bold text-light-900 dark:text-white mt-3 mb-2 max-w-2xl">
-          {software.title}
-        </h2>
-        <p className="text-light-600 dark:text-light-400 max-w-2xl mb-8">
-          {software.subtitle}
-        </p>
+      <LatestProjectsSection onSelectProject={handleSelectProject} />
 
-        <div className="grid md:grid-cols-2 gap-5 mb-6">
-          {software.items.map((p) => (
-            <Link
-              key={p.name}
-              to="/services"
-              className="group block bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-7 hover:border-primary-500/50 transition-colors"
-            >
-              <div className="flex items-baseline gap-2 mb-3">
-                <h3 className="text-xl font-bold text-light-900 dark:text-white">
-                  {p.name}
-                </h3>
-                <span className="text-sm text-light-500 dark:text-light-400">
-                  {p.tagline}
-                </span>
-              </div>
-              <p className="text-light-600 dark:text-light-400 leading-relaxed text-sm">
-                {p.line}
-              </p>
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-500 mt-4 group-hover:gap-2.5 transition-all">
-                {software.cta}
-                <svg
-                  className="w-3.5 h-3.5 rtl:rotate-180"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M14 5l7 7m0 0l-7 7m7-7H3"
-                  />
-                </svg>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <SelectedProjects
+        onSelectProject={handleSelectProject}
+        onViewAllProjects={handleViewAllProjects}
+      />
 
-      {/* Stats strip */}
-      <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 border-t border-light-200/60 dark:border-dark-700/60">
-        <span className="text-xs font-semibold text-primary-500 uppercase tracking-wider">
-          {stats.eyebrow}
-        </span>
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          {stats.items.map((s, i) => (
-            <div key={i} className="text-center md:text-start">
-              <p className="text-3xl md:text-4xl font-bold text-light-900 dark:text-white tracking-tight">
-                {s.value}
-              </p>
-              <p className="text-sm text-light-500 dark:text-light-400 mt-1">
-                {s.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <WhatWeDoSection onLearnMore={() => setIsContactOpen(true)} />
 
-      {/* Closing CTA */}
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-16 border-t border-light-200/60 dark:border-dark-700/60 text-center">
-        <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-10">
-          <h2 className="text-2xl font-bold text-light-900 dark:text-white mb-3">
-            {closing.title}
-          </h2>
-          <p className="text-light-600 dark:text-light-400 mb-7">
-            {closing.subtitle}
-          </p>
-          <Link
-            to="/contact"
-            className="inline-flex items-center gap-2 px-7 py-3.5 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 transition-colors"
-          >
-            {closing.cta}
-          </Link>
-        </div>
-      </div>
+      <ProductsSection onOpenContact={() => setIsContactOpen(true)} />
+
+      <StatsSection />
+
+      <TeamSection onJoinTeam={handleJoinTeam} />
+
+      <JoinTeamBlocksSection onOpenApply={handleOpenApply} />
+
+      <ClientsSection />
+
+      <CtaSection onOpenContact={() => setIsContactOpen(true)} />
+
+      <InlineContactSection />
+
+      <ShowreelModal isOpen={isShowreelOpen} onClose={() => setIsShowreelOpen(false)} />
+
+      <StoryViewerModal
+        key={selectedStory ? selectedStory.id : 'story-viewer-closed'}
+        initialStory={selectedStory}
+        onClose={() => setSelectedStory(null)}
+      />
+
+      <ProjectModal
+        project={selectedProject}
+        onClose={() => setSelectedProject(null)}
+        onOpenContact={() => {
+          setSelectedProject(null);
+          setIsContactOpen(true);
+        }}
+      />
+
+      <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
     </section>
   );
 };

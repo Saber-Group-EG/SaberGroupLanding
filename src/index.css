@@ -221,3 +221,93 @@
     will-change: transform;
   }
 }
+
+/* ==========================================================================
+   HOME PAGE (ported reference design) — purely additive helper classes.
+   Used only by src/components/home/* and src/pages/Home.jsx.
+   ========================================================================== */
+
+/* Hide scrollbar for clean carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hero Entrance Animations */
+@keyframes heroFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroRevealText {
+  0% {
+    opacity: 0;
+    transform: translateY(45px) skewY(2deg);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) skewY(0deg);
+    filter: blur(0px);
+  }
+}
+
+@keyframes waterGlimmer {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1) translateX(0);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.04) translateX(12px);
+  }
+}
+
+@keyframes sunPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.animate-hero-kicker {
+  animation: heroFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.animate-hero-title-1 {
+  animation: heroRevealText 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+.animate-hero-title-2 {
+  animation: heroRevealText 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+
+.animate-hero-subtitle {
+  animation: heroFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+}
+
+.animate-hero-cta {
+  animation: heroFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.75s both;
+}
+
+.animate-water-glimmer {
+  animation: waterGlimmer 6s ease-in-out infinite;
+}
+
+.animate-sun-pulse {
+  animation: sunPulse 5s ease-in-out infinite;
+}
+
