@@ -46,7 +46,7 @@ export const AutoPlayingHeroVideo = () => {
         className={`w-full h-full object-cover object-center transform scale-105 transition-opacity duration-1000 ${
           videoLoaded ? 'opacity-100' : 'opacity-0'
         }`}
-        poster="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80"
+        poster="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1280&q=60"
       >
         <source src={videoSrc} type="video/mp4" />
         {/* Secondary fallback video */}
@@ -58,7 +58,7 @@ export const AutoPlayingHeroVideo = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80')"
+            backgroundImage: "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1280&q=60')"
           }}
         />
       )}

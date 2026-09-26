@@ -11,7 +11,7 @@ const LATEST_WORKS = [
     clientName: 'Valora Developments',
     year: '2025',
     videoDuration: '02:45',
-    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=980&q=60',
   },
   {
     id: 'latest-asia-luxe',
@@ -20,7 +20,7 @@ const LATEST_WORKS = [
     clientName: 'Asia Beauty Care',
     year: '2025',
     videoDuration: '01:15',
-    coverImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=840&q=60',
   },
   {
     id: 'latest-seashell-summer',
@@ -29,7 +29,7 @@ const LATEST_WORKS = [
     clientName: 'Seashell Hospitality',
     year: '2024 - 2025',
     videoDuration: '03:10',
-    coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=840&q=60',
   },
   {
     id: 'latest-swissotel-legacy',
@@ -38,7 +38,7 @@ const LATEST_WORKS = [
     clientName: 'Swissôtel Hotels & Resorts',
     year: '2024',
     videoDuration: '02:30',
-    coverImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=840&q=60',
   },
 ];
 
@@ -116,6 +116,8 @@ export const LatestProjectsSection = ({
                 <img
                   src={heroProject.coverImage}
                   alt={heroProject.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:ltr:bg-gradient-to-r lg:rtl:bg-gradient-to-l lg:from-transparent lg:to-neutral-900" />
@@ -210,6 +212,8 @@ export const LatestProjectsSection = ({
                   <img
                     src={proj.coverImage}
                     alt={proj.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />

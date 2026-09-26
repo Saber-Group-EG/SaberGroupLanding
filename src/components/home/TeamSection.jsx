@@ -6,7 +6,7 @@ import { useHorizontalScroll } from './useHorizontalScroll';
 const TEAM_MEMBERS = [
   {
     id: 'mostafa-saber',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=560&q=60',
     socials: {
       linkedin: 'https://linkedin.com',
       instagram: 'https://instagram.com',
@@ -14,7 +14,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'omar-farouk',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=560&q=60',
     socials: {
       linkedin: 'https://linkedin.com',
       instagram: 'https://instagram.com',
@@ -22,7 +22,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'nour-el-din',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=560&q=60',
     socials: {
       linkedin: 'https://linkedin.com',
       instagram: 'https://instagram.com',
@@ -30,7 +30,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'sarah-hassan',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=560&q=60',
     socials: {
       linkedin: 'https://linkedin.com',
       instagram: 'https://instagram.com',
@@ -38,7 +38,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'karim-mansour',
-    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=560&q=60',
     socials: {
       linkedin: 'https://linkedin.com',
       instagram: 'https://instagram.com',
@@ -46,7 +46,7 @@ const TEAM_MEMBERS = [
   },
   {
     id: 'layla-mahmoud',
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=560&q=60',
     socials: {
       linkedin: 'https://linkedin.com',
       instagram: 'https://instagram.com',
@@ -152,6 +152,7 @@ export const TeamSection = ({ onJoinTeam }) => {
                       src={member.image}
                       alt={memberCopy.name}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 filter grayscale contrast-110 group-hover:grayscale-0"
                     />
 

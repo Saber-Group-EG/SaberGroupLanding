@@ -20,7 +20,8 @@ import { StoryViewerModal } from '../components/home/StoryViewerModal';
 import { ProjectModal } from '../components/home/ProjectModal';
 import { ContactModal } from '../components/home/ContactModal';
 
-import { STORIES_DATA, SELECTED_PROJECTS } from '../content/home/saberData';
+import { SELECTED_PROJECTS } from '../content/home/saberData';
+import { useProjectStories } from '../components/home/useProjectStories';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const Home = () => {
@@ -31,6 +32,8 @@ const Home = () => {
   const [selectedStory, setSelectedStory] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isContactOpen, setIsContactOpen] = useState(false);
+
+  const { stories, loading: storiesLoading } = useProjectStories();
 
   const handleSelectStory = (story) => {
     setSelectedStory(story);
@@ -48,8 +51,8 @@ const Home = () => {
   };
 
   const handleViewAllStories = () => {
-    if (STORIES_DATA.length > 0) {
-      setSelectedStory(STORIES_DATA[0]);
+    if (stories.length > 0) {
+      setSelectedStory(stories[0]);
     }
   };
 
@@ -64,10 +67,13 @@ const Home = () => {
 
   const handleOpenApply = () => navigate('/join-us');
 
+  const handleApplyToPosition = (position) =>
+    navigate(`/join-us/${position.slug || position._id}`);
+
   return (
     <section
       dir={isArabic ? 'rtl' : 'ltr'}
-      className="pt-24 min-h-screen bg-[#f8f9fa] text-[#111315] selection:bg-[#E5192D] selection:text-white"
+      className="pt-16 min-h-screen bg-[#f8f9fa] text-[#111315] selection:bg-[#E5192D] selection:text-white"
       style={{
         fontFamily: isArabic
           ? "'Cairo', system-ui, sans-serif"
@@ -95,6 +101,8 @@ const Home = () => {
       />
 
       <StoriesSection
+        stories={stories}
+        loading={storiesLoading}
         onSelectStory={handleSelectStory}
         onViewAllStories={handleViewAllStories}
       />
@@ -114,7 +122,7 @@ const Home = () => {
 
       <TeamSection onJoinTeam={handleJoinTeam} />
 
-      <JoinTeamBlocksSection onOpenApply={handleOpenApply} />
+      <JoinTeamBlocksSection onOpenApply={handleOpenApply} onApply={handleApplyToPosition} />
 
       <ClientsSection />
 
@@ -126,6 +134,7 @@ const Home = () => {
 
       <StoryViewerModal
         key={selectedStory ? selectedStory.id : 'story-viewer-closed'}
+        stories={stories}
         initialStory={selectedStory}
         onClose={() => setSelectedStory(null)}
       />

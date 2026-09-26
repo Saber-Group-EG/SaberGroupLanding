@@ -1,65 +1,173 @@
-import { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Pause, Play, Share2 } from 'lucide-react';
-import { STORIES_DATA } from '../../content/home/saberData';
+import { useState, useRef, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight, Pause, Play, Share2, Volume2, VolumeX } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
-
+import { getStoryInitials } from './useProjectStories';
 
 export const StoryViewerModal = ({
+  stories,
   initialStory,
   onClose,
 }) => {
   const copy = useHomeCopy();
+  // Dual-slot preload: two persistent <video> elements so advancing never
+  // remounts a fresh element that re-downloads the ~30 MB material.
+  const videoRefs = useRef([null, null]);
   const [currentIndex, setCurrentIndex] = useState(() => {
     if (initialStory) {
-      const idx = STORIES_DATA.findIndex((s) => s.id === initialStory.id);
+      const idx = stories.findIndex((s) => s.id === initialStory.id);
       if (idx !== -1) return idx;
     }
     return 0;
   });
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  // Two-phase playback: no <video> (and no download) until the viewer presses play.
+  const [started, setStarted] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  // Position within the current project's materials, alongside currentIndex.
+  const [materialIndex, setMaterialIndex] = useState(0);
+  // Which material each slot currently holds (or is fetching); null = empty.
+  const [slots, setSlots] = useState([null, null]);
+  const [activeSlot, setActiveSlot] = useState(0);
 
-  const currentStory = STORIES_DATA[currentIndex];
-  const currentStoryCopy = currentStory ? copy.stories.items[currentStory.id] : null;
+  const currentStory = stories[currentIndex];
+  const currentMaterial = currentStory?.materials?.[materialIndex] ?? null;
 
+  // Audible autoplay can still be rejected by strict browsers even after a
+  // click, so retry muted instead of leaving the story stuck on the poster.
   useEffect(() => {
-    if (!initialStory || isPaused) return;
+    if (!started) return;
+    const video = videoRefs.current[activeSlot];
+    if (!video) return;
+    video.play().catch(() => {
+      video.muted = true;
+      setIsMuted(true);
+      video.play().catch(() => {});
+    });
+  }, [started, currentIndex, materialIndex, activeSlot]);
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          if (currentIndex < STORIES_DATA.length - 1) {
-            setCurrentIndex((i) => i + 1);
-            return 0;
-          } else {
-            onClose();
-            return 100;
-          }
-        }
-        return prev + 2;
-      });
-    }, 100);
+  const handlePosterError = (event) => {
+    const img = event.currentTarget;
+    if (currentStory?.fallbackThumbnail && img.dataset.fallbackTried !== 'true') {
+      img.dataset.fallbackTried = 'true';
+      img.src = currentStory.fallbackThumbnail;
+      return;
+    }
+    img.style.display = 'none';
+  };
 
-    return () => clearInterval(interval);
-  }, [initialStory, isPaused, currentIndex, onClose]);
+  const resetPlayback = () => {
+    setProgress(0);
+    setIsPaused(false);
+  };
 
-  if (!initialStory || !currentStory || !currentStoryCopy) return null;
+  // Slot planning runs only inside event handlers: this repo's eslint rejects
+  // setState inside useEffect bodies.
+  const planSlots = (pIdx, mIdx) => {
+    const mat = stories[pIdx]?.materials?.[mIdx];
+    const nextM = stories[pIdx]?.materials?.[mIdx + 1];
+    const target = { pIdx, mIdx, url: mat?.videoUrl || null };
+    const next = nextM ? { pIdx, mIdx: mIdx + 1, url: nextM.videoUrl || null } : null;
+    const other = activeSlot === 0 ? 1 : 0;
+    const holdsTarget = (slot) => Boolean(slot) && slot.pIdx === pIdx && slot.mIdx === mIdx;
+
+    if (holdsTarget(slots[other])) {
+      // Promote the already-buffered slot. The demoted element must be paused
+      // explicitly: it loses its onPause handler this render, and if it is
+      // repointed to null it unmounts while still playing.
+      videoRefs.current[activeSlot]?.pause();
+      const freed = [...slots];
+      freed[activeSlot] = next;
+      setSlots(freed);
+      setActiveSlot(other);
+      return;
+    }
+    if (holdsTarget(slots[activeSlot])) return;
+    // Target not buffered (backwards jump or new project): refetch on the
+    // active element — its poster attr covers the wait — and preload after it.
+    const replan = [...slots];
+    replan[activeSlot] = target;
+    replan[other] = next;
+    setSlots(replan);
+  };
+
+  const startPlayback = () => {
+    if (started) return;
+    planSlots(currentIndex, materialIndex);
+    setStarted(true);
+    setIsPaused(false);
+  };
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      setProgress(0);
+    if (!started) {
+      startPlayback();
+      return;
     }
+    if (materialIndex > 0) {
+      planSlots(currentIndex, materialIndex - 1);
+      setMaterialIndex(materialIndex - 1);
+      resetPlayback();
+      return;
+    }
+    if (currentIndex === 0) return;
+    const prevMaterials = stories[currentIndex - 1]?.materials || [];
+    const prevMaterialIdx = Math.max(prevMaterials.length - 1, 0);
+    planSlots(currentIndex - 1, prevMaterialIdx);
+    setCurrentIndex(currentIndex - 1);
+    setMaterialIndex(prevMaterialIdx);
+    resetPlayback();
   };
 
   const handleNext = () => {
-    if (currentIndex < STORIES_DATA.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setProgress(0);
-    } else {
+    if (!started) {
+      startPlayback();
+      return;
+    }
+    const materials = currentStory?.materials || [];
+    if (materialIndex < materials.length - 1) {
+      planSlots(currentIndex, materialIndex + 1);
+      setMaterialIndex(materialIndex + 1);
+      resetPlayback();
+      return;
+    }
+    if (currentIndex >= stories.length - 1) {
       onClose();
+      return;
+    }
+    planSlots(currentIndex + 1, 0);
+    setCurrentIndex(currentIndex + 1);
+    setMaterialIndex(0);
+    resetPlayback();
+  };
+
+  const togglePause = () => {
+    if (!started) {
+      startPlayback();
+      return;
+    }
+    const video = videoRefs.current[activeSlot];
+    if (!video) return;
+    if (video.paused) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
     }
   };
+
+  const handleTimeUpdate = () => {
+    const video = videoRefs.current[activeSlot];
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    setProgress((video.currentTime / video.duration) * 100);
+  };
+
+  if (!initialStory || !currentStory) return null;
+
+  const posterSrc =
+    currentMaterial?.thumbnail || currentStory.thumbnail || currentStory.fallbackThumbnail || '';
+  // The <img> layer only backs the viewer when nothing is playing yet or the
+  // active slot has no video; otherwise the <video> covers (its poster attr
+  // shows during any buffering).
+  const showPosterLayer = !started || !slots[activeSlot]?.url;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-in fade-in duration-200">
@@ -67,7 +175,7 @@ export const StoryViewerModal = ({
       {/* Navigation Arrows for desktop */}
       <button
         onClick={handlePrev}
-        disabled={currentIndex === 0}
+        disabled={currentIndex === 0 && materialIndex === 0}
         className="hidden md:flex absolute start-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer z-20"
       >
         <ChevronLeft className="w-6 h-6 rtl:rotate-180" />
@@ -83,13 +191,48 @@ export const StoryViewerModal = ({
       {/* Story Screen Card */}
       <div className="relative w-full max-w-[400px] h-[85vh] max-h-[760px] rounded-3xl overflow-hidden shadow-2xl bg-neutral-950 border border-neutral-800 flex flex-col justify-between">
 
-        {/* Real Photographic Background */}
+        {/* Story Background: poster until started, then the two preload slots */}
         <div className="absolute inset-0">
-          <img
-            src={currentStory.imageUrl}
-            alt={currentStory.title}
-            className="w-full h-full object-cover object-center"
-          />
+          {started
+            ? [0, 1].map((i) => {
+                const slot = slots[i];
+                if (!slot?.url) return null;
+                const active = i === activeSlot;
+                // Inactive slot stays 1px in the DOM instead of display:none:
+                // hiding it lets the browser suspend the preload buffering.
+                return (
+                  <video
+                    key={`slot-${i}`}
+                    ref={(el) => {
+                      videoRefs.current[i] = el;
+                    }}
+                    src={slot.url}
+                    poster={currentMaterial?.thumbnail || currentStory.thumbnail || undefined}
+                    preload="auto"
+                    playsInline
+                    muted={active ? isMuted : true}
+                    autoPlay={active}
+                    className={
+                      active
+                        ? 'w-full h-full object-cover object-center'
+                        : 'absolute w-px h-px opacity-0 pointer-events-none'
+                    }
+                    onTimeUpdate={active ? handleTimeUpdate : undefined}
+                    onEnded={active ? handleNext : undefined}
+                    onPlay={active ? () => setIsPaused(false) : undefined}
+                    onPause={active ? () => setIsPaused(true) : undefined}
+                  />
+                );
+              })
+            : null}
+          {showPosterLayer && posterSrc ? (
+            <img
+              src={posterSrc}
+              alt={currentStory.title}
+              className="w-full h-full object-cover object-center"
+              onError={handlePosterError}
+            />
+          ) : null}
         </div>
 
         {/* Top Scrim */}
@@ -97,17 +240,28 @@ export const StoryViewerModal = ({
         {/* Bottom Scrim */}
         <div className="absolute bottom-0 start-0 end-0 h-44 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none" />
 
+        {/* Phase 1 only: nothing plays until this is pressed */}
+        {!started ? (
+          <button
+            onClick={startPlayback}
+            aria-label="Play"
+            className="absolute top-0 bottom-0 start-0 end-0 m-auto w-16 h-16 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white shadow-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer z-20"
+          >
+            <Play className="w-7 h-7 fill-white translate-x-0.5" />
+          </button>
+        ) : null}
+
         {/* Top Controls & Story Progress */}
         <div className="relative z-10 p-4">
-          {/* Progress Bars */}
+          {/* Progress Bars: one segment per material of the current project */}
           <div className="flex items-center gap-1.5 mb-3">
-            {STORIES_DATA.map((_, idx) => {
+            {(currentStory.materials || []).map((material, materialIdx) => {
               let fill = '0%';
-              if (idx < currentIndex) fill = '100%';
-              else if (idx === currentIndex) fill = `${progress}%`;
+              if (materialIdx < materialIndex) fill = '100%';
+              else if (materialIdx === materialIndex) fill = `${progress}%`;
 
               return (
-                <div key={idx} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+                <div key={material.id} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-white transition-all duration-100 ease-linear"
                     style={{ width: fill }}
@@ -117,31 +271,54 @@ export const StoryViewerModal = ({
             })}
           </div>
 
-          {/* Header with avatar, author name, and close button */}
+          {/* Header with avatar, author name, and controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border-2 border-[#E5192D] bg-neutral-900 flex items-center justify-center text-white font-bold text-xs">
-                {currentStory.avatarText}
+              <div className="relative w-10 h-10 rounded-full border-2 border-[#E5192D] bg-neutral-900 flex items-center justify-center text-white font-bold text-xs">
+                {getStoryInitials(currentStory.title)}
+                {currentStory.avatarImage ? (
+                  <img
+                    src={currentStory.avatarImage}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : null}
               </div>
               <div>
                 <h4 className="text-white font-bold text-sm leading-tight">
                   {currentStory.title}
                 </h4>
                 <p className="text-white/70 text-xs font-medium">
-                  {currentStoryCopy.category} • Saber Studio
+                  {currentStory.category} • Saber Studio
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsPaused(!isPaused)}
-                className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                {isPaused ? <Play className="w-4 h-4 fill-white" /> : <Pause className="w-4 h-4" />}
-              </button>
+              {started ? (
+                <button
+                  onClick={togglePause}
+                  aria-label={isPaused ? 'Play' : 'Pause'}
+                  className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  {isPaused ? <Play className="w-4 h-4 fill-white" /> : <Pause className="w-4 h-4" />}
+                </button>
+              ) : null}
+              {started ? (
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  aria-label={isMuted ? 'Unmute' : 'Mute'}
+                  className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+              ) : null}
               <button
                 onClick={onClose}
+                aria-label="Close"
                 className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -153,7 +330,7 @@ export const StoryViewerModal = ({
         {/* Tap areas for mobile story advancing */}
         <div className="absolute inset-0 z-0 flex">
           <div className="w-1/3 h-full cursor-pointer" onClick={handlePrev} />
-          <div className="w-1/3 h-full cursor-pointer" onClick={() => setIsPaused(!isPaused)} />
+          <div className="w-1/3 h-full cursor-pointer" onClick={togglePause} />
           <div className="w-1/3 h-full cursor-pointer" onClick={handleNext} />
         </div>
 
@@ -164,7 +341,7 @@ export const StoryViewerModal = ({
               {copy.modals.storyViewer.spotlight}
             </span>
             <p className="text-white text-xs leading-relaxed font-normal">
-              {currentStoryCopy.description}
+              {currentMaterial?.description || currentStory.description}
             </p>
 
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10 text-[11px] text-white/60">

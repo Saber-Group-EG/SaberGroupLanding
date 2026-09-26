@@ -36,8 +36,10 @@ export const WhatWeDoSection = ({ onLearnMore }) => {
       {/* Background Camera Lens Macro Photographic Imagery */}
       <div className="absolute end-0 top-0 bottom-0 w-full lg:w-1/2 opacity-25 lg:opacity-40 pointer-events-none overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1617897903246-719242758050?auto=format&fit=crop&w=1400&q=80"
+          src="https://images.unsplash.com/photo-1617897903246-719242758050?auto=format&fit=crop&w=980&q=60"
           alt={copy.whatWeDo.imageAlt}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover object-center mix-blend-screen scale-110"
         />
         {/* Soft blends into background */}

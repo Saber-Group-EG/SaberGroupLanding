@@ -43,50 +43,6 @@ const homeContent = {
       intro: 'A quick look into our latest projects and behind the scenes.',
       viewAll: 'VIEW ALL STORIES',
       scrollNext: 'Scroll stories right',
-      items: {
-        'story-bts': {
-          subtitle: 'Video Shoot',
-          category: 'Production',
-          description:
-            'Behind the scenes of our flagship cinema camera setup, utilizing anamorphic lenses and dynamic motion rigs.',
-        },
-        'story-valora': {
-          subtitle: 'Tanta',
-          category: 'Real Estate',
-          description:
-            'Golden hour drone sweeps and architectural cinematography for the new Valora luxury residential landmark in Tanta.',
-        },
-        'story-seashell': {
-          subtitle: 'Hurghada',
-          category: 'Hospitality',
-          description:
-            'Capturing sunlit beach vibes, azure Red Sea waters, and signature seaside culinary moments.',
-        },
-        'story-doctors': {
-          subtitle: 'Marketing',
-          category: 'Healthcare',
-          description:
-            'Humanizing medical innovation with documentary patient care narratives and doctor spotlight stories.',
-        },
-        'story-cosmetics': {
-          subtitle: 'Brand Campaign',
-          category: 'Beauty',
-          description:
-            'Macro studio photography and slow-motion droplet physics for luxury skincare serums and cosmetics.',
-        },
-        'story-cubic': {
-          subtitle: 'Construction',
-          category: 'Engineering',
-          description:
-            'Documenting the scale and human engineering precision of Cubic Engineering projects.',
-        },
-        'story-swissotel': {
-          subtitle: 'El Quseir',
-          category: 'Hospitality',
-          description:
-            'Twilight architectural photography highlighting the peaceful sanctuary of Swissôtel El Quseir.',
-        },
-      },
     },
 
     latestProjects: {
@@ -320,50 +276,9 @@ const homeContent = {
       next: 'Next',
       openNow: 'OPEN NOW',
       applyNow: 'Apply Now',
-      jobs: {
-        'job-cinematographer': {
-          title: 'Senior Video Director & Cinematographer',
-          department: 'Media Production',
-          type: 'In-Studio',
-          location: 'Cairo Studio',
-          experience: '4+ Years',
-        },
-        'job-editor-colorist': {
-          title: 'Senior Video Editor & Colorist',
-          department: 'Post-Production',
-          type: 'Hybrid',
-          location: 'Cairo Studio',
-          experience: '3+ Years',
-        },
-        'job-art-director': {
-          title: 'Creative Art Director & 3D Artist',
-          department: 'Brand & Visual Design',
-          type: 'Hybrid',
-          location: 'Cairo Studio',
-          experience: '3+ Years',
-        },
-        'job-fullstack': {
-          title: 'Full-Stack Software Engineer',
-          department: 'Technology & SaaS',
-          type: 'Remote',
-          location: 'Egypt / MENA',
-          experience: '3+ Years',
-        },
-        'job-media-buyer': {
-          title: 'Performance Media Buyer',
-          department: 'Growth Marketing',
-          type: 'Remote / Cairo',
-          location: 'Remote (Cairo)',
-          experience: '2+ Years',
-        },
-        'job-social-strategist': {
-          title: 'Social Media Strategist & Copywriter',
-          department: 'Content & Strategy',
-          type: 'In-Studio',
-          location: 'Cairo Studio',
-          experience: '2+ Years',
-        },
-      },
+      emptyTitle: 'No open positions right now',
+      emptyDesc:
+        'We have no open roles at the moment. Send a general application and we will reach out as soon as something fits.',
     },
 
     clients: {
@@ -684,50 +599,6 @@ const homeContent = {
       intro: 'لمحة سريعة عن أحدث مشاريعنا ووراء الكواليس.',
       viewAll: 'عرض كل القصص',
       scrollNext: 'عرض المزيد من القصص',
-      items: {
-        'story-bts': {
-          subtitle: 'تصوير فيديو',
-          category: 'إنتاج',
-          description:
-            'وراء الكواليس أثناء تجهيز كاميراتنا السينمائية الرئيسية، باستخدام العدسات الأناموريك ومعدات الحركة الديناميكية.',
-        },
-        'story-valora': {
-          subtitle: 'طنطا',
-          category: 'التطوير العقاري',
-          description:
-            'لقطات طيران بطائرات درون في الساعة الذهبية وتصوير سينمائي معماري لمشروع فالورا السكني الفاخر الجديد في طنطا.',
-        },
-        'story-seashell': {
-          subtitle: 'الغردقة',
-          category: 'الضيافة',
-          description:
-            'توثيق أجواء الشاطئ المشرقة ومياه البحر الأحمر الزرقاء ولحظات الطهي المميزة على الواجهة البحرية.',
-        },
-        'story-doctors': {
-          subtitle: 'تسويق',
-          category: 'الرعاية الصحية',
-          description:
-            'إنسانة الابتكار الطبي من خلال قصص وثائقية عن رعاية المرضى وقصص مميزة للأطباء.',
-        },
-        'story-cosmetics': {
-          subtitle: 'حملة علامة تجارية',
-          category: 'الجمال',
-          description:
-            'تصوير استوديو بمقربة وديناميكا قطرات بطيئة لسيرومات العناية بالبشرة والمستحضرات الفاخرة.',
-        },
-        'story-cubic': {
-          subtitle: 'الإنشاءات',
-          category: 'الهندسة',
-          description:
-            'توثيق حجم ودقة الهندسة البشرية في مشاريع كيوبك الهندسية.',
-        },
-        'story-swissotel': {
-          subtitle: 'القصير',
-          category: 'الضيافة',
-          description:
-            'تصوير معماري في الغسق يُبرز ملاذ سويس أوتيل القصير الهادئ.',
-        },
-      },
     },
 
     latestProjects: {
@@ -961,50 +832,9 @@ const homeContent = {
       next: 'التالي',
       openNow: 'متاح الآن',
       applyNow: 'قدّم الآن',
-      jobs: {
-        'job-cinematographer': {
-          title: 'مخرج فيديو أول وسينماتوغرافر',
-          department: 'إنتاج الإعلام',
-          type: 'من الاستوديو',
-          location: 'استوديو القاهرة',
-          experience: '+4 سنوات',
-        },
-        'job-editor-colorist': {
-          title: 'مونتير فيديو أول ومونتير ألوان',
-          department: 'ما بعد الإنتاج',
-          type: 'هايبرد',
-          location: 'استوديو القاهرة',
-          experience: '+3 سنوات',
-        },
-        'job-art-director': {
-          title: 'مدير فني إبداعي وفنان 3D',
-          department: 'تصميم العلامات والهوية',
-          type: 'هايبرد',
-          location: 'استوديو القاهرة',
-          experience: '+3 سنوات',
-        },
-        'job-fullstack': {
-          title: 'مهندس برمجيات Full-Stack',
-          department: 'التقنية وبرمجيات SaaS',
-          type: 'عن بعد',
-          location: 'مصر / الشرق الأوسط وشمال أفريقيا',
-          experience: '+3 سنوات',
-        },
-        'job-media-buyer': {
-          title: 'مشتري إعلانات أداء',
-          department: 'تسويق النمو',
-          type: 'عن بعد / القاهرة',
-          location: 'عن بعد (القاهرة)',
-          experience: '+2 سنوات',
-        },
-        'job-social-strategist': {
-          title: 'استراتيجي سوشيال ميديا وكاتب إعلانات',
-          department: 'المحتوى والاستراتيجية',
-          type: 'من الاستوديو',
-          location: 'استوديو القاهرة',
-          experience: '+2 سنوات',
-        },
-      },
+      emptyTitle: 'لا توجد وظائف شاغرة الآن',
+      emptyDesc:
+        'لا توجد فرص شاغرة في الوقت الحالي. أرسل طلبًا عامًا وسنتواصل معك فور توفر مناسبة تناسبك.',
     },
 
     clients: {

@@ -21,16 +21,6 @@ export const HERO_SLIDES = [
   },
 ];
 
-export const STORIES_DATA = [
-  { id: 'story-bts', title: 'BTS', avatarText: 'BTS' },
-  { id: 'story-valora', title: 'VALORA', avatarText: 'VALORA' },
-  { id: 'story-seashell', title: 'Seashell', avatarText: 'Seashell' },
-  { id: 'story-doctors', title: 'Doctors', avatarText: 'Doctors' },
-  { id: 'story-cosmetics', title: 'Asia Cosmetics', avatarText: 'Asia' },
-  { id: 'story-cubic', title: 'Cubic', avatarText: 'Cubic' },
-  { id: 'story-swissotel', title: 'Swissôtel', avatarText: 'Swissôtel' },
-];
-
 export const SELECTED_PROJECTS = [
   {
     id: 'proj-valora',
