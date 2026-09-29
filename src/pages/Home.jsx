@@ -22,6 +22,8 @@ import { ContactModal } from '../components/home/ContactModal';
 
 import { SELECTED_PROJECTS } from '../content/home/saberData';
 import { useProjectStories } from '../components/home/useProjectStories';
+import { useHomeProjects } from '../components/home/useHomeProjects';
+import { useCastMembers } from '../components/home/useCastMembers';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const Home = () => {
@@ -34,6 +36,8 @@ const Home = () => {
   const [isContactOpen, setIsContactOpen] = useState(false);
 
   const { stories, loading: storiesLoading } = useProjectStories();
+  const { clients, loading: projectsLoading } = useHomeProjects();
+  const { members: teamMembers, loading: castLoading } = useCastMembers();
 
   const handleSelectStory = (story) => {
     setSelectedStory(story);
@@ -120,11 +124,11 @@ const Home = () => {
 
       <StatsSection />
 
-      <TeamSection onJoinTeam={handleJoinTeam} />
+      <TeamSection onJoinTeam={handleJoinTeam} members={teamMembers} loading={castLoading} />
 
       <JoinTeamBlocksSection onOpenApply={handleOpenApply} onApply={handleApplyToPosition} />
 
-      <ClientsSection />
+      <ClientsSection clients={clients} loading={projectsLoading} />
 
       <CtaSection onOpenContact={() => setIsContactOpen(true)} />
 

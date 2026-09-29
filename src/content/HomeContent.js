@@ -222,50 +222,6 @@ const homeContent = {
       bannerText:
         'We are constantly seeking brilliant storytellers, editors, and engineers.',
       bannerCta: 'APPLY FOR OPEN ROLES',
-      members: {
-        'mostafa-saber': {
-          name: 'Mostafa Saber',
-          role: 'Founder & Executive Creative Director',
-          category: 'Leadership & Directing',
-          quote:
-            '"Every single frame should either tell an unforgettable story or drive exponential business growth."',
-        },
-        'omar-farouk': {
-          name: 'Omar Farouk',
-          role: 'Head of Cinematography & Production',
-          category: 'Film & Lighting',
-          quote:
-            '"Lighting is emotion. We paint with shadows and anamorphic glass to evoke true feeling."',
-        },
-        'nour-el-din': {
-          name: 'Nour El-Din',
-          role: 'Lead Art Director & Visual Identity',
-          category: 'Branding & Concept Art',
-          quote:
-            '"Simplicity is the ultimate sophistication in brand language and visual resonance."',
-        },
-        'sarah-hassan': {
-          name: 'Sarah Hassan',
-          role: 'VP of Technology & Software Systems',
-          category: 'Tech & Product',
-          quote:
-            '"Building robust platforms like Jahez CRM that scale seamlessly alongside client ambition."',
-        },
-        'karim-mansour': {
-          name: 'Karim Mansour',
-          role: 'Senior Post-Production & Colorist',
-          category: 'Color & Sound Design',
-          quote:
-            '"Color grading turns raw footage into pure cinematic wonder with tone and rhythm."',
-        },
-        'layla-mahmoud': {
-          name: 'Layla Mahmoud',
-          role: 'Director of Performance & Growth Marketing',
-          category: 'Growth & Analytics',
-          quote:
-            '"Creativity without distribution is a secret. We scale stories into verified conversions."',
-        },
-      },
     },
 
     joinTeam: {
@@ -778,50 +734,6 @@ const homeContent = {
       bannerText:
         'نبحث باستمرار عن سردين قصص مبدعين، ومونتيرين، ومهندسين متميزين.',
       bannerCta: 'قدّم لوظائف شاغرة',
-      members: {
-        'mostafa-saber': {
-          name: 'مصطفى صابر',
-          role: 'المؤسس والرئيس التنفيذي للإبداع',
-          category: 'القيادة والإخراج',
-          quote:
-            '"يجب أن تحكي كل لقطة قصة لا تُنسى أو تدفع نمو الأعمال بشكل متسارع."',
-        },
-        'omar-farouk': {
-          name: 'عمر فاروق',
-          role: 'رئيس قسم التصوير السينمائي والإنتاج',
-          category: 'الفيلم والإضاءة',
-          quote:
-            '"الإضاءة هي المشاعر. نرسم بالظلال والعدسات الأناموريك لإيصال مشاعر حقيقية."',
-        },
-        'nour-el-din': {
-          name: 'نور الدين',
-          role: 'مدير فني أول والهوية البصرية',
-          category: 'العلامة التجارية والكونسبت آرت',
-          quote:
-            '"البساطة هي أرقى درجات الإتقان في لغة العلامات التجارية والتناغم البصري."',
-        },
-        'sarah-hassan': {
-          name: 'سارة حسن',
-          role: 'نائب رئيس التقنية وأنظمة البرمجيات',
-          category: 'التقنية والمنتج',
-          quote:
-            '"نبني منصات قوية مثل Jahez CRM تتوسع بسلاسة مع طموح عملائنا."',
-        },
-        'karim-mansour': {
-          name: 'كريم منصور',
-          role: 'مدير ما بعد الإنتاج الأقدم ومونتير ألوان',
-          category: 'الألوان وتصميم الصوت',
-          quote:
-            '"تصحيح الألوان يحوّل اللقطات الخام إلى عجابة سينمائية خالصة بإيقاعها ونبرتها."',
-        },
-        'layla-mahmoud': {
-          name: 'ليلى محمود',
-          role: 'مديرة الأداء وتسويق النمو',
-          category: 'النمو والتحليلات',
-          quote:
-            '"الإبداع بلا توزيع هو سر مكتوم. نحوّل القصص إلى نتائج موثّقة."',
-        },
-      },
     },
 
     joinTeam: {

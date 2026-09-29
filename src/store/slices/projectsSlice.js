@@ -4,7 +4,7 @@ import { getEnSlug } from '../../utils/slug';
 import { getProxiedCoverUrl } from '../../utils/imageProxy';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
-const CACHE_KEY = 'saber_projects_cache_v6';
+const CACHE_KEY = 'saber_projects_cache_v7';
 
 const loadFromCache = () => {
   try {
@@ -119,6 +119,15 @@ const transformProject = (raw) => {
     mediaGroups,
     clientName: resolveBilingual(raw.company),
     clientNameAr: raw.company?.ar || raw.company?.name?.ar || resolveBilingual(raw.company),
+    client: (raw.company && typeof raw.company === 'object' && raw.company._id)
+      ? {
+          id: raw.company._id,
+          nameEn: raw.company.name?.en || '',
+          nameAr: raw.company.name?.ar || '',
+          field: raw.company.field || '',
+          logo: raw.company.logo || '',
+        }
+      : null,
     locationAr: raw.location?.ar || (typeof raw.location === 'string' ? raw.location : ''),
     locationEn: raw.location?.en || (typeof raw.location === 'string' ? raw.location : ''),
     location: resolveBilingual(raw.location),
@@ -244,5 +253,19 @@ export const selectRelatedProjects = createSelector(
     );
   }
 );
+
+export const selectClients = createSelector([selectPublishedProjects], (projects) => {
+  const seen = new Set();
+  const clients = [];
+
+  projects.forEach((project) => {
+    const client = project.client;
+    if (!client || !client.id || seen.has(client.id)) return;
+    seen.add(client.id);
+    clients.push(client);
+  });
+
+  return clients;
+});
 
 export default projectsSlice.reducer;
