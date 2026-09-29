@@ -20,6 +20,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import './index.css';
 import Checkout from './pages/Checkout';
 import CheckoutComplete from './pages/checkoutComplete';
+import PaymentPage from './pages/Payment';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
         />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/checkout/complete" element={<CheckoutComplete />} />
+        <Route path="/checkout/payment" element={<PaymentPage />} />
         <Route path="/coming-soon" element={<ComingSoon />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
