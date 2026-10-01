@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
@@ -6,6 +6,7 @@ import {
   refundContent,
   serviceContent,
 } from '../content/PoliciesContent.js';
+import { dataDeletionContent } from '../content/DataDeletionContent.js';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ const TABS = [
   { key: 'privacy', en: 'Privacy Policy', ar: 'سياسة الخصوصية' },
   { key: 'refund', en: 'Refund Policy', ar: 'سياسة الاسترداد' },
   { key: 'service', en: 'Service Duration', ar: 'مدة الخدمة' },
+  { key: 'data-deletion', en: 'Data Deletion', ar: 'حذف البيانات' },
 ];
 
 // ─── Shared components ────────────────────────────────────────────────────────
@@ -161,6 +163,116 @@ const ServicePanel = ({ isArabic }) => {
   );
 };
 
+// Status of a Meta data deletion request. The CRM's data deletion callback
+// sends people here with ?code=...; /api/v1 is proxied to the CRM backend
+// (see vercel.json).
+const DeletionStatus = ({ code, isArabic, text }) => {
+  const [request, setRequest] = useState(null);
+  const [state, setState] = useState('loading');
+
+  // Rendered with key={code}, so a new code remounts and starts at 'loading'.
+  useEffect(() => {
+    fetch(`/api/v1/webhooks/meta/data-deletion/${encodeURIComponent(code)}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((body) => {
+        setRequest(body.data);
+        setState('found');
+      })
+      .catch(() => setState('notFound'));
+  }, [code]);
+
+  const formatDate = (value) =>
+    value ? new Date(value).toLocaleString(isArabic ? 'ar-EG' : 'en-US') : '—';
+
+  return (
+    <div className="bg-primary-500/5 border border-primary-500/20 rounded-2xl p-6">
+      <h2 className="text-lg font-bold text-light-900 dark:text-white mb-3">
+        {text.title}
+      </h2>
+      {state === 'loading' && (
+        <p className="text-light-600 dark:text-light-400">{text.loading}</p>
+      )}
+      {state === 'notFound' && <p className="text-red-500">{text.notFound}</p>}
+      {state === 'found' && request && (
+        <>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="text-light-500 dark:text-light-400">{text.code}</dt>
+            <dd className="font-mono text-light-900 dark:text-white" dir="ltr">
+              {request.confirmationCode}
+            </dd>
+            <dt className="text-light-500 dark:text-light-400">{text.state}</dt>
+            <dd className="font-semibold text-light-900 dark:text-white">
+              {text.states[request.status]}
+            </dd>
+            <dt className="text-light-500 dark:text-light-400">
+              {text.received}
+            </dt>
+            <dd className="text-light-900 dark:text-white">
+              {formatDate(request.createdAt)}
+            </dd>
+            <dt className="text-light-500 dark:text-light-400">
+              {text.completed}
+            </dt>
+            <dd className="text-light-900 dark:text-white">
+              {formatDate(request.completedAt)}
+            </dd>
+          </dl>
+          {request.status === 'completed' && (
+            <p className="text-light-600 dark:text-light-400 text-sm mt-4">
+              {text.completedNote}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+const BulletCard = ({ title, items }) => (
+  <div className="bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 rounded-2xl p-6 md:p-8">
+    <h2 className="text-lg font-bold text-light-900 dark:text-white mb-3">
+      {title}
+    </h2>
+    <ul className="list-disc ps-6 space-y-2 text-light-600 dark:text-light-400 leading-relaxed">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  </div>
+);
+
+const DataDeletionPanel = ({ isArabic, code }) => {
+  const lang = isArabic ? 'ar' : 'en';
+  const { intro, storedTitle, stored, notStoredTitle, notStored, steps, status } =
+    dataDeletionContent[lang];
+  return (
+    <div className="space-y-6">
+      {code && (
+        <DeletionStatus
+          key={code}
+          code={code}
+          isArabic={isArabic}
+          text={status}
+        />
+      )}
+      <div className="bg-primary-500/5 border border-primary-500/20 rounded-2xl p-6 text-light-700 dark:text-light-300 leading-relaxed">
+        {intro}
+      </div>
+      <BulletCard title={storedTitle} items={stored} />
+      <BulletCard title={notStoredTitle} items={notStored} />
+      {steps.map((step, i) => (
+        <SectionCard
+          key={i}
+          index={i + 1}
+          title={step.title}
+          content={step.content}
+        />
+      ))}
+      <ContactFooter isArabic={isArabic} />
+    </div>
+  );
+};
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 const PoliciesPage = () => {
@@ -169,6 +281,8 @@ const PoliciesPage = () => {
   const tabParam = searchParams.get('tab');
   const validKeys = TABS.map((t) => t.key);
   const activeTab = validKeys.includes(tabParam) ? tabParam : 'privacy';
+
+  const deletionCode = searchParams.get('code');
 
   const setTab = (key) => setSearchParams({ tab: key }, { replace: true });
 
@@ -189,7 +303,7 @@ const PoliciesPage = () => {
               : 'Everything you need to know about how we operate and protect your data.'}
           </p>
           <p className="text-light-400 dark:text-light-500 text-xs">
-            {isArabic ? 'آخر تحديث: يونيو 2025' : 'Last updated: June 2025'}
+            {isArabic ? 'آخر تحديث: أكتوبر 2026' : 'Last updated: October 2026'}
           </p>
         </div>
 
@@ -216,6 +330,9 @@ const PoliciesPage = () => {
         {activeTab === 'privacy' && <PrivacyPanel isArabic={isArabic} />}
         {activeTab === 'refund' && <RefundPanel isArabic={isArabic} />}
         {activeTab === 'service' && <ServicePanel isArabic={isArabic} />}
+        {activeTab === 'data-deletion' && (
+          <DataDeletionPanel isArabic={isArabic} code={deletionCode} />
+        )}
       </div>
     </section>
   );
