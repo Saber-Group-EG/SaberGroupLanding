@@ -37,6 +37,16 @@ export const privacyContent = {
           'We use cookies and similar tracking technologies to maintain login sessions, remember your language and preferences, and analyze how our platform is used. We may work with analytics partners who collect non-personally identifiable information through cookies to help us understand platform performance. You can configure your browser to decline cookies, though this may affect some platform functionality.',
       },
       {
+        title: 'Facebook & Instagram Data (Saber CRM)',
+        content:
+          "When a business connects its Facebook Pages or Instagram professional accounts to Saber CRM using Facebook Login, we receive, through Meta's APIs: the Page or Instagram account ID and name; a Page access token, stored encrypted and used only to receive and reply to that Page's messages; the messages that customers send to the connected Page or account and the replies sent from Saber CRM; and the customer's name and profile photo as provided by Meta. We use this data only to show those conversations to the business's authorized team members in the Saber CRM inbox, so they can reply and turn conversations into leads. We do not store the connecting person's Facebook password, personal access token or Facebook profile, and we do not use Meta data for advertising, sell it, or share it with third parties other than the infrastructure providers needed to run the service.",
+      },
+      {
+        title: 'Retention & Deletion of Facebook & Instagram Data',
+        content:
+          "Conversation data is kept for as long as the business keeps the Page connected to Saber CRM, or until the business or the customer asks us to delete it. A business can disconnect a Page at any time in Saber CRM, or remove Saber CRM from Facebook under Settings & privacy → Settings → Business integrations. To delete a Page's conversations and customer data, or if you messaged a business that uses Saber CRM and want your messages deleted, see the Data Deletion tab on this page or email info@sabergroup-eg.com. We complete deletion requests within 30 days.",
+      },
+      {
         title: 'Your Rights & Account Deletion',
         content:
           'You have the right to access, correct, or request deletion of your personal data at any time. To exercise these rights, contact us at info@sabergroup-eg.com. We will respond within 30 days. If you wish to delete your account entirely, contact our support team — please note that any pending subscription payments must be settled before account deletion can be completed.',
@@ -81,6 +91,16 @@ export const privacyContent = {
         title: 'ملفات تعريف الارتباط والتتبع',
         content:
           'نستخدم ملفات تعريف الارتباط وتقنيات تتبع مشابهة للحفاظ على جلسات تسجيل الدخول وتذكّر لغتك وتفضيلاتك وتحليل كيفية استخدام المنصة. قد نتعاون مع شركاء تحليلات يجمعون معلومات غير شخصية عبر ملفات تعريف الارتباط لمساعدتنا في فهم أداء المنصة. يمكنك ضبط متصفحك لرفض ملفات تعريف الارتباط، وإن كان ذلك قد يؤثر على بعض وظائف المنصة.',
+      },
+      {
+        title: 'بيانات فيسبوك وإنستجرام (Saber CRM)',
+        content:
+          'عندما تربط شركة صفحاتها على فيسبوك أو حساباتها الاحترافية على إنستجرام بـ Saber CRM عبر تسجيل الدخول بفيسبوك، نستلم من خلال واجهات ميتا البرمجية: معرّف واسم الصفحة أو حساب إنستجرام؛ ورمز وصول للصفحة يُحفظ مشفّرًا ويُستخدم فقط لاستقبال رسائل تلك الصفحة والرد عليها؛ والرسائل التي يرسلها العملاء إلى الصفحة أو الحساب المرتبط والردود المرسلة من Saber CRM؛ واسم العميل وصورة ملفه الشخصي كما توفرها ميتا. نستخدم هذه البيانات فقط لعرض تلك المحادثات لأعضاء فريق الشركة المخوّلين في صندوق رسائل Saber CRM ليتمكنوا من الرد وتحويل المحادثات إلى عملاء محتملين. لا نحفظ كلمة مرور فيسبوك للشخص الذي يقوم بالربط ولا رمز وصوله الشخصي ولا ملفه الشخصي، ولا نستخدم بيانات ميتا في الإعلانات ولا نبيعها ولا نشاركها مع أي طرف ثالث سوى مزودي البنية التحتية اللازمين لتشغيل الخدمة.',
+      },
+      {
+        title: 'الاحتفاظ ببيانات فيسبوك وإنستجرام وحذفها',
+        content:
+          'نحتفظ ببيانات المحادثات طالما بقيت الصفحة مرتبطة بـ Saber CRM، أو حتى تطلب الشركة أو العميل حذفها. يمكن للشركة فصل الصفحة في أي وقت من Saber CRM، أو إزالة Saber CRM من فيسبوك عبر الإعدادات والخصوصية ← الإعدادات ← تكاملات الأعمال. لحذف محادثات صفحة وبيانات عملائها، أو إذا راسلت شركة تستخدم Saber CRM وترغب في حذف رسائلك، راجع تبويب حذف البيانات في هذه الصفحة أو راسلنا على info@sabergroup-eg.com، وننفّذ طلبات الحذف خلال 30 يومًا.',
       },
       {
         title: 'حقوقك وحذف الحساب',
