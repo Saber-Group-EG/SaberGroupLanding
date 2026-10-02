@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
@@ -25,6 +25,7 @@ import { useProjectStories } from '../components/home/useProjectStories';
 import { useHomeProjects } from '../components/home/useHomeProjects';
 import { useCastMembers } from '../components/home/useCastMembers';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { startIdleVideoWarmup } from '../utils/storyVideoPrefetch';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -38,6 +39,15 @@ const Home = () => {
   const { stories, loading: storiesLoading } = useProjectStories();
   const { clients, loading: projectsLoading } = useHomeProjects();
   const { members: teamMembers, loading: castLoading } = useCastMembers();
+
+  // stories re-memoises on language change, so key on the URL list itself to
+  // keep the warm-up from restarting on every translation switch.
+  const warmupKey = stories.map((s) => s.materials?.[0]?.videoUrl || '').join('|');
+
+  useEffect(() => {
+    if (!warmupKey) return undefined;
+    return startIdleVideoWarmup(warmupKey.split('|').filter(Boolean));
+  }, [warmupKey]);
 
   const handleSelectStory = (story) => {
     setSelectedStory(story);

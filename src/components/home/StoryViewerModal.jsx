@@ -2,6 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Pause, Play, Share2, Volume2, VolumeX } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 import { getStoryInitials } from './useProjectStories';
+import {
+  requestVideoPrefetch,
+  nextStoryVideoUrls,
+  pauseVideoWarmup,
+  resumeVideoWarmup,
+} from '../../utils/storyVideoPrefetch';
 
 export const StoryViewerModal = ({
   stories,
@@ -33,18 +39,46 @@ export const StoryViewerModal = ({
   const currentStory = stories[currentIndex];
   const currentMaterial = currentStory?.materials?.[materialIndex] ?? null;
 
-  // Audible autoplay can still be rejected by strict browsers even after a
-  // click, so retry muted instead of leaving the story stuck on the poster.
+  // Audible autoplay can still be rejected by strict browsers (an onEnded
+  // advance carries no user activation), so retry muted — but never flip the
+  // user's preference: onPlay restores it, which needs no gesture.
   useEffect(() => {
     if (!started) return;
     const video = videoRefs.current[activeSlot];
     if (!video) return;
     video.play().catch(() => {
       video.muted = true;
-      setIsMuted(true);
       video.play().catch(() => {});
     });
   }, [started, currentIndex, materialIndex, activeSlot]);
+
+  // Muting the property directly bypasses React's declarative prop (it only
+  // re-applies when the prop value changes), so sync every slot here —
+  // without calling play(), or a mute toggle would resume a paused story.
+  useEffect(() => {
+    if (!started) return;
+    videoRefs.current.forEach((video, i) => {
+      if (video) video.muted = i === activeSlot ? isMuted : true;
+    });
+  }, [started, isMuted, activeSlot]);
+
+  // The idle warm-up downloads tens of MB underneath the player; hold it while
+  // a story is actually open. This component stays mounted (and renders null)
+  // whenever nothing is selected, so the guard is what keeps the warm-up alive.
+  useEffect(() => {
+    if (!initialStory) return undefined;
+    pauseVideoWarmup();
+    return () => {
+      resumeVideoWarmup();
+    };
+  }, [initialStory]);
+
+  // Prefetch deliberately targets the videos *beyond* the dual slots above so
+  // the player and the service worker never download the same file twice.
+  useEffect(() => {
+    if (!started) return;
+    requestVideoPrefetch(nextStoryVideoUrls(stories, currentIndex, materialIndex));
+  }, [started, currentIndex, materialIndex, stories]);
 
   const handlePosterError = (event) => {
     const img = event.currentTarget;
@@ -148,7 +182,11 @@ export const StoryViewerModal = ({
     const video = videoRefs.current[activeSlot];
     if (!video) return;
     if (video.paused) {
-      video.play().catch(() => {});
+      video.muted = isMuted;
+      video.play().catch(() => {
+        video.muted = true;
+        video.play().catch(() => {});
+      });
     } else {
       video.pause();
     }
@@ -219,7 +257,17 @@ export const StoryViewerModal = ({
                     }
                     onTimeUpdate={active ? handleTimeUpdate : undefined}
                     onEnded={active ? handleNext : undefined}
-                    onPlay={active ? () => setIsPaused(false) : undefined}
+                    onPlay={
+                      active
+                        ? (event) => {
+                            // A muted fallback play must not leave the story
+                            // silent: unmuting a playing element is always
+                            // allowed, no user activation required.
+                            event.currentTarget.muted = isMuted;
+                            setIsPaused(false);
+                          }
+                        : undefined
+                    }
                     onPause={active ? () => setIsPaused(true) : undefined}
                   />
                 );
