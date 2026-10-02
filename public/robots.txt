@@ -1,0 +1,21 @@
+# Search engines and AI assistants are welcome to read and cite this site.
+User-agent: *
+Allow: /
+Disallow: /checkout
+
+# AI crawlers and assistant fetchers (explicitly allowed)
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bingbot
+Allow: /
+Disallow: /checkout
+
+Sitemap: https://sabergroup-eg.com/sitemap.xml

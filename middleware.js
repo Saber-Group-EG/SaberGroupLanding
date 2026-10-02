@@ -1,23 +1,30 @@
-const PROJECTS_API =
-  'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
-const SITE_URL = 'https://www.sabergroup-eg.com';
-const DEFAULT_IMAGE = `${SITE_URL}/S ICON.png`;
+// Serves readable HTML for portfolio links to crawlers, link-preview bots and
+// AI assistants, which don't run the React bundle. Projects are fetched live,
+// so new ones are covered without a rebuild. Everyone else falls through to
+// the normal SPA.
 
+import { SITE_URL, LOGO_URL, PROJECTS_API } from './seo/site.js';
+import {
+  renderPage,
+  projectFacts,
+  projectJsonLd,
+  organizationJsonLd,
+  renderProjectArticle,
+  isPublicProject,
+} from './seo/render.js';
+import { getEnSlug } from './src/utils/slug.js';
+
+// Link-preview bots, search crawlers and AI assistant fetchers. Anything that
+// doesn't identify as a browser (no "Mozilla") is treated the same way —
+// that covers scripts and agent tools with generic user agents.
 const CRAWLER_UA =
-  /bot|crawl|spider|facebook|twitter|whatsapp|telegram|slack|discord|linkedin|pinterest|skype|viber|applebot|googlebot|bingbot|yandex|baidu/i;
+  /bot|crawl|spider|facebookexternalhit|twitter|whatsapp|telegram|slack|discord|linkedinbot|pinterest|skype|viber|applebot|googlebot|bingbot|yandex|baidu|gptbot|chatgpt|oai-searchbot|openai|claude|anthropic|perplexity|google-extended|ccbot|bytespider|amazonbot|cohere|meta-externalagent|duckassist|youbot/i;
+
+const isCrawler = (ua) => !ua || CRAWLER_UA.test(ua) || !/mozilla/i.test(ua);
 
 export const config = {
   matcher: ['/portfolio/:path*'],
 };
-
-function esc(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function resolveBilingual(val) {
   if (!val) return '';
@@ -28,27 +35,6 @@ function resolveBilingual(val) {
     return '';
   }
   return '';
-}
-
-function slugify(text) {
-  if (!text) return '';
-  return String(text)
-    .normalize('NFKD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-');
-}
-
-function getEnSlug(raw) {
-  if (!raw) return '';
-  const enName = raw.name?.en || '';
-  if (enName) {
-    const s = slugify(enName);
-    if (s) return s;
-  }
-  return String(raw._id || '').replace(/[^a-z0-9-]/gi, '-');
 }
 
 function isVideoUrl(url) {
@@ -121,97 +107,64 @@ function parseMediaRoute(pathname) {
 
 export default async function middleware(request) {
   const { pathname } = new URL(request.url);
-  const ua = request.headers.get('user-agent') || '';
-
-  if (!CRAWLER_UA.test(ua)) return;
+  if (!isCrawler(request.headers.get('user-agent') || '')) return;
 
   const route = parseMediaRoute(pathname);
-  if (!route) return;
-
+  if (!route?.slug) return;
   const { slug, type, index } = route;
-  if (!slug) return;
 
   try {
-    const res = await fetch(`${PROJECTS_API}?PageCount=all`);
-    const data = await res.json();
-    const raw = (data.projects || []).find((p) => getEnSlug(p) === slug);
+    // The built shell carries the real asset tags, so a human who lands here
+    // (e.g. through an unusual in-app browser) still gets the working app.
+    const [projectsRes, shellRes] = await Promise.all([
+      fetch(`${PROJECTS_API}?PageCount=all`),
+      fetch(new URL('/index.html', request.url)),
+    ]);
+    if (!projectsRes.ok || !shellRes.ok) return;
+    const [data, shell] = await Promise.all([projectsRes.json(), shellRes.text()]);
+
+    const raw = (data.projects || []).find((p) => isPublicProject(p) && getEnSlug(p) === slug);
     if (!raw) return;
 
-    const projectName = resolveBilingual(raw.name);
-    const projectDesc = resolveBilingual(raw.description);
-    const coverImage = raw.mainCover?.url || DEFAULT_IMAGE;
-    const absoluteCover = coverImage.startsWith('http')
-      ? coverImage
-      : `${SITE_URL}${coverImage}`;
-    const pageUrl = `${SITE_URL}/portfolio/${slug}`;
-
-    let ogImage = absoluteCover;
-    let ogTitle = `${projectName} | Saber Group`;
-    let ogDescription = projectDesc || projectName;
-    let mediaUrl = pageUrl;
+    const project = projectFacts(raw);
+    let title = `${project.title} | Saber Group`;
+    let description =
+      (project.description || project.descriptionAr || project.title).replace(/\s+/g, ' ').slice(0, 300);
+    let image = project.image || LOGO_URL;
+    let path = `/portfolio/${slug}`;
 
     if (type === 'cover') {
-      mediaUrl = `${SITE_URL}/portfolio/${slug}/cover`;
-      ogTitle = `${projectName} | Saber Group`;
+      path = `/portfolio/${slug}/cover`;
     } else if (type === 'photo' || type === 'video') {
-      const photoItems = type === 'photo' ? getAllPhotoItems(raw) : [];
-      const videoItems = type === 'video' ? getAllVideoItems(raw) : [];
-
-      let mediaItem = null;
-      if (type === 'photo' && index >= 0 && index < photoItems.length) {
-        mediaItem = photoItems[index];
-        mediaUrl = `${SITE_URL}/portfolio/${slug}/photo/${index}`;
-      } else if (type === 'video' && index >= 0 && index < videoItems.length) {
-        mediaItem = videoItems[index];
-        mediaUrl = `${SITE_URL}/portfolio/${slug}/video/${index}`;
-      }
-
-      if (mediaItem) {
-        const mediaThumb = mediaItem.thumbnail?.startsWith('http')
-          ? mediaItem.thumbnail
-          : mediaItem.thumbnail
-            ? `${SITE_URL}${mediaItem.thumbnail}`
-            : mediaItem.url?.startsWith('http')
-              ? mediaItem.url
-              : `${SITE_URL}${mediaItem.url}`;
-        ogImage = mediaThumb;
-        const mediaCaption = mediaItem.caption || projectName;
-        ogTitle = `${mediaCaption} | ${projectName} | Saber Group`;
-        ogDescription = `${mediaCaption} - ${projectName}`;
+      const items = type === 'photo' ? getAllPhotoItems(raw) : getAllVideoItems(raw);
+      const item = index >= 0 ? items[index] : null;
+      if (item) {
+        path = `/portfolio/${slug}/${type}/${index}`;
+        const thumb = item.thumbnail || item.url || '';
+        image = thumb.startsWith('http') ? thumb : `${SITE_URL}${thumb}`;
+        const caption = item.caption || project.title;
+        title = `${caption} | ${project.title} | Saber Group`;
+        description = `${caption} - ${project.title}`;
       }
     }
 
-    const html = `<!doctype html>
-<html lang="en" dir="ltr">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/jpeg" href="/S ICON.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="${esc(ogDescription)}" />
-    <meta property="og:type" content="article" />
-    <meta property="og:url" content="${esc(mediaUrl)}" />
-    <meta property="og:title" content="${esc(ogTitle)}" />
-    <meta property="og:description" content="${esc(ogDescription)}" />
-    <meta property="og:site_name" content="Saber Group" />
-    <meta property="og:image" content="${esc(ogImage)}" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="${esc(ogTitle)}" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${esc(ogTitle)}" />
-    <meta name="twitter:description" content="${esc(ogDescription)}" />
-    <meta name="twitter:image" content="${esc(ogImage)}" />
-    <title>${esc(ogTitle)}</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>`;
+    const html = renderPage(shell, {
+      path,
+      title,
+      description,
+      image,
+      type: 'article',
+      jsonLd: [projectJsonLd(project), organizationJsonLd()],
+      body: `${renderProjectArticle(project)}
+<p>A project by Saber Group, a marketing and creative agency in Tanta, Egypt. <a href="/portfolio">More projects</a>.</p>`,
+    });
 
     return new Response(html, {
       status: 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=86400',
+      },
     });
   } catch {
     return;
