@@ -6,12 +6,13 @@ import {
   MAX_PHOTO_SIZE,
   isAllowedFileType,
   isFileWithinSizeLimit,
+  readFileIntoMemory,
 } from '../utils/uploadValidation';
 
 export default function ProfilePhotoUpload({ value, onChange, error, touched, label, t }) {
   const inputRef = useRef(null);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -39,7 +40,25 @@ export default function ProfilePhotoUpload({ value, onChange, error, touched, la
       return;
     }
 
-    onChange(file);
+    let inMemoryFile;
+    try {
+      inMemoryFile = await readFileIntoMemory(file);
+    } catch (err) {
+      console.error('Failed to read selected file', err);
+      e.target.value = '';
+      Swal.fire({
+        icon: 'warning',
+        title: label || 'Profile Photo',
+        text:
+          (t && t('joinUs:fileReadError')) ||
+          'Could not read this file. If it is stored in Google Drive or another cloud app, download it to your phone first, then select it again.',
+        confirmButtonText: (t && t('common:ok')) || 'OK',
+        confirmButtonColor: '#f59e0b',
+      });
+      return;
+    }
+
+    onChange(inMemoryFile);
   };
 
   return (

@@ -18,3 +18,30 @@ export function isAllowedFileType(file, allowedTypes, allowedExtensions) {
 export function isFileWithinSizeLimit(file, maxSize) {
   return file.size <= maxSize;
 }
+
+const MIME_BY_EXTENSION = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+};
+
+// Some Android pickers return an empty `file.type`; fall back to the extension.
+export function getFileContentType(file) {
+  if (file.type) return file.type;
+  const name = file.name || '';
+  const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
+  return MIME_BY_EXTENSION[ext] || 'application/octet-stream';
+}
+
+// Copy the picked file into memory right away. On mobile (especially Android
+// with Google Drive / WhatsApp / content:// files) the browser can lose access
+// to the original file before submit, which makes the upload request fail with
+// status 0. An in-memory copy can always be sent.
+export async function readFileIntoMemory(file) {
+  const buffer = await file.arrayBuffer();
+  return new File([buffer], file.name, {
+    type: getFileContentType(file),
+    lastModified: file.lastModified,
+  });
+}

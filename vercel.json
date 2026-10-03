@@ -5,6 +5,10 @@
       "destination": "https://sge-commerce.onrender.com/api/v1/:path*"
     },
     {
+      "source": "/r2-upload/:path*",
+      "destination": "https://sabergroup-ats.b74c21ec244e1035b5dd855bc75cb920.r2.cloudflarestorage.com/:path*"
+    },
+    {
       "source": "/:path*",
       "destination": "/index.html"
     }

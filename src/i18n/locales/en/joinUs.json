@@ -53,6 +53,7 @@
   "invalidPhotoType": "Only JPG, JPEG, and PNG files are allowed",
   "invalidCVType": "Only PDF files are allowed",
   "cvTooLarge": "CV file size must be 10 MB or less",
+  "fileReadError": "Could not read this file. If it is stored in Google Drive or another cloud app, download it to your phone first, then select it again.",
   "acceptTerms": "You must accept the terms and conditions",
   "uploadingPhoto": "Uploading photo...",
   "photoUploaded": "Photo uploaded successfully!",
