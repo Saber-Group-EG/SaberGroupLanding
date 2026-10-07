@@ -533,7 +533,7 @@ const ProjectDetail = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 pt-4 sm:pt-5 border-t border-neutral-200">
               {(isArabic ? project.locationAr : project.locationEn) && (
                 <div className="space-y-0.5 sm:space-y-1">
-                  {project.clientName && (
+                  {project.clientName && !project.hideClientName && (
                     <>
                       <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en block">{t('client', 'CLIENT')}</span>
                       <div className="text-xs sm:text-[13px] font-extrabold text-neutral-950 leading-snug">{isArabic ? project.clientNameAr : project.clientName}</div>
@@ -746,7 +746,7 @@ const ProjectDetail = () => {
                       <img src={rel.coverImage} alt="" className="w-11 h-11 rounded-[2px] object-cover shrink-0" />
                       <div className="overflow-hidden">
                         <h5 className="text-xs font-bold text-neutral-950 truncate">{isArabic ? rel.titleAr : rel.titleEn}</h5>
-                        <p className="text-[10px] text-neutral-500 truncate mt-0.5">{isArabic ? rel.clientNameAr : rel.clientName || rel.tags?.slice(0, 2).join(', ')}</p>
+                        <p className="text-[10px] text-neutral-500 truncate mt-0.5">{rel.hideClientName ? rel.tags?.slice(0, 2).join(', ') : (isArabic ? rel.clientNameAr : rel.clientName || rel.tags?.slice(0, 2).join(', '))}</p>
                       </div>
                     </div>
                   ))}

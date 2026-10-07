@@ -119,6 +119,7 @@ const transformProject = (raw) => {
     mediaGroups,
     clientName: resolveBilingual(raw.company),
     clientNameAr: raw.company?.ar || raw.company?.name?.ar || resolveBilingual(raw.company),
+    hideClientName: raw.hideClientName === true,
     client: (raw.company && typeof raw.company === 'object' && raw.company._id)
       ? {
           id: raw.company._id,
