@@ -7,6 +7,9 @@ import store from './store';
 import i18n from './i18n';
 import App from './App.jsx';
 import './index.css';
+import { captureTrafficSource } from './utils/trafficSource';
+
+captureTrafficSource();
 
 createRoot(document.getElementById('root')).render(
   <Provider store={store}>

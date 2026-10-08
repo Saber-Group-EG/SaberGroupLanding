@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
@@ -18,6 +18,7 @@ import { getFullUrl, getDefaultOgImage, SITE_NAME } from '../utils/ogMeta';
 import Footer from '../components/footer';
 import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
 import CvUpload from '../components/CvUpload';
+import { getTrafficSource } from '../utils/trafficSource';
 import { uploadToR2 } from '../utils/r2Upload';
 import {
   ALLOWED_PHOTO_TYPES,
@@ -31,6 +32,9 @@ import {
 } from '../utils/uploadValidation';
 
 const JobApplicationForm = () => {
+  // Anti-spam: people never see or fill the honeypot, and take a while to fill the form.
+  const honeypotRef = useRef(null);
+  const formStartedAtRef = useRef(Date.now());
   const { slug } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -1709,6 +1713,9 @@ const JobApplicationForm = () => {
           ? remappedCustomResponses
           : englishCustomResponses,
         jobSpecsResponses: jobSpecsResponsesArray,
+        source: getTrafficSource(),
+        website: honeypotRef.current?.value || '',
+        formStartedAt: formStartedAtRef.current,
       };
 
       const response = await submitApplicant(payload);
@@ -2273,6 +2280,15 @@ const JobApplicationForm = () => {
                   onSubmit={handleSubmitWithScroll}
                   noValidate
                 >
+                  <input
+                    ref={honeypotRef}
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+                  />
                   <h2 className="text-2xl font-bold text-light-900 dark:text-white mb-6">
                     {t('joinUs:applicationForm') || 'Application Form'}
                   </h2>
