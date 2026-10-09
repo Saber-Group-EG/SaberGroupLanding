@@ -62,10 +62,10 @@ export const ContactModal = ({ isOpen, onClose }) => {
       // company if one was given — all as one CRM message.
       const messageLines = [
         `${modalCopy.budget}: ${formData.budget}`,
+        formData.message.trim(),
         formData.company.trim()
           ? `${modalCopy.companyLine}: ${formData.company.trim()}`
           : '',
-        formData.message.trim(),
       ].filter(Boolean);
 
       const payload = {

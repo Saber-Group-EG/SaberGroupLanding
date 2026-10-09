@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { HERO_SLIDES } from '../../content/home/saberData';
-import { AutoPlayingHeroVideo } from './AutoPlayingHeroVideo';
-import {
-  SeashellBeachVisual,
-  CosmeticsVisual,
-  SwissotelVisual
-} from './VisualAssets';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 
 
@@ -47,27 +41,24 @@ export const Hero = ({ onOpenShowreel, onSelectProject }) => {
 
       {/* Background Visual Scene with Smooth Transitions */}
       <div className="absolute inset-0 transition-opacity duration-700 select-none">
-        {/* Slide 1: Autoplaying cinematic video on page load */}
-        {currentSlideIndex === 0 && (
-          <AutoPlayingHeroVideo onOpenShowreel={onOpenShowreel} />
-        )}
-        {currentSlideIndex === 1 && (
-          <div className="relative w-full h-full animate-in fade-in duration-700">
-            <SeashellBeachVisual />
-            <div className="absolute inset-0 bg-black/60 pointer-events-none" />
-          </div>
-        )}
-        {currentSlideIndex === 2 && (
-          <div className="relative w-full h-full animate-in fade-in duration-700">
-            <CosmeticsVisual />
-            <div className="absolute inset-0 bg-black/75 pointer-events-none" />
-          </div>
-        )}
-        {currentSlideIndex === 3 && (
-          <div className="relative w-full h-full animate-in fade-in duration-700">
-            <SwissotelVisual />
-            <div className="absolute inset-0 bg-black/65 pointer-events-none" />
-          </div>
+        {HERO_SLIDES.map((slide, idx) =>
+          idx === currentSlideIndex ? (
+            <div
+              key={slide.id}
+              className="relative w-full h-full animate-in fade-in duration-700"
+            >
+              <img
+                src={slide.image}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                loading={idx === 0 ? 'eager' : 'lazy'}
+                fetchPriority={idx === 0 ? 'high' : 'auto'}
+              />
+              {/* Uniform dim + left-side gradient so the headline stays legible */}
+              <div className="absolute inset-0 bg-black/45 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent pointer-events-none" />
+            </div>
+          ) : null
         )}
       </div>
 

@@ -3,21 +3,25 @@ export const HERO_SLIDES = [
     id: 'slide-01',
     slideNumber: '01',
     projectName: 'VALORA',
+    image: '/hero/1.jpg',
   },
   {
     id: 'slide-02',
     slideNumber: '02',
     projectName: 'SEASHELL',
+    image: '/hero/3.jpg',
   },
   {
     id: 'slide-03',
     slideNumber: '03',
     projectName: 'ASIA COSMETICS',
+    image: '/hero/5.jpg',
   },
   {
     id: 'slide-04',
     slideNumber: '04',
     projectName: 'SWISSÔTEL EL QUSEIR',
+    image: '/hero/6.jpg',
   },
 ];
 

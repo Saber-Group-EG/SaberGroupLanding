@@ -691,7 +691,7 @@ const Portfolio = () => {
                       ref={registerCard(proj.id)}
                       data-pid={proj.id}
                       onClick={(e) => handleCardClick(e, proj)}
-                      className={`group relative block col-span-3 sm:col-span-2 lg:col-span-3 aspect-[19/6] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer ${cardRevealCls(proj.id)}`}
+                      className={`group relative block col-span-3 sm:col-span-2 lg:col-span-2 aspect-[9/5.45] overflow-hidden rounded-[4px] border border-neutral-200 bg-neutral-900 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer ${cardRevealCls(proj.id)}`}
                     >
                       <img
                         src={proj.coverImage}

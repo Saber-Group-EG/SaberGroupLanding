@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Play, ArrowRight, Sparkles, Clock, MapPin } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Play, Pause, ArrowRight, Sparkles, Clock, MapPin } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 
 
@@ -37,10 +37,108 @@ const LATEST_WORKS = [
     industryKey: 'hospitality',
     clientName: 'Swissôtel Hotels & Resorts',
     year: '2024',
-    videoDuration: '02:30',
-    coverImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=840&q=60',
+    videoDuration: '02:56',
+    video: '/videos/latest-swissotel.mp4',
+    coverImage: '/hero/2.jpg',
   },
 ];
+
+// Thumbnail-first: the <video> element is only mounted after the visitor
+// presses play, so nothing of the (huge) video file loads before that.
+// The parent keys this by project id, so spotlight state resets on change.
+const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
+  const [started, setStarted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!started) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video
+      .play()
+      .then(() => setPlaying(true))
+      .catch(() => setPlaying(false));
+  }, [started]);
+
+  const toggle = (e) => {
+    e.stopPropagation();
+    if (!heroProject.video) return;
+    if (!started) {
+      setStarted(true);
+      return;
+    }
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
+    } else {
+      video.pause();
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <div className="lg:col-span-7 relative overflow-hidden min-h-[320px] lg:min-h-[480px] bg-neutral-950">
+      {/* Thumbnail always visible first — video mounts only on play */}
+      <img
+        src={heroProject.coverImage}
+        alt={heroProject.title}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+      />
+      {heroProject.video && started && (
+        <video
+          ref={videoRef}
+          src={heroProject.video}
+          playsInline
+          onEnded={() => setPlaying(false)}
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:ltr:bg-gradient-to-r lg:rtl:bg-gradient-to-l lg:from-transparent lg:to-neutral-900" />
+
+      {/* Badges */}
+      <div className="absolute top-5 start-5 flex items-center gap-2">
+        <span className="px-3.5 py-1 rounded-full bg-[#E5192D] text-white text-[10px] font-extrabold uppercase tracking-widest shadow-lg">
+          {heroCopy.featuredBadge || copy.latestProjects.featuredFallback}
+        </span>
+        <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-neutral-300 text-[10px] font-bold uppercase tracking-wider border border-white/10 flex items-center gap-1">
+          <Clock className="w-3 h-3 text-[#E5192D]" />
+          <span>{heroProject.videoDuration}</span>
+        </span>
+      </div>
+
+      {/* Big Play Reel Button */}
+      {heroProject.video && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={
+              playing
+                ? copy.latestProjects.pauseVideo || 'Pause video'
+                : copy.latestProjects.playVideo || 'Play video'
+            }
+            className={`w-16 h-16 rounded-full bg-[#E5192D]/90 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:bg-[#E5192D] transition-all ${
+              playing ? 'opacity-0 hover:opacity-100' : 'opacity-100'
+            }`}
+          >
+            {playing ? (
+              <Pause className="w-6 h-6 fill-current" />
+            ) : (
+              <Play className="w-6 h-6 fill-current ltr:ml-0.5 rtl:mr-0.5" />
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const LatestProjectsSection = ({
   onSelectProject,
@@ -53,8 +151,13 @@ export const LatestProjectsSection = ({
       ? LATEST_WORKS
       : LATEST_WORKS.filter((item) => item.industryKey === activeTab);
 
-  const heroProject = filteredList[0] || LATEST_WORKS[0];
-  const gridProjects = filteredList.slice(1);
+  // Prefer the project that has an actual film for the spotlight card, so
+  // the video is always featured when the section renders.
+  const heroProject =
+    filteredList.find((item) => item.video) ||
+    filteredList[0] ||
+    LATEST_WORKS[0];
+  const gridProjects = filteredList.filter((item) => item !== heroProject);
   const heroCopy = copy.shared.projects[heroProject.id];
 
   return (
@@ -107,39 +210,22 @@ export const LatestProjectsSection = ({
         {/* Spotlight Showcase (Hero Card) */}
         {heroProject && (
           <div
-            onClick={() => onSelectProject(heroProject)}
-            className="group relative rounded-3xl overflow-hidden border border-neutral-800 hover:border-neutral-700 bg-neutral-900 mb-10 transition-all duration-300 shadow-2xl cursor-pointer"
+            onClick={() => {
+              // Projects with their own film play it in place — no modal.
+              if (!heroProject.video) onSelectProject(heroProject);
+            }}
+            className={`group relative rounded-3xl overflow-hidden border border-neutral-800 hover:border-neutral-700 bg-neutral-900 mb-10 transition-all duration-300 shadow-2xl ${
+              heroProject.video ? 'cursor-default' : 'cursor-pointer'
+            }`}
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[480px]">
               {/* Media Visual Column */}
-              <div className="lg:col-span-7 relative overflow-hidden min-h-[320px] lg:min-h-[480px] bg-neutral-950">
-                <img
-                  src={heroProject.coverImage}
-                  alt={heroProject.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:ltr:bg-gradient-to-r lg:rtl:bg-gradient-to-l lg:from-transparent lg:to-neutral-900" />
-
-                {/* Badges */}
-                <div className="absolute top-5 start-5 flex items-center gap-2">
-                  <span className="px-3.5 py-1 rounded-full bg-[#E5192D] text-white text-[10px] font-extrabold uppercase tracking-widest shadow-lg">
-                    {heroCopy.featuredBadge || copy.latestProjects.featuredFallback}
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-neutral-300 text-[10px] font-bold uppercase tracking-wider border border-white/10 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-[#E5192D]" />
-                    <span>{heroProject.videoDuration}</span>
-                  </span>
-                </div>
-
-                {/* Big Play Reel Button */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full bg-[#E5192D]/90 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:bg-[#E5192D] transition-all">
-                    <Play className="w-6 h-6 fill-current ltr:ml-0.5 rtl:mr-0.5" />
-                  </div>
-                </div>
-              </div>
+              <SpotlightMedia
+                key={heroProject.id}
+                heroProject={heroProject}
+                heroCopy={heroCopy}
+                copy={copy}
+              />
 
               {/* Information Column */}
               <div className="lg:col-span-5 p-8 sm:p-10 flex flex-col justify-between bg-neutral-900">

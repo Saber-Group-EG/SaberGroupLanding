@@ -60,6 +60,8 @@ const homeContent = {
       productionScope: 'PRODUCTION SCOPE:',
       viewCaseStudy: 'View Case Study & Media',
       exploreMedia: 'Explore Media',
+      playVideo: 'Play video',
+      pauseVideo: 'Pause video',
     },
 
     selectedProjects: {
@@ -580,6 +582,8 @@ const homeContent = {
       productionScope: 'نطاق الإنتاج:',
       viewCaseStudy: 'عرض دراسة الحالة والوسائط',
       exploreMedia: 'استكشف الوسائط',
+      playVideo: 'تشغيل الفيديو',
+      pauseVideo: 'إيقاف الفيديو',
     },
 
     selectedProjects: {

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Mail, Phone, MapPin, Send, Check } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { Mail, Phone, MapPin, Send, Check } from 'lucide-react';import Swal from 'sweetalert2';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
 import useLocations from '../../hooks/useLocations';
@@ -394,6 +393,9 @@ export const InlineContactSection = () => {
                     <span>
                       {isSubmitting ? contactCopy.sending : contactCopy.submit}
                     </span>
+x-7 py-3 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-red-600/30 active:scale-95 cursor-pointer"
+                  
+                    <span>{contactCopy.submit}</span>
                     <Send className={`w-3.5 h-3.5 ${isArabic ? '-scale-x-100' : ''}`} />
                   </button>
                 </div>
