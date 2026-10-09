@@ -1,12 +1,29 @@
 import { useState } from 'react';
 import { X, Check, Send, Phone, Mail } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
+import useLocations from '../../hooks/useLocations';
+import { addLead } from '../../api/generalApi';
 
 
 export const ContactModal = ({ isOpen, onClose }) => {
   const copy = useHomeCopy();
   const { isArabic } = useTranslation();
+  const {
+    countries,
+    governorates,
+    cities,
+    country,
+    government,
+    city,
+    isEgypt,
+    onCountryChange,
+    onGovernmentChange,
+    onCityChange,
+    formatName,
+  } = useLocations(isArabic, isOpen);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,10 +35,12 @@ export const ContactModal = ({ isOpen, onClose }) => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
   const modalCopy = copy.modals.contact;
+  const contactCopy = copy.contact;
   const budgetTiers = ['$5k - $10k', '$10k - $25k', '$25k - $50k', '$50k+'];
 
   const toggleService = (serviceId) => {
@@ -33,9 +52,62 @@ export const ContactModal = ({ isOpen, onClose }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Budget line goes first, then the brief the user wrote, then the
+      // company if one was given — all as one CRM message.
+      const messageLines = [
+        `${modalCopy.budget}: ${formData.budget}`,
+        formData.company.trim()
+          ? `${modalCopy.companyLine}: ${formData.company.trim()}`
+          : '',
+        formData.message.trim(),
+      ].filter(Boolean);
+
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        status: 'Pending',
+        country,
+        ...(government ? { government } : {}),
+        ...(city ? { city } : {}),
+        addresses: [],
+        subCategories: formData.services,
+        campaigns: [],
+        channels: [],
+        files: [],
+        prevOrders: [],
+        sales: [],
+        message: { message: messageLines.join('\n') },
+        company: import.meta.env.VITE_CRM_COMPANY_ID,
+        branch: import.meta.env.VITE_CRM_BRANCH_ID,
+        deleted: false,
+        isWhatsapp: false,
+      };
+
+      await addLead(payload);
+      setSubmitted(true);
+    } catch (error) {
+      console.debug('Contact modal submission error:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: isArabic ? 'خطأ' : 'Error',
+        text:
+          error?.response?.data?.message ||
+          (isArabic
+            ? 'حدث خطأ في الإرسال. حاول مرة أخرى.'
+            : 'Something went wrong. Please try again.'),
+        confirmButtonText: isArabic ? 'تمام' : 'OK',
+        confirmButtonColor: '#ef4444',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const thanksTitle = copy.shared.thanksTitle.replace(
@@ -162,6 +234,7 @@ export const ContactModal = ({ isOpen, onClose }) => {
                   </label>
                   <input
                     type="tel"
+                    required
                     placeholder={copy.contact.phonePlaceholder}
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -182,6 +255,76 @@ export const ContactModal = ({ isOpen, onClose }) => {
                   />
                 </div>
               </div>
+
+              {/* Location — country defaults to Egypt, like the Contact page */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                    {contactCopy.country}
+                  </label>
+                  <select
+                    required
+                    value={country}
+                    onChange={(e) => onCountryChange(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:outline-hidden focus:border-[#E5192D] focus:ring-1 focus:ring-[#E5192D] text-sm bg-white"
+                  >
+                    <option value="">
+                      {contactCopy.selectCountry}
+                    </option>
+                    {countries.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {formatName(c)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {isEgypt && (
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                      {contactCopy.government}
+                    </label>
+                    <select
+                      value={government}
+                      onChange={(e) => onGovernmentChange(e.target.value)}
+                      disabled={!country}
+                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:outline-hidden focus:border-[#E5192D] focus:ring-1 focus:ring-[#E5192D] text-sm bg-white disabled:opacity-50"
+                    >
+                      <option value="">
+                        {contactCopy.selectGovernment}
+                      </option>
+                      {governorates.map((g) => (
+                        <option key={g._id} value={g._id}>
+                          {formatName(g)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {isEgypt && (
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                    {contactCopy.city}
+                  </label>
+                  <select
+                    value={city}
+                    onChange={(e) => onCityChange(e.target.value)}
+                    disabled={!government}
+                    className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:outline-hidden focus:border-[#E5192D] focus:ring-1 focus:ring-[#E5192D] text-sm bg-white disabled:opacity-50"
+                  >
+                    <option value="">
+                      {contactCopy.selectCity}
+                    </option>
+                    {cities.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {formatName(c)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Budget Range */}
               <div>
@@ -226,19 +369,22 @@ export const ContactModal = ({ isOpen, onClose }) => {
                 <div className="flex items-center gap-4 text-neutral-500 text-xs">
                   <div className="flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-[#E5192D]" />
-                    <span dir="ltr">hello@sabergroup.com</span>
+                    <span dir="ltr">info@sabergroup-eg.com</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-[#E5192D]" />
-                    <span dir="ltr">+20 2 2456 7890</span>
+                    <span dir="ltr">01080099757</span>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-red-600/30 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-colors shadow-md shadow-red-600/30 cursor-pointer disabled:opacity-60"
                 >
-                  <span>{modalCopy.submit}</span>
+                  <span>
+                    {isSubmitting ? contactCopy.sending : modalCopy.submit}
+                  </span>
                   <Send className={`w-4 h-4 ${isArabic ? '-scale-x-100' : ''}`} />
                 </button>
               </div>

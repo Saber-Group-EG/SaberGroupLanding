@@ -1,11 +1,28 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send, Check } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
+import useLocations from '../../hooks/useLocations';
+import { addLead } from '../../api/generalApi';
 
 export const InlineContactSection = () => {
   const copy = useHomeCopy();
   const { isArabic } = useTranslation();
+  const {
+    countries,
+    governorates,
+    cities,
+    country,
+    government,
+    city,
+    isEgypt,
+    onCountryChange,
+    onGovernmentChange,
+    onCityChange,
+    formatName,
+  } = useLocations(isArabic);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,12 +32,58 @@ export const InlineContactSection = () => {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const contactCopy = copy.contact;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        status: 'Pending',
+        country,
+        ...(government ? { government } : {}),
+        ...(city ? { city } : {}),
+        addresses: [],
+        subCategories: [formData.service],
+        campaigns: [],
+        channels: [],
+        files: [],
+        prevOrders: [],
+        sales: [],
+        ...(formData.message.trim()
+          ? { message: { message: formData.message.trim() } }
+          : {}),
+        company: import.meta.env.VITE_CRM_COMPANY_ID,
+        branch: import.meta.env.VITE_CRM_BRANCH_ID,
+        deleted: false,
+        isWhatsapp: false,
+      };
+
+      await addLead(payload);
+      setSubmitted(true);
+    } catch (error) {
+      console.debug('Inline contact submission error:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: isArabic ? 'خطأ' : 'Error',
+        text:
+          error?.response?.data?.message ||
+          (isArabic
+            ? 'حدث خطأ في الإرسال. حاول مرة أخرى.'
+            : 'Something went wrong. Please try again.'),
+        confirmButtonText: isArabic ? 'تمام' : 'OK',
+        confirmButtonColor: '#ef4444',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -79,7 +142,7 @@ export const InlineContactSection = () => {
             {/* Direct Contact Cards */}
             <div className="relative z-10 mt-10 space-y-3 pt-6 border-t border-neutral-800/80">
               <a
-                href="mailto:contact@sabergroup.studio"
+                href="mailto:info@sabergroup-eg.com"
                 className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-[#E5192D] transition-colors group"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E5192D] group-hover:text-white transition-colors">
@@ -90,13 +153,13 @@ export const InlineContactSection = () => {
                     {contactCopy.directEmail}
                   </div>
                   <div className="text-xs font-semibold text-white group-hover:text-[#E5192D] transition-colors" dir="ltr">
-                    contact@sabergroup.studio
+                    info@sabergroup-eg.com
                   </div>
                 </div>
               </a>
 
               <a
-                href="tel:+201000000000"
+                href="tel:+201080099757"
                 className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-[#E5192D] transition-colors group"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E5192D] group-hover:text-white transition-colors">
@@ -107,7 +170,7 @@ export const InlineContactSection = () => {
                     {contactCopy.hotline}
                   </div>
                   <div className="text-xs font-semibold text-white group-hover:text-[#E5192D] transition-colors" dir="ltr">
-                    +20 100 000 0000
+                    01080099757
                   </div>
                 </div>
               </a>
@@ -237,6 +300,76 @@ export const InlineContactSection = () => {
                   />
                 </div>
 
+                {/* Location — country defaults to Egypt, like the Contact page */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
+                      {contactCopy.country}
+                    </label>
+                    <select
+                      required
+                      value={country}
+                      onChange={(e) => onCountryChange(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white focus:outline-hidden focus:border-[#E5192D] text-xs transition-colors"
+                    >
+                      <option value="">
+                        {contactCopy.selectCountry}
+                      </option>
+                      {countries.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {formatName(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {isEgypt && (
+                    <div>
+                      <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
+                        {contactCopy.government}
+                      </label>
+                      <select
+                        value={government}
+                        onChange={(e) => onGovernmentChange(e.target.value)}
+                        disabled={!country}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white focus:outline-hidden focus:border-[#E5192D] text-xs transition-colors disabled:opacity-50"
+                      >
+                        <option value="">
+                          {contactCopy.selectGovernment}
+                        </option>
+                        {governorates.map((g) => (
+                          <option key={g._id} value={g._id}>
+                            {formatName(g)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {isEgypt && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
+                      {contactCopy.city}
+                    </label>
+                    <select
+                      value={city}
+                      onChange={(e) => onCityChange(e.target.value)}
+                      disabled={!government}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white focus:outline-hidden focus:border-[#E5192D] text-xs transition-colors disabled:opacity-50"
+                    >
+                      <option value="">
+                        {contactCopy.selectCity}
+                      </option>
+                      {cities.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {formatName(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Message */}
                 <div>
                   <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
@@ -255,9 +388,12 @@ export const InlineContactSection = () => {
                 <div className="pt-1 flex items-center justify-end">
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-red-600/30 active:scale-95 cursor-pointer"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-red-600/30 active:scale-95 cursor-pointer disabled:opacity-60"
                   >
-                    <span>{contactCopy.submit}</span>
+                    <span>
+                      {isSubmitting ? contactCopy.sending : contactCopy.submit}
+                    </span>
                     <Send className={`w-3.5 h-3.5 ${isArabic ? '-scale-x-100' : ''}`} />
                   </button>
                 </div>
