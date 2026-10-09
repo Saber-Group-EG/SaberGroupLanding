@@ -393,7 +393,6 @@ export const InlineContactSection = () => {
                     <span>
                       {isSubmitting ? contactCopy.sending : contactCopy.submit}
                     </span>
-x-7 py-3 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-red-600/30 active:scale-95 cursor-pointer"
                   
                     <span>{contactCopy.submit}</span>
                     <Send className={`w-3.5 h-3.5 ${isArabic ? '-scale-x-100' : ''}`} />
