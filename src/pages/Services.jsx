@@ -306,11 +306,11 @@ const ServicesPage = () => {
                 ))}
                 <tr>
                   <td className="p-4" />
-                  {/* index (i) is the stable, language-independent tier
+                  {/* tierIndex (i) is the stable, language-independent tier
                       position: 0 = Starter, 1 = Growth, 2 = Enterprise.
-                      We pass it to /checkout instead of the localized
-                      tier.name, since the backend Plan lookup needs an
-                      English-stable key, not "النمو" vs "Growth". */}
+                      Proceed opens the dedicated package page for that tier
+                      (/services/:product/:tierIndex), which carries the same
+                      index into /checkout on Buy Now. */}
                   {tierPlans.map((tier, i) => {
                     const isEnterprise =
                       tier.name === 'Enterprise' || tier.name === 'المؤسسات';
@@ -324,9 +324,7 @@ const ServicesPage = () => {
                             if (isEnterprise) {
                               selectTierFromTable(tier.name);
                             } else {
-                              navigate(
-                                `/checkout?product=${activeProduct}&tierIndex=${i}`
-                              );
+                              navigate(`/services/${activeProduct}/${i}`);
                             }
                           }}
                           className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${

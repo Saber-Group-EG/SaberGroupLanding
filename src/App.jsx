@@ -9,6 +9,7 @@ import JobApplicationForm from './pages/JobApplicationForm';
 import CheckPreviousApplication from './pages/checkjob';
 import ComingSoon from './pages/ComingSoon';
 import ServicesPage from './pages/Services';
+import ServicePlan from './pages/ServicePlan';
 import AboutUs from './pages/AboutUs';
 import AddressPage from './pages/Address';
 import ContactPage from './pages/Contact';
@@ -28,6 +29,7 @@ function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/services" element={<ServicesPage />} />
+        <Route path="/services/:product/:tierIndex" element={<ServicePlan />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/address" element={<AddressPage />} />
         <Route path="/contact" element={<ContactPage />} />

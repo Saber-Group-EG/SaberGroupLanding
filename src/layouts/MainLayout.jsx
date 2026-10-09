@@ -75,14 +75,36 @@ const MainLayout = () => {
 
   // Reset scroll position on every route change so navigation doesn't keep
   // the previous page's offset (which could land mid/below page content).
+  // behavior: 'instant' is required — index.css sets html { scroll-behavior:
+  // smooth }, which would otherwise animate a long jump up on every route.
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+    if (location.hash) {
+      const el = document.getElementById(location.hash.slice(1));
+      if (el) {
+        el.scrollIntoView({ behavior: 'instant', block: 'start' });
+        return;
+      }
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname, location.hash]);
 
   // Resolve meta for the current path, falling back to the default.
   // Strip trailing slash so /about/ and /about both match.
   const normalizedPath = location.pathname.replace(/\/$/, '') || '/';
-  const meta = routeMeta[normalizedPath] ?? defaultMeta;
+  const packageMatch = normalizedPath.match(
+    /^\/services\/(ats|crm)\/([0-2])$/
+  );
+  const packageMeta = packageMatch
+    ? {
+        title: `${
+          ['Starter', 'Growth', 'Enterprise'][Number(packageMatch[2])]
+        } plan — ${SITE_NAME}`,
+        description: `Features and pricing for the ${
+          ['Starter', 'Growth', 'Enterprise'][Number(packageMatch[2])]
+        } ${packageMatch[1].toUpperCase()} plan from ${SITE_NAME}.`,
+      }
+    : null;
+  const meta = routeMeta[normalizedPath] ?? packageMeta ?? defaultMeta;
   const ogImage = getDefaultOgImage();
   const pageUrl = getFullUrl(location.pathname);
 
