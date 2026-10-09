@@ -145,13 +145,21 @@ const Portfolio = () => {
   const popupReveal = (delay = '') =>
     `transition-all duration-400 ease-out ${!closing && revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'} ${delay}`;
 
-  const sectorProjects = selectedSectorId === 'all'
+  // Restored filters are validated against the loaded data during render so a
+  // stale sector/tag can never produce an empty grid.
+  const sectorId = selectedSectorId !== 'all' && !allCategoryIds.includes(selectedSectorId)
+    ? 'all'
+    : selectedSectorId;
+
+  const sectorProjects = sectorId === 'all'
     ? publishedProjects
-    : publishedProjects.filter((p) => p.sectorId?.trim().toLowerCase() === selectedSectorId);
+    : publishedProjects.filter((p) => p.sectorId?.trim().toLowerCase() === sectorId);
 
   const allTagsRaw = Array.from(
     new Set(sectorProjects.flatMap((p) => (p.subcategories || []).map((sub) => (typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '')).filter(Boolean)))
   );
+
+  const activeTags = selectedTags.filter((tag) => allTagsRaw.includes(tag));
 
   const allTagNames = allTagsRaw.reduce((acc, key) => {
     const sample = sectorProjects.flatMap((p) => (p.subcategories || [])).find((sub) => {
@@ -182,22 +190,8 @@ const Portfolio = () => {
     saveFilters({ sectorId: selectedSectorId, tags: selectedTags, sortBy });
   }, [selectedSectorId, selectedTags, sortBy]);
 
-  // Drop restored filters that no longer exist in the loaded project data
-  useEffect(() => {
-    if (loading || publishedProjects.length === 0) return;
-    if (selectedSectorId !== 'all' && !allCategoryIds.includes(selectedSectorId)) {
-      setSelectedSectorId('all');
-      setSelectedTags([]);
-      return;
-    }
-    if (selectedTags.length > 0) {
-      const validTags = selectedTags.filter((tag) => allTagsRaw.includes(tag));
-      if (validTags.length !== selectedTags.length) setSelectedTags(validTags);
-    }
-  }, [loading, publishedProjects, allCategoryIds, allTagsRaw, selectedSectorId, selectedTags]);
-
   const handleSectorChange = (sector) => {
-    if (sector === selectedSectorId) {
+    if (sector === sectorId) {
       setSelectedSectorId('all');
     } else {
       setSelectedSectorId(sector);
@@ -206,13 +200,13 @@ const Portfolio = () => {
   };
 
   const handleTagChange = (tag) => {
-    const isSelected = selectedTags.includes(tag);
+    const isSelected = activeTags.includes(tag);
     let newTags;
 
     if (isSelected) {
-      newTags = selectedTags.filter((t) => t !== tag);
+      newTags = activeTags.filter((t) => t !== tag);
     } else {
-      newTags = [...selectedTags, tag];
+      newTags = [...activeTags, tag];
     }
 
     setSelectedTags(newTags);
@@ -237,11 +231,11 @@ const Portfolio = () => {
   };
 
   const filteredProjects = publishedProjects.filter((proj) => {
-    if (selectedSectorId !== 'all' && proj.sectorId?.trim().toLowerCase() !== selectedSectorId) return false;
-    if (selectedTags.length > 0) {
+    if (sectorId !== 'all' && proj.sectorId?.trim().toLowerCase() !== sectorId) return false;
+    if (activeTags.length > 0) {
       const matchSubcategory = (proj.subcategories || []).some((sub) => {
         const name = typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '';
-        return selectedTags.some((t) => t.toLowerCase() === name.toLowerCase());
+        return activeTags.some((t) => t.toLowerCase() === name.toLowerCase());
       });
       if (!matchSubcategory) return false;
     }
@@ -598,12 +592,12 @@ const Portfolio = () => {
               </button>
             )}
             <div ref={categoryScrollRef} className="flex items-center gap-4 sm:gap-6 lg:gap-8 py-2 overflow-x-auto scrollbar-hide">
-              <button onClick={() => handleSectorChange('all')} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${selectedSectorId === 'all' ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
+              <button onClick={() => handleSectorChange('all')} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${sectorId === 'all' ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
                 <span>{t('all', 'ALL')}</span>
-                {selectedSectorId === 'all' && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
+                {sectorId === 'all' && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-600 rounded-full" />}
               </button>
               {allCategoryIds.map((cat) => {
-                const isActive = selectedSectorId === cat;
+                const isActive = sectorId === cat;
                 return (
                   <button key={cat} onClick={() => handleSectorChange(cat)} className={`whitespace-nowrap text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative pb-2.5 ${isActive ? 'text-red-600 font-black' : 'text-neutral-800 hover:text-red-600'}`}>
                     <span>{categoryNames[cat]?.[isArabic ? 'ar' : 'en'] || cat}</span>
@@ -631,7 +625,7 @@ const Portfolio = () => {
             )}
             <div ref={tagScrollRef} className="flex items-center gap-2 sm:gap-2.5 py-1 overflow-x-auto scrollbar-hide">
               {allTagsRaw.map((tag) => {
-                const isActive = selectedTags.includes(tag);
+                const isActive = activeTags.includes(tag);
                 return (
                   <button key={tag} onClick={() => handleTagChange(tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
                     {allTagNames[tag] || tag}
