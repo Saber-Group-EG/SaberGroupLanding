@@ -38,7 +38,7 @@ const LATEST_WORKS = [
     clientName: 'Swissôtel Hotels & Resorts',
     year: '2024',
     videoDuration: '02:56',
-    video: '/videos/latest-swissotel.mp4',
+    video: 'https://upload.ats.sabergroup-eg.com/Markting/landing/video/resized.mp4',
     coverImage: '/hero/2.jpg',
   },
 ];
