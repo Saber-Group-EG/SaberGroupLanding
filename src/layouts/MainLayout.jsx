@@ -73,6 +73,12 @@ const MainLayout = () => {
     }
   }, [dispatch, positions.length]);
 
+  // Reset scroll position on every route change so navigation doesn't keep
+  // the previous page's offset (which could land mid/below page content).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // Resolve meta for the current path, falling back to the default.
   // Strip trailing slash so /about/ and /about both match.
   const normalizedPath = location.pathname.replace(/\/$/, '') || '/';

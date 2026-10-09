@@ -1,6 +1,5 @@
 import React from "react";
 import { Helmet } from 'react-helmet-async';
-import Footer from '../components/footer';
 import mainLogo from '/auth-logo.png';
 import { getFullUrl, getDefaultOgImage, SITE_NAME } from '../utils/ogMeta';
 
@@ -39,8 +38,6 @@ const ComingSoon = () => {
           </div>
         </div>
       </section>
-
-      <Footer />
     </>
   );
 };

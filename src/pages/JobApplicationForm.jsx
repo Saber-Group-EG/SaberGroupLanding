@@ -15,7 +15,6 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getJobPositions } from '../store/slices/jobPositionsSlice';
 import valoraLogo from '/auth-logo.png';
 import { getFullUrl, getDefaultOgImage, SITE_NAME } from '../utils/ogMeta';
-import Footer from '../components/footer';
 import ProfilePhotoUpload from '../components/ProfilePhotoUpload';
 import CvUpload from '../components/CvUpload';
 import { uploadToR2 } from '../utils/r2Upload';
@@ -3633,7 +3632,6 @@ const JobApplicationForm = () => {
           </Formik>
         </div>
       </section>
-      <Footer />
     </>
   );
 };

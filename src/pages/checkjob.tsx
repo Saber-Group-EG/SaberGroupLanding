@@ -7,7 +7,6 @@ import { checkExistingApplicant, getApiErrorMessage } from '../api/formsApi';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getJobPositions } from '../store/slices/jobPositionsSlice';
 import { getDefaultOgImage, getFullUrl, SITE_NAME } from '../utils/ogMeta';
-import Footer from '../components/footer';
 
 type ApplicantRecord = Record<string, any>;
 
@@ -430,8 +429,6 @@ const CheckPreviousApplication: React.FC = () => {
 					</div>
 				</div>
 			</section>
-
-			<Footer />
 		</>
 	);
 };

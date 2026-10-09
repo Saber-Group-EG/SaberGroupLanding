@@ -21,6 +21,27 @@ import DynamicIcon, { iconNames } from 'lucide-react/dist/esm/DynamicIcon.mjs';
 const toLucideKey = (value) =>
   String(value).trim().replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
+const FILTERS_KEY = 'saber_portfolio_filters_v1';
+
+const loadFilters = () => {
+  try {
+    const raw = sessionStorage.getItem(FILTERS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveFilters = (filters) => {
+  try {
+    sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+  } catch {
+    // sessionStorage full or unavailable — ignore
+  }
+};
+
 const Portfolio = () => {
   const { t: tFn, isArabic } = useTranslation();
   const dir = isArabic ? 'rtl' : 'ltr';
@@ -57,9 +78,16 @@ const Portfolio = () => {
   }, {});
 
   // Portfolio list state
-  const [selectedSectorId, setSelectedSectorId] = useState('all');
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [sortBy, setSortBy] = useState('newest');
+  const [savedFilters] = useState(loadFilters);
+  const [selectedSectorId, setSelectedSectorId] = useState(() =>
+    typeof savedFilters.sectorId === 'string' && savedFilters.sectorId ? savedFilters.sectorId : 'all'
+  );
+  const [selectedTags, setSelectedTags] = useState(() =>
+    Array.isArray(savedFilters.tags) ? savedFilters.tags.filter((tag) => typeof tag === 'string') : []
+  );
+  const [sortBy, setSortBy] = useState(() =>
+    ['newest', 'featured', 'photos', 'reels'].includes(savedFilters.sortBy) ? savedFilters.sortBy : 'newest'
+  );
   const [preview, setPreview] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -148,6 +176,25 @@ const Portfolio = () => {
     window.addEventListener('resize', checkOverflow);
     return () => window.removeEventListener('resize', checkOverflow);
   }, [allCategoryIds.length, allTagsRaw.length]);
+
+  // Persist filters so they survive navigation to a project and back
+  useEffect(() => {
+    saveFilters({ sectorId: selectedSectorId, tags: selectedTags, sortBy });
+  }, [selectedSectorId, selectedTags, sortBy]);
+
+  // Drop restored filters that no longer exist in the loaded project data
+  useEffect(() => {
+    if (loading || publishedProjects.length === 0) return;
+    if (selectedSectorId !== 'all' && !allCategoryIds.includes(selectedSectorId)) {
+      setSelectedSectorId('all');
+      setSelectedTags([]);
+      return;
+    }
+    if (selectedTags.length > 0) {
+      const validTags = selectedTags.filter((tag) => allTagsRaw.includes(tag));
+      if (validTags.length !== selectedTags.length) setSelectedTags(validTags);
+    }
+  }, [loading, publishedProjects, allCategoryIds, allTagsRaw, selectedSectorId, selectedTags]);
 
   const handleSectorChange = (sector) => {
     if (sector === selectedSectorId) {
@@ -374,7 +421,7 @@ const Portfolio = () => {
   };
 
   const renderProjectIcon = (proj) => (
-    <div className={`hidden sm:block absolute top-3 sm:top-5 z-10 ${isRtl ? 'right-3 sm:right-5' : 'left-3 sm:left-5'}`}>
+    <div className={`hidden sm:block absolute top-3 sm:top-5 z-10 transition-all duration-300 ease-out opacity-0 translate-y-1.5 scale-90 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-hover:pointer-events-auto group-hover:delay-75 ${isRtl ? 'right-3 sm:right-5' : 'left-3 sm:left-5'}`}>
       {renderIconCircle(proj)}
     </div>
   );
@@ -419,8 +466,8 @@ const Portfolio = () => {
     );
   };
 
-  const renderViewButton = (showLabel) => (
-    <span className="shrink-0 relative inline-flex items-center gap-0 cursor-pointer whitespace-nowrap transition-all duration-300 group group-hover:-translate-y-0.5">
+  const renderViewButton = (showLabel, hoverReveal = false) => (
+    <span className={`shrink-0 relative inline-flex items-center gap-0 cursor-pointer whitespace-nowrap transition-all duration-300 ease-out group group-hover:-translate-y-0.5 ${hoverReveal ? 'opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto group-hover:delay-150' : ''}`}>
       <span className={`${showLabel ? 'block' : 'hidden sm:block'} relative py-0.5 text-[8.5px] sm:text-[9px] font-medium text-white transition-all duration-300 group-hover:bg-white group-hover:text-neutral-950 group-hover:border-white rounded-s-full border-y-[0.5px] border-s-[0.5px] border-white/40 ps-1 sm:ps-1.5 pe-1.5`}>
         {t('viewFullProject', 'View Full Project')}
       </span>
@@ -675,7 +722,7 @@ const Portfolio = () => {
                         </div>
                         <div className="flex items-center justify-between gap-1 sm:gap-2 shrink-0">
                           {renderCounts(proj, false)}
-                          {renderViewButton()}
+                          {renderViewButton(false, true)}
                         </div>
                       </div>
                     </Link>
@@ -721,7 +768,7 @@ const Portfolio = () => {
 
                       <div className="flex items-center justify-between gap-1 sm:gap-2 mt-0.5 sm:mt-1">
                         {renderCounts(proj, true)}
-                        {renderViewButton()}
+                        {renderViewButton(false, true)}
                       </div>
                     </div>
                   </Link>
