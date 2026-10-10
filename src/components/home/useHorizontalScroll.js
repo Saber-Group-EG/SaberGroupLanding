@@ -15,12 +15,18 @@ import { useTranslation } from '../../i18n/hooks/useTranslation';
  *  - scrollByStep(direction): scroll by roughly one item ('start' | 'end')
  *  - scrollToIndex(index): jump to an item by index
  */
-export const useHorizontalScroll = ({ itemCount = 0, gap = 24 } = {}) => {
+export const useHorizontalScroll = ({
+  itemCount = 0,
+  gap = 24,
+  autoScroll = false,
+  autoScrollSpeed = 35,
+} = {}) => {
   const { isArabic } = useTranslation();
   const containerRef = useRef(null);
   const [canScrollStart, setCanScrollStart] = useState(false);
   const [canScrollEnd, setCanScrollEnd] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [autoScrollPaused, setAutoScrollPaused] = useState(false);
 
   const isRtl = isArabic;
 
@@ -61,6 +67,56 @@ export const useHorizontalScroll = ({ itemCount = 0, gap = 24 } = {}) => {
     };
   }, [measure]);
 
+  // Continuous marquee loop. Requires the DOM to contain two identical copies
+  // of the item list (duplicates marked aria-hidden) so we can wrap the scroll
+  // position by the width of one copy without a visible jump.
+  useEffect(() => {
+    if (!autoScroll || autoScrollPaused || itemCount <= 1) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    const el = containerRef.current;
+    if (!el) return undefined;
+
+    const prevBehavior = el.style.scrollBehavior;
+    el.style.scrollBehavior = 'auto';
+    const sign = isRtl ? -1 : 1;
+    let rafId;
+    let last = performance.now();
+    let loopWidth = 0;
+    let lastMeasured = 0;
+
+    const measureLoopWidth = () => {
+      const children = el.children;
+      if (children.length >= itemCount * 2) {
+        loopWidth = Math.abs(children[itemCount].offsetLeft - children[0].offsetLeft);
+      } else {
+        loopWidth = el.scrollWidth / 2;
+      }
+    };
+
+    const tick = (now) => {
+      if (now - lastMeasured > 1000) {
+        measureLoopWidth();
+        lastMeasured = now;
+      }
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      if (!document.hidden && loopWidth > 0) {
+        let next = el.scrollLeft + sign * autoScrollSpeed * dt;
+        if (sign > 0 && next >= loopWidth) next -= loopWidth;
+        if (sign < 0 && next <= -loopWidth) next += loopWidth;
+        el.scrollLeft = next;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafId);
+      el.style.scrollBehavior = prevBehavior;
+    };
+  }, [autoScroll, autoScrollPaused, itemCount, autoScrollSpeed, isRtl]);
+
   const scrollByStep = useCallback(
     (direction) => {
       const el = containerRef.current;
@@ -89,6 +145,8 @@ export const useHorizontalScroll = ({ itemCount = 0, gap = 24 } = {}) => {
     canScrollStart,
     canScrollEnd,
     activeIndex,
+    autoScrollPaused,
+    setAutoScrollPaused,
     scrollByStep,
     scrollToIndex,
   };
