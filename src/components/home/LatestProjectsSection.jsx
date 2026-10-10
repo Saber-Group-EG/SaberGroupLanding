@@ -77,6 +77,13 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
     return () => document.removeEventListener('keydown', onKey);
   }, [expanded, playing]);
 
+  // The autoplay attribute alone is often blocked by browsers — nudge
+  // playback once the modal element mounts and again once metadata loads.
+  useEffect(() => {
+    if (!expanded) return;
+    modalVideoRef.current?.play().catch(() => {});
+  }, [expanded]);
+
   const toggle = (e) => {
     e.stopPropagation();
     if (!heroProject.video) return;
@@ -184,7 +191,7 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
       {/* Expanded player — double-click / double-tap the video, same look as the hero showreel */}
       {expanded && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-black/90 backdrop-blur-xl"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-8 bg-black/90 backdrop-blur-xl"
           onClick={closeExpand}
           role="dialog"
           aria-modal="true"
@@ -219,9 +226,15 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
               onLoadedMetadata={() => {
                 const modal = modalVideoRef.current;
                 const inline = videoRef.current;
-                if (modal && inline && Number.isFinite(inline.currentTime)) {
+                if (
+                  modal &&
+                  inline &&
+                  Number.isFinite(inline.currentTime) &&
+                  inline.currentTime > 0.5
+                ) {
                   modal.currentTime = inline.currentTime;
                 }
+                modal?.play().catch(() => {});
               }}
             />
           </div>
