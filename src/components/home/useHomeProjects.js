@@ -1,24 +1,18 @@
 import { useEffect } from 'react';
-import { useDispatch, useSelector, useStore } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { getProjects, selectClients } from '../../store/slices/projectsSlice';
 
 export const useHomeProjects = () => {
   const dispatch = useDispatch();
-  const store = useStore();
   const clients = useSelector(selectClients);
   const loading = useSelector((state) => state.projects.loading);
   const error = useSelector((state) => state.projects.error);
 
-  // getProjects has no condition guard, so the "already fetched / in flight"
-  // check has to live here to avoid duplicate requests. State is read fresh
-  // from the store because useProjectStories dispatches the same thunk in the
-  // same commit, which makes this hook's own values stale by then.
+  // Cached data renders instantly; getProjects' thunk condition refetches at
+  // most once per page load and dedupes against useProjectStories.
   useEffect(() => {
-    const projects = store.getState().projects;
-    if (projects.rawProjects.length === 0 && !projects.loading && !projects.error) {
-      dispatch(getProjects());
-    }
-  }, [dispatch, store]);
+    dispatch(getProjects());
+  }, [dispatch]);
 
   return { clients, loading, error };
 };

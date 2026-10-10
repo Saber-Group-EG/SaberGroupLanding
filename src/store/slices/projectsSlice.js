@@ -4,7 +4,7 @@ import { getEnSlug } from '../../utils/slug';
 import { getProxiedCoverUrl } from '../../utils/imageProxy';
 
 const PROJECTS_API_URL = 'https://marketing-planner-tau.vercel.app/api/v1/projects/public';
-const CACHE_KEY = 'saber_projects_cache_v7';
+const CACHE_KEY = 'saber_projects_cache_v8';
 
 const loadFromCache = () => {
   try {
@@ -127,6 +127,7 @@ const transformProject = (raw) => {
           nameAr: raw.company.name?.ar || '',
           field: raw.company.field || '',
           logo: raw.company.logo || '',
+          order: Number.isFinite(Number(raw.company.order)) ? Number(raw.company.order) : 999,
         }
       : null,
     locationAr: raw.location?.ar || (typeof raw.location === 'string' ? raw.location : ''),
@@ -179,6 +180,12 @@ const transformProject = (raw) => {
   };
 };
 
+// One background refresh per full page load: cached data renders instantly,
+// then the thunk refetches once so CMS changes (orders, logos) show up without
+// a manual cache clear. Guards also dedupe the two home hooks that dispatch
+// the same thunk in the same commit.
+let fetchedThisPageLoad = false;
+
 export const getProjects = createAsyncThunk(
   'projects/getProjects',
   async (_, { rejectWithValue }) => {
@@ -191,6 +198,12 @@ export const getProjects = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message);
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      if (fetchedThisPageLoad || getState().projects.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -213,6 +226,7 @@ const projectsSlice = createSlice({
         state.error = null;
       })
       .addCase(getProjects.fulfilled, (state, action) => {
+        fetchedThisPageLoad = true;
         state.loading = false;
         state.rawProjects = action.payload;
         state.error = null;
@@ -259,17 +273,17 @@ export const selectClients = createSelector([selectPublishedProjects], (projects
   const seen = new Set();
   const clients = [];
 
-  const sortedProjects = [...projects].sort((a, b) => {
-    const orderA = Number.isFinite(Number(a?.order)) ? Number(a.order) : Infinity;
-    const orderB = Number.isFinite(Number(b?.order)) ? Number(b.order) : Infinity;
-    return orderA - orderB;
-  });
-
-  sortedProjects.forEach((project) => {
+  projects.forEach((project) => {
     const client = project.client;
     if (!client || !client.id || seen.has(client.id)) return;
     seen.add(client.id);
     clients.push(client);
+  });
+
+  clients.sort((a, b) => {
+    const orderA = Number.isFinite(Number(a?.order)) ? Number(a.order) : Infinity;
+    const orderB = Number.isFinite(Number(b?.order)) ? Number(b.order) : Infinity;
+    return orderA - orderB;
   });
 
   return clients;

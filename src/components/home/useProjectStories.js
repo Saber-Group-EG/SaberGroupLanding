@@ -63,15 +63,12 @@ export const useProjectStories = () => {
   const projects = useSelector(selectPublishedProjects);
   const loading = useSelector((state) => state.projects.loading);
   const error = useSelector((state) => state.projects.error);
-  const rawProjectCount = useSelector((state) => state.projects.rawProjects.length);
 
-  // getProjects has no condition guard, so the "already fetched / in flight"
-  // check has to live here to avoid duplicate requests.
+  // Cached data renders instantly; getProjects' thunk condition refetches at
+  // most once per page load and dedupes against useHomeProjects.
   useEffect(() => {
-    if (rawProjectCount === 0 && !loading && !error) {
-      dispatch(getProjects());
-    }
-  }, [dispatch, rawProjectCount, loading, error]);
+    dispatch(getProjects());
+  }, [dispatch]);
 
   const stories = useMemo(() => {
     const fallbackCategory = copy.whatWeDo.services['service-media-production'].title;

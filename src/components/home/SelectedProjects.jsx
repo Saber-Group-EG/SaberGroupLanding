@@ -40,8 +40,9 @@ export const SelectedProjects = ({
     <section id="portfolio" className="py-24 bg-[#f8f9fa] border-b border-neutral-200/80 scroll-mt-16">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12">
 
-        {/* Header Layout */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+        {/* Header Layout — row only at lg+: at md the pills + button were
+            wider than the container and forced the page into horizontal scroll */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
           <div>
             <div className="text-neutral-400 font-bold text-xs tracking-[0.25em] uppercase mb-2">
               {copy.selectedProjects.eyebrow}
@@ -59,9 +60,9 @@ export const SelectedProjects = ({
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-4">
             {/* Category Filter Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-white border border-neutral-200 rounded-full shadow-xs">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white border border-neutral-200 rounded-full shadow-xs">
               {copy.selectedProjects.categories.map((cat) => (
                 <button
                   key={cat.id}
