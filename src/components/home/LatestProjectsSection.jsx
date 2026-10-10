@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, ArrowRight, Sparkles, Clock, MapPin } from 'lucide-react';
+import { Play, Pause, ArrowRight, Sparkles, Clock, MapPin, X } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 
 
@@ -49,7 +49,10 @@ const LATEST_WORKS = [
 const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
   const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const videoRef = useRef(null);
+  const modalVideoRef = useRef(null);
+  const lastTapRef = useRef(0);
 
   useEffect(() => {
     if (!started) return;
@@ -60,6 +63,19 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
       .then(() => setPlaying(true))
       .catch(() => setPlaying(false));
   }, [started]);
+
+  useEffect(() => {
+    if (!expanded) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setExpanded(false);
+        const video = videoRef.current;
+        if (video && playing) video.play().catch(() => {});
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [expanded, playing]);
 
   const toggle = (e) => {
     e.stopPropagation();
@@ -81,8 +97,36 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
     }
   };
 
+  const openExpand = () => {
+    if (!heroProject.video || !started) return;
+    setExpanded(true);
+    videoRef.current?.pause();
+  };
+
+  const closeExpand = (e) => {
+    if (e) e.stopPropagation();
+    setExpanded(false);
+    const video = videoRef.current;
+    if (video && playing) video.play().catch(() => {});
+  };
+
+  // Double-click on desktop, double-tap on touch → expand like the showreel
+  const handleMediaTap = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 350) {
+      lastTapRef.current = 0;
+      openExpand();
+    } else {
+      lastTapRef.current = now;
+    }
+  };
+
   return (
-    <div className="lg:col-span-7 relative overflow-hidden min-h-[320px] lg:min-h-[480px] bg-neutral-950">
+    <div
+      className="lg:col-span-7 relative overflow-hidden min-h-[320px] lg:min-h-[480px] bg-neutral-950"
+      onDoubleClick={openExpand}
+      onTouchEnd={handleMediaTap}
+    >
       {/* Thumbnail always visible first — video mounts only on play */}
       <img
         src={heroProject.coverImage}
@@ -134,6 +178,53 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
               <Play className="w-6 h-6 fill-current ltr:ml-0.5 rtl:mr-0.5" />
             )}
           </button>
+        </div>
+      )}
+
+      {/* Expanded player — double-click / double-tap the video, same look as the hero showreel */}
+      {expanded && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-black/90 backdrop-blur-xl"
+          onClick={closeExpand}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative w-full max-w-5xl bg-neutral-950 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 bg-neutral-900/90 border-b border-neutral-800 z-10">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#E5192D] animate-ping shrink-0" />
+                <span className="text-white font-bold text-xs sm:text-sm tracking-widest uppercase truncate">
+                  {heroProject.title}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={closeExpand}
+                aria-label={copy.latestProjects.closeVideo || 'Close video'}
+                className="w-8 h-8 shrink-0 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <video
+              ref={modalVideoRef}
+              src={heroProject.video}
+              playsInline
+              controls
+              autoPlay
+              className="w-full aspect-video bg-black"
+              onLoadedMetadata={() => {
+                const modal = modalVideoRef.current;
+                const inline = videoRef.current;
+                if (modal && inline && Number.isFinite(inline.currentTime)) {
+                  modal.currentTime = inline.currentTime;
+                }
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
