@@ -259,7 +259,13 @@ export const selectClients = createSelector([selectPublishedProjects], (projects
   const seen = new Set();
   const clients = [];
 
-  projects.forEach((project) => {
+  const sortedProjects = [...projects].sort((a, b) => {
+    const orderA = Number.isFinite(Number(a?.order)) ? Number(a.order) : Infinity;
+    const orderB = Number.isFinite(Number(b?.order)) ? Number(b.order) : Infinity;
+    return orderA - orderB;
+  });
+
+  sortedProjects.forEach((project) => {
     const client = project.client;
     if (!client || !client.id || seen.has(client.id)) return;
     seen.add(client.id);
