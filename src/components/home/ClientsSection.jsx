@@ -38,10 +38,13 @@ const ClientWordmark = ({ logo, name, field }) => {
 export const ClientsSection = ({ clients = [], loading = false }) => {
   const copy = useHomeCopy();
   const { isArabic } = useTranslation();
-  const { containerRef, canScrollStart, canScrollEnd, scrollByStep } = useHorizontalScroll({
-    itemCount: clients.length,
-    gap: 32,
-  });
+  const { containerRef, canScrollStart, canScrollEnd, scrollByStep, setAutoScrollPaused } =
+    useHorizontalScroll({
+      itemCount: clients.length,
+      gap: 32,
+      autoScroll: true,
+      autoScrollSpeed: 35,
+    });
 
   const showSkeletons = loading && clients.length === 0;
 
@@ -63,7 +66,14 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
         </div>
 
         {/* Logos Carousel with Navigation Arrows */}
-        <div className="relative flex items-center">
+        <div
+          className="relative flex items-center"
+          onPointerEnter={() => setAutoScrollPaused(true)}
+          onPointerLeave={() => setAutoScrollPaused(false)}
+          onFocus={() => setAutoScrollPaused(true)}
+          onBlur={() => setAutoScrollPaused(false)}
+          onTouchStart={() => setAutoScrollPaused(true)}
+        >
 
           {/* Start Arrow Button */}
           {showArrows && (
@@ -103,14 +113,16 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
                 ))}
               </div>
             ) : (
-              clients.map((client) => {
+              [...clients, ...clients].map((client, index) => {
+                const isDuplicate = index >= clients.length;
                 const name = isArabic
                   ? client.nameAr || client.nameEn
                   : client.nameEn || client.nameAr;
                 return (
                   <div
-                    key={client.id}
+                    key={`${client.id}-${index}`}
                     title={name}
+                    aria-hidden={isDuplicate || undefined}
                     className="group flex-shrink-0"
                   >
                     <ClientWordmark logo={client.logo} name={name} field={client.field} />
