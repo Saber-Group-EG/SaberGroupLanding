@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, Pause, ArrowRight, Sparkles, Clock, MapPin, X } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
@@ -52,7 +52,8 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
   const [playing, setPlaying] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const videoRef = useRef(null);
-  const modalVideoRef = useRef(null);
+  const inlineMediaRef = useRef(null);
+  const modalMediaRef = useRef(null);
   const lastTapRef = useRef(0);
 
   useEffect(() => {
@@ -70,19 +71,24 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
     const onKey = (e) => {
       if (e.key === 'Escape') {
         setExpanded(false);
-        const video = videoRef.current;
-        if (video && playing) video.play().catch(() => {});
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [expanded, playing]);
+  }, [expanded]);
 
-  // The autoplay attribute alone is often blocked by browsers — nudge
-  // playback once the modal element mounts and again once metadata loads.
-  useEffect(() => {
-    if (!expanded) return;
-    modalVideoRef.current?.play().catch(() => {});
+  useLayoutEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    const inline = inlineMediaRef.current;
+    const target = expanded ? modalMediaRef.current : inline;
+    if (target && video.parentNode !== target) target.appendChild(video);
+    if (expanded) video.play().catch(() => {});
+    return () => {
+      const slot = inlineMediaRef.current;
+      const current = videoRef.current;
+      if (current && slot && current.parentNode !== slot) slot.appendChild(current);
+    };
   }, [expanded]);
 
   const toggle = (e) => {
@@ -106,16 +112,13 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
   };
 
   const openExpand = () => {
-    if (!heroProject.video || !started) return;
+    if (expanded || !heroProject.video || !started) return;
     setExpanded(true);
-    videoRef.current?.pause();
   };
 
   const closeExpand = (e) => {
     if (e) e.stopPropagation();
     setExpanded(false);
-    const video = videoRef.current;
-    if (video && playing) video.play().catch(() => {});
   };
 
   // Double-click on desktop, double-tap on touch → expand like the showreel
@@ -143,14 +146,25 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
         decoding="async"
         className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
       />
-      {heroProject.video && started && (
-        <video
-          ref={videoRef}
-          src={heroProject.video}
-          playsInline
-          onEnded={() => setPlaying(false)}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
+      {heroProject.video && (
+        <div ref={inlineMediaRef} className="absolute inset-0">
+          {started && (
+            <video
+              ref={videoRef}
+              src={heroProject.video}
+              playsInline
+              controls={expanded}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => setPlaying(false)}
+              className={
+                expanded
+                  ? 'w-full h-full object-contain bg-black'
+                  : 'w-full h-full object-cover object-center'
+              }
+            />
+          )}
+        </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent lg:ltr:bg-gradient-to-r lg:rtl:bg-gradient-to-l lg:from-transparent lg:to-neutral-900" />
 
@@ -203,6 +217,7 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
             <div
               className="relative w-full max-w-5xl bg-neutral-950 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex flex-col"
               onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-6 py-4 bg-neutral-900/90 border-b border-neutral-800 z-10">
                 <div className="flex items-center gap-3 min-w-0">
@@ -220,27 +235,7 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <video
-                ref={modalVideoRef}
-                src={heroProject.video}
-                playsInline
-                controls
-                autoPlay
-                className="w-full aspect-video bg-black"
-                onLoadedMetadata={() => {
-                  const modal = modalVideoRef.current;
-                  const inline = videoRef.current;
-                  if (
-                    modal &&
-                    inline &&
-                    Number.isFinite(inline.currentTime) &&
-                    inline.currentTime > 0.5
-                  ) {
-                    modal.currentTime = inline.currentTime;
-                  }
-                  modal?.play().catch(() => {});
-                }}
-              />
+              <div ref={modalMediaRef} className="w-full aspect-video bg-black" />
             </div>
           </div>,
           document.body
