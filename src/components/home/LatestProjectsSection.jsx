@@ -131,7 +131,7 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
 
   return (
     <div
-      className="lg:col-span-7 relative overflow-hidden min-h-[320px] lg:min-h-[480px] bg-neutral-950"
+      className="lg:col-span-7 relative overflow-hidden aspect-video lg:aspect-auto lg:min-h-[480px] bg-neutral-950"
       onDoubleClick={openExpand}
       onTouchEnd={handleMediaTap}
     >
@@ -327,7 +327,7 @@ export const LatestProjectsSection = ({
               heroProject.video ? 'cursor-default' : 'cursor-pointer'
             }`}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[480px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 lg:min-h-[480px]">
               {/* Media Visual Column */}
               <SpotlightMedia
                 key={heroProject.id}

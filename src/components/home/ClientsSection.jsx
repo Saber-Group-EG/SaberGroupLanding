@@ -14,7 +14,7 @@ const ClientWordmark = ({ logo, name, field }) => {
       <img
         src={logo}
         alt={name}
-        className="h-10 sm:h-12 w-auto object-contain"
+        className="h-10 sm:h-12 w-auto object-contain grayscale opacity-70 contrast-125 transition-all duration-500 ease-out group-hover:grayscale-0 group-hover:opacity-100"
         loading="lazy"
         onError={() => setFailed(true)}
       />
@@ -111,7 +111,7 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
                   <div
                     key={client.id}
                     title={name}
-                    className="flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity"
+                    className="group flex-shrink-0"
                   >
                     <ClientWordmark logo={client.logo} name={name} field={client.field} />
                   </div>
