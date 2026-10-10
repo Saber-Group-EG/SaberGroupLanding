@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Play, Pause, ArrowRight, Sparkles, Clock, MapPin, X } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 
@@ -188,58 +189,62 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
         </div>
       )}
 
-      {/* Expanded player — double-click / double-tap the video, same look as the hero showreel */}
-      {expanded && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-8 bg-black/90 backdrop-blur-xl"
-          onClick={closeExpand}
-          role="dialog"
-          aria-modal="true"
-        >
+      {/* Expanded player — double-click / double-tap the video, same look as the hero showreel.
+          Portaled to document.body: the section's inner container has `relative z-10`,
+          which caps any z-index inside it below the fixed navbar (z-50). */}
+      {expanded &&
+        createPortal(
           <div
-            className="relative w-full max-w-5xl bg-neutral-950 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-8 bg-black/90 backdrop-blur-xl"
+            onClick={closeExpand}
+            role="dialog"
+            aria-modal="true"
           >
-            <div className="flex items-center justify-between px-6 py-4 bg-neutral-900/90 border-b border-neutral-800 z-10">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E5192D] animate-ping shrink-0" />
-                <span className="text-white font-bold text-xs sm:text-sm tracking-widest uppercase truncate">
-                  {heroProject.title}
-                </span>
+            <div
+              className="relative w-full max-w-5xl bg-neutral-950 rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 bg-neutral-900/90 border-b border-neutral-800 z-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#E5192D] animate-ping shrink-0" />
+                  <span className="text-white font-bold text-xs sm:text-sm tracking-widest uppercase truncate">
+                    {heroProject.title}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeExpand}
+                  aria-label={copy.latestProjects.closeVideo || 'Close video'}
+                  className="w-8 h-8 shrink-0 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={closeExpand}
-                aria-label={copy.latestProjects.closeVideo || 'Close video'}
-                className="w-8 h-8 shrink-0 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <video
+                ref={modalVideoRef}
+                src={heroProject.video}
+                playsInline
+                controls
+                autoPlay
+                className="w-full aspect-video bg-black"
+                onLoadedMetadata={() => {
+                  const modal = modalVideoRef.current;
+                  const inline = videoRef.current;
+                  if (
+                    modal &&
+                    inline &&
+                    Number.isFinite(inline.currentTime) &&
+                    inline.currentTime > 0.5
+                  ) {
+                    modal.currentTime = inline.currentTime;
+                  }
+                  modal?.play().catch(() => {});
+                }}
+              />
             </div>
-            <video
-              ref={modalVideoRef}
-              src={heroProject.video}
-              playsInline
-              controls
-              autoPlay
-              className="w-full aspect-video bg-black"
-              onLoadedMetadata={() => {
-                const modal = modalVideoRef.current;
-                const inline = videoRef.current;
-                if (
-                  modal &&
-                  inline &&
-                  Number.isFinite(inline.currentTime) &&
-                  inline.currentTime > 0.5
-                ) {
-                  modal.currentTime = inline.currentTime;
-                }
-                modal?.play().catch(() => {});
-              }}
-            />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

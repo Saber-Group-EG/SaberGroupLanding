@@ -62,6 +62,7 @@ const homeContent = {
       exploreMedia: 'Explore Media',
       playVideo: 'Play video',
       pauseVideo: 'Pause video',
+      closeVideo: 'Close video',
     },
 
     selectedProjects: {
@@ -584,6 +585,7 @@ const homeContent = {
       exploreMedia: 'استكشف الوسائط',
       playVideo: 'تشغيل الفيديو',
       pauseVideo: 'إيقاف الفيديو',
+      closeVideo: 'إغلاق الفيديو',
     },
 
     selectedProjects: {

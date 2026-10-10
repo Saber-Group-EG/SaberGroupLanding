@@ -37,7 +37,7 @@ export const Hero = ({ onOpenShowreel, onSelectProject }) => {
   };
 
   return (
-    <section id="home" className="relative w-full h-[88vh] min-h-[640px] max-h-[850px] bg-neutral-900 overflow-hidden">
+    <section id="home" className="relative w-full h-[88vh] min-h-[640px] max-h-[850px] 2xl:max-h-none bg-neutral-900 overflow-hidden">
 
       {/* Background Visual Scene with Smooth Transitions */}
       <div className="absolute inset-0 transition-opacity duration-700 select-none">
@@ -50,7 +50,7 @@ export const Hero = ({ onOpenShowreel, onSelectProject }) => {
               <img
                 src={slide.image}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover object-[50%_20%]"
                 loading={idx === 0 ? 'eager' : 'lazy'}
                 fetchPriority={idx === 0 ? 'high' : 'auto'}
               />
