@@ -655,14 +655,14 @@ const ProjectDetail = () => {
 
             {/* META TAGS */}
             {(project.tags || []).length > 0 && (
-              <div className="bg-white rounded-[3px] border border-neutral-200 p-2.5 sm:p-3 shadow-2xs">
-                <h3 className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en mb-2">Meta tags</h3>
-                <div className="flex flex-wrap gap-1">
+              <div className="bg-white rounded-[3px] border border-neutral-50 p-0.5 sm:p-1 shadow-2xs">
+                <h3 className="text-[4px] sm:text-[4.5px] font-extrabold uppercase tracking-widest text-neutral-200 font-sans-en mb-0.5">Meta tags</h3>
+                <div className="flex flex-wrap gap-[1px]">
                   {project.tags.map((tag, i) => (
                     <a
                       key={i}
                       href={`/portfolio/${slug}`}
-                      className="inline-flex items-center px-2 py-0.5 bg-neutral-100 hover:bg-red-50 hover:border-red-300 border border-neutral-200 rounded-full text-[9px] sm:text-[10px] font-bold text-neutral-700 hover:text-red-600 transition-all"
+                      className="inline-flex items-center px-[3px] py-px bg-neutral-50 hover:bg-red-50 hover:border-red-300 border border-neutral-50 rounded-full text-[4.5px] sm:text-[5px] font-bold text-neutral-300 hover:text-red-600 transition-all leading-[1.4]"
                     >
                       {tag}
                     </a>
