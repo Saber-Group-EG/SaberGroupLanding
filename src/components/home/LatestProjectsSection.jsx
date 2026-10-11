@@ -332,9 +332,9 @@ export const LatestProjectsSection = ({
               />
 
               {/* Information Column */}
-              <div className="lg:col-span-5 p-8 sm:p-10 flex flex-col justify-between bg-neutral-900">
+              <div className="lg:col-span-5 p-8 sm:p-10 lg:p-7 xl:p-10 flex flex-col justify-between bg-neutral-900">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 lg:mb-2 xl:mb-3">
                     <span>{heroCopy.industry}</span>
                     <span>•</span>
                     <span className="text-[#E5192D] flex items-center gap-1">
@@ -343,19 +343,19 @@ export const LatestProjectsSection = ({
                     </span>
                   </div>
 
-                  <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight leading-tight group-hover:text-[#E5192D] transition-colors mb-3">
+                  <h3 className="text-2xl sm:text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight group-hover:text-[#E5192D] transition-colors mb-3">
                     {heroProject.title}
                   </h3>
 
-                  <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed mb-6">
+                  <p className="text-neutral-400 text-xs sm:text-sm lg:text-xs xl:text-sm leading-relaxed mb-6 lg:mb-4 xl:mb-6">
                     {heroCopy.description}
                   </p>
 
                   {/* Highlights Grid */}
-                  <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-black/40 border border-neutral-800 mb-6">
+                  <div className="grid grid-cols-3 gap-3 lg:gap-2 xl:gap-3 p-4 lg:p-3 xl:p-4 rounded-2xl bg-black/40 border border-neutral-800 mb-6 lg:mb-4 xl:mb-6">
                     {heroCopy.metrics.map((m, i) => (
                       <div key={i} className="text-center">
-                        <div className="text-base sm:text-lg font-black text-white tracking-tight">
+                        <div className="text-base sm:text-lg lg:text-base xl:text-lg font-black text-white tracking-tight">
                           {m.value}
                         </div>
                         <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider mt-0.5">
@@ -373,7 +373,7 @@ export const LatestProjectsSection = ({
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-neutral-800/80 flex items-center justify-between">
+                <div className="pt-6 lg:pt-4 xl:pt-6 border-t border-neutral-800/80 flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-widest text-[#E5192D] group-hover:underline flex items-center gap-1.5">
                     <span>{copy.latestProjects.viewCaseStudy}</span>
                     <ArrowRight className="w-4 h-4 ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />

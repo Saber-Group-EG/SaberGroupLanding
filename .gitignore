@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Large transcode outputs (scripts/transcode-stories.mjs) go to the CDN, not git
+story-renditions
+
 # Environment variables
 .env
 .env.local

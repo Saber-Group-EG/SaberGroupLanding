@@ -1,4 +1,5 @@
 import { Layers, Users, UtensilsCrossed, Stethoscope, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 
 
@@ -8,6 +9,7 @@ const PRODUCT_META = [
     title: 'Jahez CRM',
     badgeColor: 'bg-[#E5192D]/10 text-[#E5192D] border-[#E5192D]/20',
     isSoon: false,
+    servicesProduct: 'crm',
     icon: <Layers className="w-6 h-6 text-[#E5192D]" />,
   },
   {
@@ -15,6 +17,7 @@ const PRODUCT_META = [
     title: 'Jahez ATS',
     badgeColor: 'bg-[#E5192D]/10 text-[#E5192D] border-[#E5192D]/20',
     isSoon: false,
+    servicesProduct: 'ats',
     icon: <Users className="w-6 h-6 text-[#E5192D]" />,
   },
   {
@@ -35,6 +38,7 @@ const PRODUCT_META = [
 
 export const ProductsSection = ({ onOpenContact }) => {
   const copy = useHomeCopy();
+  const navigate = useNavigate();
 
   return (
     <section id="our-products" className="py-24 bg-white border-b border-neutral-200/80 scroll-mt-20">
@@ -117,7 +121,13 @@ export const ProductsSection = ({ onOpenContact }) => {
                 {/* Action Button */}
                 <div className="pt-4 border-t border-neutral-200/60">
                   <button
-                    onClick={onOpenContact}
+                    onClick={() => {
+                      if (product.servicesProduct) {
+                        navigate(`/services?product=${product.servicesProduct}`);
+                      } else {
+                        onOpenContact();
+                      }
+                    }}
                     className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       product.isSoon
                         ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'

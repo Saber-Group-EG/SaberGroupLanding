@@ -5,7 +5,7 @@ import { addLead } from '../api/generalApi.js';
 import servicesContent, {
   tiers as tiersByProduct,
 } from '../content/ServicesContent.js';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 // At the top of ServicesPage, define the ID maps
 const PRODUCT_IDS = {
@@ -25,11 +25,15 @@ const QUOTE_CHANNEL_ID = '6a365b1fee51c7709f1585fc';
 const ServicesPage = () => {
   const { isArabic } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const lang = isArabic ? 'ar' : 'en';
   const { hero, tabs, products, tiersSection, quoteForm } =
     servicesContent[lang];
 
-  const [activeProduct, setActiveProduct] = useState('ats');
+  const productParam = searchParams.get('product');
+  const [activeProduct, setActiveProduct] = useState(
+    productParam === 'crm' || productParam === 'ats' ? productParam : 'ats',
+  );
   const product = products[activeProduct];
 
   const productTiers = tiersByProduct[activeProduct][lang];

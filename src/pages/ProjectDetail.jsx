@@ -11,8 +11,10 @@ import {
   selectRelatedProjects,
 } from '../store/slices/projectsSlice';
 import { getAbsoluteImageUrl, SITE_URL } from '../utils/ogMeta';
+import { getProxiedCoverUrl } from '../utils/imageProxy';
 import {
   Camera,
+  LoaderCircle,
   ArrowRight,
   ArrowLeft,
   ChevronDown,
@@ -632,7 +634,7 @@ const ProjectDetail = () => {
                                 </div>
                               </>
                             ) : (
-                              <img src={item.thumbnail || item.url} alt={item.caption || ''} onLoad={(e) => handleMediaLoad(item.url, e)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                              <GridPhoto item={item} onMediaLoad={(e) => handleMediaLoad(item.url, e)} />
                             )}
                             <div className="absolute inset-0 bg-neutral-950/80 opacity-0 sm:group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-end text-white text-right">
                               <span className="text-[11px] font-bold leading-tight line-clamp-2">{isArabic ? (item.captionAr || item.caption) : item.caption}</span>
@@ -653,14 +655,14 @@ const ProjectDetail = () => {
 
             {/* META TAGS */}
             {(project.tags || []).length > 0 && (
-              <div className="bg-white rounded-[3px] border border-neutral-200 p-4 sm:p-5 shadow-2xs">
-                <h3 className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en mb-3">Meta tags</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="bg-white rounded-[3px] border border-neutral-200 p-2.5 sm:p-3 shadow-2xs">
+                <h3 className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-widest text-neutral-400 font-sans-en mb-2">Meta tags</h3>
+                <div className="flex flex-wrap gap-1">
                   {project.tags.map((tag, i) => (
                     <a
                       key={i}
                       href={`/portfolio/${slug}`}
-                      className="inline-flex items-center px-3 py-1.5 bg-neutral-100 hover:bg-red-50 hover:border-red-300 border border-neutral-200 rounded-full text-[11px] sm:text-xs font-bold text-neutral-700 hover:text-red-600 transition-all"
+                      className="inline-flex items-center px-2 py-0.5 bg-neutral-100 hover:bg-red-50 hover:border-red-300 border border-neutral-200 rounded-full text-[9px] sm:text-[10px] font-bold text-neutral-700 hover:text-red-600 transition-all"
                     >
                       {tag}
                     </a>
@@ -776,10 +778,10 @@ const ProjectDetail = () => {
             className="relative flex items-center justify-center"
             style={{ maxWidth: '100%', maxHeight: zoomLevel > 1 ? 'none' : '88vh', overflow: zoomLevel > 1 ? 'visible' : 'hidden' }}
           >
-            <img
+            <LightboxImage
+              key={lightboxPhoto.url}
               ref={lightboxImgRef}
-              src={lightboxPhoto.url}
-              alt={lightboxPhoto.title}
+              photo={lightboxPhoto}
               className="object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10 max-w-full max-h-[88vh]"
               style={{
                 transform: `scale(${zoomLevel}) translate(${zoomPosition.x}%, ${zoomPosition.y}%)`,
@@ -791,7 +793,6 @@ const ProjectDetail = () => {
               onMouseDown={handleZoomMouseDown}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
-              draggable={false}
             />
           </div>
           <button onClick={handleNextLightbox} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]">
@@ -818,6 +819,81 @@ const ProjectDetail = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+/* Grid photo: small proxied preview with a per-cell loading spinner.
+   Also invisibly preloads the full-quality original (lazy = only near the
+   viewport) so the lightbox can show it instantly from cache. */
+const GridPhoto = ({ item, onMediaLoad }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <LoaderCircle className="w-6 h-6 text-white/80 animate-spin" aria-hidden="true" />
+        </div>
+      )}
+      <img
+        src={getProxiedCoverUrl(item.thumbnail || item.url, { width: 640, quality: 60 })}
+        alt={item.caption || ''}
+        onLoad={(e) => { setLoaded(true); onMediaLoad(e); }}
+        onError={() => setLoaded(true)}
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        loading="lazy"
+        decoding="async"
+      />
+      <img
+        src={item.thumbnail || item.url}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        className="absolute w-px h-px opacity-0 pointer-events-none -z-10"
+      />
+    </>
+  );
+};
+
+/* Lightbox photo: a small proxied preview paints instantly (spinner covers it
+   on a cache miss), then the full-quality original crossfades on top once it
+   finishes loading — normally already cached by the grid's hidden preload. */
+const LightboxImage = ({ photo, className, style, onWheel, onDoubleClick, onMouseDown, onTouchStart, onTouchMove, ref }) => {
+  const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [fullReady, setFullReady] = useState(false);
+  return (
+    <div className={`relative inline-flex ${fullReady ? '' : 'min-w-[240px] min-h-[300px]'}`}>
+      {!previewLoaded && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+          <LoaderCircle className="w-10 h-10 text-white/70 animate-spin" aria-hidden="true" />
+        </div>
+      )}
+      <img
+        src={getProxiedCoverUrl(photo.url, { width: 1600, quality: 70 })}
+        alt=""
+        aria-hidden="true"
+        onLoad={() => setPreviewLoaded(true)}
+        onError={() => setPreviewLoaded(true)}
+        className={`${className} absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${fullReady ? 'opacity-0' : 'opacity-100'}`}
+        style={style}
+        draggable={false}
+      />
+      <img
+        ref={ref}
+        src={photo.url}
+        alt={photo.title}
+        className={`${className} relative z-10 transition-opacity duration-200 ${fullReady ? 'opacity-100' : 'opacity-0'}`}
+        style={style}
+        onLoad={() => setFullReady(true)}
+        onError={() => setFullReady(true)}
+        onWheel={onWheel}
+        onDoubleClick={onDoubleClick}
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        draggable={false}
+      />
     </div>
   );
 };

@@ -9,6 +9,12 @@ const CONTROL_TIMEOUT_MS = 8000;
 const IDLE_TIMEOUT_MS = 8000;
 const HIDDEN_DELAY_MS = 5000;
 const FALLBACK_DELAY_MS = 2000;
+// Every warm-up candidate is a material video, and until the `-story`
+// renditions are uploaded each one is a full-size original (tens of MB), so
+// the idle queue is capped to a handful instead of every story's first
+// video. The cap stays once the small renditions land — it just finishes
+// sooner.
+const WARMUP_QUEUE_CAP = 3;
 
 const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//.test(value);
 
@@ -66,19 +72,25 @@ export function requestVideoPrefetch(urls) {
   }
 }
 
+// The next videos beyond the dual slots, each preferring the small `-story`
+// rendition (storyVideoUrl) over the original. Until those renditions exist
+// on the CDN the candidates 404 cheaply — nothing is cached and playback
+// falls back to the original, i.e. today's behaviour — while once they are
+// uploaded every prefetched byte is the small file the viewer will play.
 export function nextStoryVideoUrls(stories, pIdx, mIdx) {
   const list = Array.isArray(stories) ? stories : [];
   const urls = [];
-  const push = (url) => {
+  const push = (material) => {
     if (urls.length >= 2) return;
+    const url = material?.storyVideoUrl || material?.videoUrl;
     if (typeof url === 'string' && url.trim() !== '') urls.push(url);
   };
 
-  push(list[pIdx]?.materials?.[mIdx + 2]?.videoUrl);
+  push(list[pIdx]?.materials?.[mIdx + 2]);
   for (let p = pIdx + 1; p < list.length && urls.length < 2; p += 1) {
     const materials = list[p]?.materials || [];
     for (let m = 0; m < materials.length && urls.length < 2; m += 1) {
-      push(materials[m]?.videoUrl);
+      push(materials[m]);
     }
   }
   return urls;
@@ -118,7 +130,16 @@ export function startIdleVideoWarmup(urls) {
   let queue = null;
   try {
     if ('serviceWorker' in navigator && connectionAllowed()) {
-      const list = [...new Set((Array.isArray(urls) ? urls : []).filter(isHttpUrl))];
+      // Home.jsx feeds the first video of EVERY story here; uncapped, that is
+      // potentially hundreds of MB pulled down while the tab sits idle. The
+      // first few stories are enough to make the landing page feel instant,
+      // and once a viewer starts watching, requestVideoPrefetch /
+      // nextStoryVideoUrls already prefetch the next 2 videos per view — which
+      // is what actually covers progression through the rest of the list.
+      // The URLs are `-story` rendition candidates: they 404 (and are never
+      // cached) until the files are uploaded, and from then on every warm
+      // byte is the small file instead of the original.
+      const list = [...new Set((Array.isArray(urls) ? urls : []).filter(isHttpUrl))].slice(0, WARMUP_QUEUE_CAP);
       if (list.length > 0) queue = list;
     }
   } catch {

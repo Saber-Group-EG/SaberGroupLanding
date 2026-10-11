@@ -41,8 +41,12 @@ const Home = () => {
   const { members: teamMembers, loading: castLoading } = useCastMembers();
 
   // stories re-memoises on language change, so key on the URL list itself to
-  // keep the warm-up from restarting on every translation switch.
-  const warmupKey = stories.map((s) => s.materials?.[0]?.videoUrl || '').join('|');
+  // keep the warm-up from restarting on every translation switch. The list is
+  // the rendition candidates: 404-cheap while the `-story` files are still
+  // being uploaded, small and warmable the moment they are.
+  const warmupKey = stories
+    .map((s) => s.materials?.[0]?.storyVideoUrl || s.materials?.[0]?.videoUrl || '')
+    .join('|');
 
   useEffect(() => {
     if (!warmupKey) return undefined;

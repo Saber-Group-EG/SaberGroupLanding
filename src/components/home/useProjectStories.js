@@ -20,6 +20,27 @@ export const getStoryInitials = (title) => {
 
 const VIDEO_URL_RE = /\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?|#|$)/i;
 
+// The story viewer asks for a phone-first rendition next to the original on
+// the CDN (`<name>-story.mp4`, produced by scripts/transcode-stories.mjs).
+// Every supported extension maps to that same `.mp4` name because the
+// transcoder always emits mp4; non-remote or unknown files are left alone so
+// playback still has an original to fall back to.
+const STORY_RENDITION_RE = /\.(mp4|webm|mov|m4v)$/i;
+
+export const storyRenditionUrl = (url) => {
+  if (typeof url !== 'string') return url;
+  const trimmed = url.trim();
+  if (!/^https?:\/\/\S+$/i.test(trimmed)) return url;
+  // Insert before any query/fragment: `clip.mp4?sig=x` must become
+  // `clip-story.mp4?sig=x`, never `clip.mp4-story.mp4`.
+  const cut = trimmed.search(/[?#]/);
+  const path = cut === -1 ? trimmed : trimmed.slice(0, cut);
+  const tail = cut === -1 ? '' : trimmed.slice(cut);
+  if (!STORY_RENDITION_RE.test(path)) return url;
+  if (/-story\.mp4$/i.test(path)) return url;
+  return `${path.slice(0, path.lastIndexOf('.'))}-story.mp4${tail}`;
+};
+
 // Video files fed to the image proxy render as a black card, so anything that
 // isn't a real image URL must be skipped.
 const isRenderableImage = (url) =>
@@ -99,7 +120,11 @@ export const useProjectStories = () => {
 
         return {
           id: `${projectId}-${index}`,
+          // videoUrl stays the ORIGINAL: ProjectDetail, sharing and any other
+          // full-quality consumer rely on it — only the story surfaces below
+          // ask for the rendition.
           videoUrl: video.url || '',
+          storyVideoUrl: storyRenditionUrl(video.url || ''),
           thumbnail: resolveThumbnail(video, project),
           fallbackThumbnail: resolveProjectImage(project),
           description: caption || projectDescription || '',
@@ -112,6 +137,9 @@ export const useProjectStories = () => {
         {
           id: projectId,
           videoUrl: firstMaterial.videoUrl,
+          // Root mirrors the first material for consumers that read the story
+          // object directly instead of reaching into materials.
+          storyVideoUrl: firstMaterial.storyVideoUrl,
           thumbnail: firstMaterial.thumbnail,
           fallbackThumbnail: firstMaterial.fallbackThumbnail,
           avatarImage: resolveAvatarImage(project),

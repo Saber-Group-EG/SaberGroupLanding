@@ -1,39 +1,51 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const footerLogo = '/FOOTER.png';
 
+// The footer is shared by every route (MainLayout), so it inherits each page's
+// content container — match the classes the page itself uses.
+const DEFAULT_CONTAINER = 'max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12';
+
+const EXACT_CONTAINERS = {
+  '/': DEFAULT_CONTAINER,
+  '/about': 'max-w-5xl mx-auto px-4 md:px-6',
+  '/address': 'max-w-5xl mx-auto px-4 md:px-6',
+  '/contact': 'container mx-auto px-4 md:px-6',
+  '/policies': 'max-w-4xl mx-auto px-4 md:px-6',
+  '/terms': 'max-w-4xl mx-auto px-4 md:px-6',
+  '/join-us': 'container mx-auto px-4 md:px-6',
+  '/join-us/check-application': 'container mx-auto px-4 md:px-6 max-w-3xl',
+  '/checkout': 'max-w-2xl mx-auto px-4 md:px-6',
+  '/checkout/payment': 'max-w-2xl mx-auto px-4 md:px-6',
+  '/checkout/complete': 'max-w-2xl mx-auto px-4 md:px-6',
+  '/coming-soon': 'container mx-auto px-4 md:px-6',
+};
+
+const PREFIX_CONTAINERS = [
+  ['/portfolio', 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'],
+  ['/services', 'max-w-5xl mx-auto px-4 md:px-6'],
+  ['/join-us', 'container mx-auto px-4 md:px-6 max-w-4xl'],
+];
+
+const containerForPath = (pathname) => {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  const exact = EXACT_CONTAINERS[path];
+  if (exact) return exact;
+  const prefixMatch = PREFIX_CONTAINERS.find(
+    ([prefix]) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+  return prefixMatch ? prefixMatch[1] : DEFAULT_CONTAINER;
+};
+
 const Footer = () => {
   const { t, isArabic } = useTranslation();
+  const location = useLocation();
+  const containerClass = containerForPath(location.pathname);
   const currentYear = new Date().getFullYear();
 
   const displayedYear = String(currentYear);
-  const rawPhone = t('contact:phoneNumber') || '01080099757';
-  const displayedPhone = isArabic
-    ? String(rawPhone).replace(/ /g, '\u00A0')
-    : rawPhone;
-  const rawEmail = t('contact:emailAddress') || 'info@sabergroup-eg.com';
-
-  const renderWithLtrNumbers = (rawText) => {
-    if (!rawText) return rawText;
-    if (!isArabic) return rawText;
-    const parts = String(rawText).split(/(\d+)/g);
-    return parts.map((part, idx) => {
-      if (/^\d+$/.test(part)) {
-        return (
-          <span
-            key={idx}
-            dir="ltr"
-            className="inline-block font-sans text-lg font-semibold"
-          >
-            {part}
-          </span>
-        );
-      }
-      return <span key={idx}>{part}</span>;
-    });
-  };
 
   const policyLinks = [
     {
@@ -58,7 +70,7 @@ const Footer = () => {
 
   return (
     <footer className="bg-dark-900 text-white">
-      <div className="container mx-auto px-4 md:px-6">
+      <div className={containerClass}>
         {/* Main Contact & Location Section */}
         <div className="py-12 md:py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -186,13 +198,14 @@ const Footer = () => {
               </h4>
 
               <div className="space-y-4">
-                <div className="flex items-start gap-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
                     <svg
-                      className="w-5 h-5 text-primary-500"
+                      className="w-4 h-4 text-primary-500 shrink-0 mt-0.5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"
@@ -207,31 +220,58 @@ const Footer = () => {
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
+                    <p className="text-sm leading-relaxed">
+                      <span className="text-white font-semibold">
+                        {t('contact:addressTitle') || 'Headquarters'}
+                      </span>
+                      <span className="text-light-400">{' : '}</span>
+                      <a
+                        href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-light-300 hover:text-primary-300 transition-colors"
+                      >
+                        {t('contact:address') ||
+                          'El-gharbia Tanta, El-nady St in front of Tanta Club Gate, Above Waffle Art'}
+                      </a>
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-light-300 font-medium mb-1">
-                      {t('contact:addressTitle') || 'Headquarters'}
-                    </p>
-                    <a
-                      href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-light-300 leading-relaxed hover:text-primary-300 transition-colors duration-200 inline-block text-sm"
+
+                  <div className="flex items-start gap-2">
+                    <svg
+                      className="w-4 h-4 text-primary-500 shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
-                      {t('contact:address') ||
-                        'El-gharbia Tanta, El-nady St in front of Tanta Club Gate, Above Waffle Art'}
-                    </a>
-                    <p className="text-light-300 font-medium mb-1 mt-3">
-                      {t('contact:secondaryAddressTitle') || 'Studio'}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <p className="text-sm leading-relaxed">
+                      <span className="text-white font-semibold">
+                        {t('contact:secondaryAddressTitle') || 'Studio'}
+                      </span>
+                      <span className="text-light-400">{' : '}</span>
+                      <a
+                        href="https://www.google.com/maps/place/articka/@30.7958747,30.9888239,16z/data=!3m1!4b1!4m6!3m5!1s0x14f7c94d9d544d5b:0xabf04ad58406b6c1!8m2!3d30.7958747!4d30.9888239!16s%2Fg%2F11h5w69h6d"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-light-300 hover:text-primary-300 transition-colors"
+                      >
+                        {t('contact:secondaryAddress')}
+                      </a>
                     </p>
-                    <a
-                      href="https://www.google.com/maps/place/articka/@30.7958747,30.9888239,16z/data=!3m1!4b1!4m6!3m5!1s0x14f7c94d9d544d5b:0xabf04ad58406b6c1!8m2!3d30.7958747!4d30.9888239!16s%2Fg%2F11h5w69h6d"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-light-300 leading-relaxed hover:text-primary-300 transition-colors duration-200 inline-block text-sm"
-                    >
-                      {t('contact:secondaryAddress')}
-                    </a>
                   </div>
                 </div>
 
@@ -306,38 +346,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Created By */}
-        <div className="border-t border-dark-800 py-4">
-          <div className="text-center">
-            <p className="text-light-500 text-xs">
-              {isArabic ? (
-                <>
-                  تطوير&nbsp;
-                  <a
-                    href="https://www.sabergroup-eg.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary-500 hover:underline"
-                  >
-                    SABERGROUPSTUDIOS ©
-                  </a>
-                </>
-              ) : (
-                <>
-                  Created by&nbsp;
-                  <a
-                    href="https://www.sabergroup-eg.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary-500 hover:underline"
-                  >
-                    SABERGROUPSTUDIOS ©
-                  </a>
-                </>
-              )}
-            </p>
-          </div>
-        </div>
       </div>
     </footer>
   );
