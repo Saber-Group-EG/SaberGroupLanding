@@ -20,25 +20,28 @@ export const getStoryInitials = (title) => {
 
 const VIDEO_URL_RE = /\.(mp4|webm|ogg|mov|m4v|avi|mkv)(\?|#|$)/i;
 
-// The story viewer asks for a phone-first rendition next to the original on
-// the CDN (`<name>-story.mp4`, produced by scripts/transcode-stories.mjs).
-// Every supported extension maps to that same `.mp4` name because the
-// transcoder always emits mp4; non-remote or unknown files are left alone so
-// playback still has an original to fall back to.
+// The story viewer plays a phone-first 720p rendition instead of the 30-80 MB
+// original. Videos on our CDN zone are resized on the fly by Cloudflare Media
+// Transformations (`/cdn-cgi/media/<options>/<source path>`), which also puts
+// the metadata first so playback starts while the rest still downloads. The
+// result is cached at the edge, so nothing has to be re-uploaded. Any URL that
+// is not on our zone, or not a plain video file, is returned untouched, and
+// the viewer still falls back to the original if the rendition errors.
 const STORY_RENDITION_RE = /\.(mp4|webm|mov|m4v)$/i;
+const STORY_CDN_ORIGIN = 'https://upload.ats.sabergroup-eg.com';
+const STORY_TRANSFORM_OPTIONS = 'mode=video,width=720,fit=scale-down';
 
 export const storyRenditionUrl = (url) => {
   if (typeof url !== 'string') return url;
   const trimmed = url.trim();
-  if (!/^https?:\/\/\S+$/i.test(trimmed)) return url;
-  // Insert before any query/fragment: `clip.mp4?sig=x` must become
-  // `clip-story.mp4?sig=x`, never `clip.mp4-story.mp4`.
+  if (!trimmed.startsWith(`${STORY_CDN_ORIGIN}/`)) return url;
+  // Keep any query/fragment out of the path test, but pass the URL through
+  // intact so signed or versioned links still resolve.
   const cut = trimmed.search(/[?#]/);
   const path = cut === -1 ? trimmed : trimmed.slice(0, cut);
-  const tail = cut === -1 ? '' : trimmed.slice(cut);
   if (!STORY_RENDITION_RE.test(path)) return url;
-  if (/-story\.mp4$/i.test(path)) return url;
-  return `${path.slice(0, path.lastIndexOf('.'))}-story.mp4${tail}`;
+  if (trimmed.startsWith(`${STORY_CDN_ORIGIN}/cdn-cgi/`)) return url;
+  return `${STORY_CDN_ORIGIN}/cdn-cgi/media/${STORY_TRANSFORM_OPTIONS}/${trimmed.slice(STORY_CDN_ORIGIN.length + 1)}`;
 };
 
 // Video files fed to the image proxy render as a black card, so anything that
