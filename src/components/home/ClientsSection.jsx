@@ -8,29 +8,48 @@ const SKELETON_IDS = ['client-1', 'client-2', 'client-3', 'client-4', 'client-5'
 
 const ClientWordmark = ({ logo, name, field }) => {
   const [failed, setFailed] = useState(false);
+  // 'compact' = emblem / square-ish mark, 'balanced' = normal wordmark,
+  // 'wide' = very wide wordmark that would dominate if sized by height alone.
+  const [fit, setFit] = useState('balanced');
 
   if (logo && !failed) {
+    const heightCls =
+      fit === 'compact' ? 'h-full' : fit === 'balanced' ? 'h-10 sm:h-12' : 'h-9 sm:h-11';
     return (
-      <img
-        src={logo}
-        alt={name}
-        className="h-10 sm:h-12 w-auto object-contain grayscale opacity-70 contrast-125 transition-all duration-500 ease-out group-hover:grayscale-0 group-hover:opacity-100"
-        loading="lazy"
-        onError={() => setFailed(true)}
-      />
+      <div className="flex h-14 sm:h-[72px] min-w-[76px] sm:min-w-[104px] items-center justify-center">
+        <img
+          src={logo}
+          alt={name}
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            // Emblems keep a tiny footprint when sized like a wordmark, so let
+            // them fill the whole slot to preserve their true shape and size.
+            if (ratio <= 1.8) setFit('compact');
+            else if (ratio <= 3) setFit('balanced');
+            else setFit('wide');
+          }}
+          className={`${heightCls} w-auto max-w-[160px] sm:max-w-[200px] object-contain object-center grayscale opacity-70 contrast-125 transition-all duration-500 ease-out group-hover:grayscale-0 group-hover:opacity-100`}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-start">
-      <span className="text-lg sm:text-xl font-black uppercase tracking-tight text-neutral-500 whitespace-nowrap max-w-[200px] sm:max-w-[260px] line-clamp-1">
-        {name}
-      </span>
-      {field && (
-        <span className="mt-1 text-[10px] uppercase tracking-[0.2em] text-neutral-600 max-w-[200px] sm:max-w-[260px] line-clamp-2">
-          {field}
+    <div className="flex h-14 sm:h-[72px] min-w-[76px] sm:min-w-[104px] items-center">
+      <div className="flex flex-col items-start">
+        <span className="text-lg sm:text-xl font-black uppercase tracking-tight text-neutral-500 whitespace-nowrap max-w-[200px] sm:max-w-[260px] line-clamp-1">
+          {name}
         </span>
-      )}
+        {field && (
+          <span className="mt-1 text-[10px] uppercase tracking-[0.2em] text-neutral-600 max-w-[200px] sm:max-w-[260px] line-clamp-2">
+            {field}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
@@ -41,7 +60,7 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
   const { containerRef, canScrollStart, canScrollEnd, scrollByStep, setAutoScrollPaused } =
     useHorizontalScroll({
       itemCount: clients.length,
-      gap: 32,
+      gap: 28,
       autoScroll: true,
       autoScrollSpeed: 35,
     });
@@ -100,7 +119,7 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
             aria-roledescription="carousel"
             aria-label={copy.clients.label}
             aria-busy={loading}
-            className="flex items-center gap-8 sm:gap-16 lg:gap-20 overflow-x-auto no-scrollbar scroll-smooth w-full py-4 px-2"
+            className="flex items-center gap-2.5 sm:gap-4 lg:gap-5 overflow-x-auto no-scrollbar scroll-smooth w-full py-4 px-2"
           >
             {showSkeletons ? (
               <div role="status" className="flex items-center gap-8 shrink-0">
@@ -108,7 +127,7 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
                   <div
                     key={id}
                     aria-hidden="true"
-                    className="h-10 w-28 rounded bg-neutral-200 animate-pulse flex-shrink-0"
+                    className="h-14 sm:h-[72px] min-w-[76px] sm:min-w-[104px] rounded bg-neutral-200 animate-pulse flex-shrink-0"
                   />
                 ))}
               </div>
