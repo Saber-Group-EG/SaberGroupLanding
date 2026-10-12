@@ -230,6 +230,27 @@ const Portfolio = () => {
     }
   };
 
+  // Keeps every grid row full: the grid has 3 columns and an isHero card spans 2,
+  // so when a wide card doesn't fit in the columns left in the current row, the
+  // next normal card is pulled beside it instead of leaving an empty cell.
+  const packHeroCards = (list, cols = 3) => {
+    const spanOf = (proj) => (proj.isHero ? 2 : 1);
+    const remaining = [...list];
+    const ordered = [];
+    let col = 0;
+    while (remaining.length > 0) {
+      const idx = remaining.findIndex((proj) => col + spanOf(proj) <= cols);
+      if (idx === -1) {
+        col = 0;
+        continue;
+      }
+      const [proj] = remaining.splice(idx, 1);
+      ordered.push(proj);
+      col = (col + spanOf(proj)) % cols;
+    }
+    return ordered;
+  };
+
   const filteredProjects = publishedProjects.filter((proj) => {
     if (sectorId !== 'all' && proj.sectorId?.trim().toLowerCase() !== sectorId) return false;
     if (activeTags.length > 0) {
@@ -242,12 +263,12 @@ const Portfolio = () => {
     return true;
   });
 
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
+  const sortedProjects = packHeroCards([...filteredProjects].sort((a, b) => {
     if (sortBy === 'featured') return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
     if (sortBy === 'photos') return (b.photosCount || 10) - (a.photosCount || 10);
     if (sortBy === 'reels') return (b.videosCount || 0) - (a.videosCount || 0);
     return (a.order != null ? a.order : 999) - (b.order != null ? b.order : 999);
-  });
+  }));
 
   // Scroll-reveal for project cards
   const cardsRef = useRef(new Map());
@@ -703,19 +724,24 @@ const Portfolio = () => {
                       {renderProjectIcon(proj)}
                       <div className="hidden sm:flex absolute inset-0 flex-col justify-between p-3 sm:p-5 lg:p-7">
                         <div className="h-7 sm:h-10 shrink-0" />
-                        <div className={`flex flex-col my-auto ${isArabic ? 'text-right' : 'text-left'}`}>
-                          <h3 className={`text-base sm:text-2xl lg:text-[40px] font-black uppercase text-white leading-none tracking-tight line-clamp-2 drop-shadow-sm ${!isArabic ? 'font-sans-en' : ''}`}>
-                            {fullTitle}
+                        <div className={`flex flex-col mt-auto mb-2 sm:mb-3 ${isArabic ? 'text-right' : 'text-left'}`}>
+                          <h3 className={`text-sm sm:text-xl lg:text-[34px] font-black uppercase text-white leading-none tracking-tight line-clamp-2 drop-shadow-sm transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
+                            {firstWord}
                           </h3>
-                          <span className="block w-6 sm:w-8 h-[2px] bg-red-800 rounded-full my-1 sm:my-2" />
+                          {restTitle && (
+                            <p className={`mt-1 sm:mt-1.5 text-[8px] sm:text-[10px] lg:text-[13px] font-medium uppercase tracking-[0.14em] text-white/70 line-clamp-1 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-75 lg:group-hover:opacity-100 lg:group-hover:translate-y-0 ${!isArabic ? 'font-sans-en' : ''}`}>
+                              {restTitle}
+                            </p>
+                          )}
+                          <span className="block w-6 sm:w-8 h-[2px] bg-red-800 rounded-full my-1 sm:my-2 transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-150 lg:group-hover:opacity-100 lg:group-hover:translate-y-0" />
                           {description && (
-                            <p className="text-[8.5px] sm:text-[11px] lg:text-xs text-white/75 leading-snug line-clamp-1 sm:line-clamp-2 max-w-[95%] sm:max-w-md">
+                            <p className="text-[8.5px] sm:text-[11px] lg:text-xs text-white/75 leading-snug line-clamp-1 sm:line-clamp-2 max-w-[95%] sm:max-w-md transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-225 lg:group-hover:opacity-100 lg:group-hover:translate-y-0">
                               {description}
                             </p>
                           )}
                         </div>
                         <div className="flex items-center justify-between gap-1 sm:gap-2 shrink-0">
-                          {renderCounts(proj, false)}
+                          {renderCounts(proj, true)}
                           {renderViewButton(false, true)}
                         </div>
                       </div>
