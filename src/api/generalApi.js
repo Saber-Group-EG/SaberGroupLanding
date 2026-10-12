@@ -54,3 +54,15 @@ export async function fetchGovernorates(params = { deleted: false, PageCount: 10
   // Use CRM backend for governorate endpoints so the configured CRM base URL is used
   return api.get('/government/public', { params });
 }
+
+/**
+ * Fetch subcategories for a company (public).
+ * Returns the full axios response — body lives in `res.data.data`.
+ * Each item: { _id, name (string or { en, ar }), slug, category, company, deleted }
+ */
+export async function fetchCompanySubCategories(
+  companyId = import.meta.env.VITE_CRM_COMPANY_ID,
+  params = { deleted: false, PageCount: 1000, page: 1 },
+) {
+  return api.get(`/subCategory/public/company/${companyId}`, { params });
+}

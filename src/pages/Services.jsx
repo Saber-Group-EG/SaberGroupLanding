@@ -6,21 +6,16 @@ import servicesContent, {
   tiers as tiersByProduct,
 } from '../content/ServicesContent.js';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-
-// At the top of ServicesPage, define the ID maps
-const PRODUCT_IDS = {
-  crm: '6a365a92ee51c7709f157156',
-  ats: '6a365a92ee51c7709f157158',
-  both: ['6a365a92ee51c7709f157156', '6a365a92ee51c7709f157158'], // both products
-};
-
-const TIER_IDS = {
-  Starter: '6a3659caee51c7709f1563f6',
-  Growth: '6a3659caee51c7709f156477',
-  Enterprise: '6a3659caee51c7709f156453',
-};
+import useSubCategories from '../hooks/useSubCategories';
 
 const QUOTE_CHANNEL_ID = '6a365b1fee51c7709f1585fc';
+
+const normalizeKey = (value) =>
+  (value || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9؀-ۿ]/g, '');
 
 const ServicesPage = () => {
   const { isArabic } = useTranslation();
@@ -40,6 +35,34 @@ const ServicesPage = () => {
   const tierPlans = productTiers.plans;
   const rowLabels = productTiers.rowLabels;
   const rowOrder = tiersByProduct[activeProduct].rowOrder;
+
+  const { subCategories } = useSubCategories(isArabic);
+  const unavailableTitle = isArabic ? 'غير متاح حالياً' : 'Currently unavailable';
+
+  const findSubId = (matchKey) => {
+    if (!matchKey) return '';
+    const match = subCategories.find(
+      (sub) => normalizeKey(sub.slug) === matchKey || normalizeKey(sub.name) === matchKey,
+    );
+    return match?._id || '';
+  };
+
+  const productIdByKey = {
+    crm: findSubId('crm'),
+    ats: findSubId('ats'),
+  };
+
+  const tierNameKeys = [
+    ...tiersByProduct[activeProduct].en.plans.map((plan) => normalizeKey(plan.name)),
+    ...tiersByProduct[activeProduct].ar.plans.map((plan) => normalizeKey(plan.name)),
+  ];
+
+  const resolveTierId = (planName) => {
+    const key = normalizeKey(planName);
+    if (!key || !tierNameKeys.includes(key)) return '';
+    const match = subCategories.find((sub) => normalizeKey(sub.name) === key);
+    return match?._id || '';
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -95,22 +118,20 @@ const ServicesPage = () => {
     setIsSubmitting(true);
 
     try {
-      const productIds = Array.isArray(PRODUCT_IDS[formData.product])
-        ? PRODUCT_IDS[formData.product]
-        : PRODUCT_IDS[formData.product]
-          ? [PRODUCT_IDS[formData.product]]
-          : [];
+      const productIds =
+        formData.product === 'both'
+          ? [productIdByKey.crm, productIdByKey.ats]
+          : [productIdByKey[formData.product]];
 
-      const subCategories = [
-        ...productIds,
-        formData.tier ? TIER_IDS[formData.tier] : null,
-      ].filter(Boolean);
+      const tierId = formData.tier ? resolveTierId(formData.tier) : '';
+
+      const subCategoryIds = [...productIds, tierId].filter(Boolean);
 
       const payload = {
         name: formData.name,
         phone: formData.phone,
         status: 'Pending',
-        subCategories,
+        subCategories: subCategoryIds,
         channels: [QUOTE_CHANNEL_ID],
         message: {
           message: [
@@ -318,12 +339,15 @@ const ServicesPage = () => {
                   {tierPlans.map((tier, i) => {
                     const isEnterprise =
                       tier.name === 'Enterprise' || tier.name === 'المؤسسات';
+                    const tierAvailable = Boolean(resolveTierId(tier.name));
                     return (
                       <td
                         key={tier.name}
                         className={`p-4 rounded-b-xl ${tier.highlighted ? 'bg-primary-500/10' : ''}`}
                       >
                         <button
+                          disabled={!tierAvailable}
+                          title={tierAvailable ? undefined : unavailableTitle}
                           onClick={() => {
                             if (isEnterprise) {
                               selectTierFromTable(tier.name);
@@ -331,7 +355,7 @@ const ServicesPage = () => {
                               navigate(`/services/${activeProduct}/${i}`);
                             }
                           }}
-                          className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                          className={`w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                             tier.highlighted
                               ? 'bg-primary-500 text-white hover:bg-primary-600'
                               : 'bg-white dark:bg-dark-800 border border-light-200 dark:border-dark-700 text-light-800 dark:text-light-200 hover:border-primary-500'
@@ -449,11 +473,19 @@ const ServicesPage = () => {
                   <option value="">
                     {isArabic ? '— اختر —' : '— Select —'}
                   </option>
-                  {tierPlans.map((t) => (
-                    <option key={t.name} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
+                  {tierPlans.map((t) => {
+                    const available = Boolean(resolveTierId(t.name));
+                    return (
+                      <option
+                        key={t.name}
+                        value={t.name}
+                        disabled={!available}
+                        title={available ? undefined : unavailableTitle}
+                      >
+                        {t.name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div>

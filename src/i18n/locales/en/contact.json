@@ -2,6 +2,8 @@
   "title": "Transform Your Operations",
   "subtitle": "Tell us about your project and let's discuss how we can help your business scale with custom software solutions.",
   "tagline": "Let's Build Something Amazing",
+  "badge": "LET'S TALK",
+  "formEyebrow": "START A PROJECT",
 
   "contactInfoTitle": "Contact Information",
   "addressTitle": "Tanta Office",
@@ -28,6 +30,7 @@
 
   "formTitle": "Tell Us About Your Project",
   "formSubtitle": "Fill out the form and we'll get back to you within 24 hours",
+  "serviceLabel": "Service Needed",
   "name": "Full Name",
   "namePlaceholder": "Jane Doe",
   "company": "Company Name",
@@ -54,6 +57,7 @@
   "emailRequired": "Email is required",
   "emailInvalid": "Please enter a valid email",
   "phoneRequired": "Phone is required",
+  "countryRequired": "Country is required",
   "validationError": "Validation Error",
   "submitError": "An error occurred. Please try again.",
   "error": "Error",
@@ -77,6 +81,10 @@
   "emailUs": "Email Us",
   "whatsapp": "WhatsApp",
   "findUs": "Find Us",
+
+  "ctaHeading": "Let's Build Something Great Together",
+  "ctaText": "Tell us what you need — we reply within 24 hours.",
+  "ctaButton": "SEND AN INQUIRY",
 
   "heroHeading": "Transform Your Operations with Scalable Software",
   "heroSubheading": "Saber Group combines robust engineering, agile development, and scalable architecture to build custom CRMs, ATS, landing pages, and systems that streamline workflows and drive measurable growth.",

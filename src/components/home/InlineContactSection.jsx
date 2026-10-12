@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin, Send, Check } from 'lucide-react';import Swal from
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
 import useLocations from '../../hooks/useLocations';
+import useSubCategories from '../../hooks/useSubCategories';
 import { addLead } from '../../api/generalApi';
 
 export const InlineContactSection = () => {
@@ -21,12 +22,13 @@ export const InlineContactSection = () => {
     onCityChange,
     formatName,
   } = useLocations(isArabic);
+  const { subCategories } = useSubCategories(isArabic);
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    service: 'media-production',
+    service: '',
     message: '',
   });
 
@@ -41,6 +43,10 @@ export const InlineContactSection = () => {
 
     setIsSubmitting(true);
     try {
+      const selectedService =
+        subCategories.length > 0
+          ? formData.service || subCategories[0]?._id || ''
+          : '';
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -50,7 +56,7 @@ export const InlineContactSection = () => {
         ...(government ? { government } : {}),
         ...(city ? { city } : {}),
         addresses: [],
-        subCategories: [formData.service],
+        subCategories: selectedService ? [selectedService] : [],
         campaigns: [],
         channels: [],
         files: [],
@@ -91,7 +97,7 @@ export const InlineContactSection = () => {
       name: '',
       email: '',
       phone: '',
-      service: 'media-production',
+      service: '',
       message: '',
     });
   };
@@ -229,30 +235,32 @@ export const InlineContactSection = () => {
                 </div>
 
                 {/* Service Selection */}
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-2">
-                    {contactCopy.serviceLabel}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {contactCopy.services.map((svc) => {
-                      const isSelected = formData.service === svc.id;
-                      return (
-                        <button
-                          key={svc.id}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, service: svc.id })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide border transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#E5192D] text-white border-[#E5192D] shadow-sm'
-                              : 'bg-neutral-900/90 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
-                          }`}
-                        >
-                          {svc.label}
-                        </button>
-                      );
-                    })}
+                {subCategories.length > 0 && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-2">
+                      {contactCopy.serviceLabel}
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {subCategories.map((sub) => {
+                        const isSelected = formData.service === sub._id;
+                        return (
+                          <button
+                            key={sub._id}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, service: sub._id })}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide border transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#E5192D] text-white border-[#E5192D] shadow-sm'
+                                : 'bg-neutral-900/90 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
+                            }`}
+                          >
+                            {sub.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Compact 2-Column Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

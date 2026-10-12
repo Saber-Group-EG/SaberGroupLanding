@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
 import { useTranslation } from '../../i18n/hooks/useTranslation';
 import useLocations from '../../hooks/useLocations';
+import useSubCategories from '../../hooks/useSubCategories';
 import { addLead } from '../../api/generalApi';
 
 
@@ -23,6 +24,7 @@ export const ContactModal = ({ isOpen, onClose }) => {
     onCityChange,
     formatName,
   } = useLocations(isArabic, isOpen);
+  const { subCategories } = useSubCategories(isArabic, isOpen);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -173,30 +175,32 @@ export const ContactModal = ({ isOpen, onClose }) => {
               </div>
 
               {/* Service Selection */}
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-2.5">
-                  {modalCopy.servicesLabel}
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {modalCopy.services.map((service) => {
-                    const isSelected = formData.services.includes(service.id);
-                    return (
-                      <button
-                        type="button"
-                        key={service.id}
-                        onClick={() => toggleService(service.id)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#E5192D] text-white shadow-xs'
-                            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                        }`}
-                      >
-                        {service.label}
-                      </button>
-                    );
-                  })}
+              {subCategories.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-2.5">
+                    {modalCopy.servicesLabel}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {subCategories.map((sub) => {
+                      const isSelected = formData.services.includes(sub._id);
+                      return (
+                        <button
+                          type="button"
+                          key={sub._id}
+                          onClick={() => toggleService(sub._id)}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#E5192D] text-white shadow-xs'
+                              : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                          }`}
+                        >
+                          {sub.name}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Inputs Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

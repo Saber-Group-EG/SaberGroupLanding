@@ -1,16 +1,31 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
+import {
+  AlertCircle,
+  ArrowRight,
+  Check,
+  Clock,
+  Loader2,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Send,
+} from "lucide-react";
 import { useTranslation } from "../i18n/hooks/useTranslation";
 import Swal from "sweetalert2";
 import { SITE_NAME } from "../utils/ogMeta";
 import { addLead, fetchCountries as apiFetchCountries, fetchCities as apiFetchCities, fetchGovernorates as apiFetchGovernorates } from "../api/generalApi";
+import useSubCategories from "../hooks/useSubCategories";
 
 const ContactUs = () => {
   const { t, isArabic } = useTranslation();
+  const { subCategories, isLoading } = useSubCategories(isArabic);
   const [countries, setCountries] = useState([]);
   const [governorates, setGovernorates] = useState([]);
   const [allCities, setAllCities] = useState([]);
   const [cities, setCities] = useState([]);
-  
+
 
   const [formData, setFormData] = useState({
     name: "",
@@ -20,15 +35,15 @@ const ContactUs = () => {
     country: "",
     government: "",
     city: "",
-    
+    services: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const inputClass = "w-full px-6 py-4 rounded-2xl bg-white/80 dark:bg-dark-800/80 border border-light-200/50 dark:border-dark-700/50 text-light-900 dark:text-white placeholder-light-400/50 dark:placeholder-light-500/50 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-shadow shadow-sm";
-  
-  const labelClass = "block text-sm font-medium text-light-700 dark:text-light-300 mb-2";
+  const inputClass = "w-full px-4 py-3 min-h-11 rounded-xl bg-neutral-900 border border-neutral-800 text-white placeholder-neutral-400 text-sm focus:outline-none focus:border-[#E5192D] focus-visible:ring-2 focus-visible:ring-[#E5192D]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418] transition-colors";
+
+  const labelClass = "block text-[11px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal mb-1.5";
 
   // Helper to get a localized display name from location objects
   const formatLocationName = (item) => {
@@ -42,37 +57,22 @@ const ContactUs = () => {
 
   const contactMethods = [
     {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-      ),
+      icon: <Phone className="w-4 h-4" />,
       title: t("contact:callUs") || "Call Us",
       value: "01080099757",
       link: "tel:+201080099757",
-      bg: "from-blue-500 to-cyan-500",
     },
     {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
+      icon: <Mail className="w-4 h-4" />,
       title: t("contact:emailUs") || "Email Us",
       value: "info@sabergroup-eg.com",
       link: "mailto:info@sabergroup-eg.com",
-      bg: "from-purple-500 to-pink-500",
     },
     {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      ),
+      icon: <MessageCircle className="w-4 h-4" />,
       title: t("contact:whatsapp") || "WhatsApp",
       value: "01080099757",
       link: "https://wa.me/201080099757",
-      bg: "from-green-500 to-emerald-500",
     },
   ];
 
@@ -85,7 +85,6 @@ const ContactUs = () => {
         </svg>
       ),
       link: "https://www.instagram.com/sabergroupstudios",
-      color: "hover:bg-pink-600",
     },
     {
       name: "LinkedIn",
@@ -95,7 +94,6 @@ const ContactUs = () => {
         </svg>
       ),
       link: "https://www.linkedin.com/in/ahmed-saber-004aa8196/",
-      color: "hover:bg-blue-700",
     },
     {
       name: "Behance",
@@ -105,7 +103,6 @@ const ContactUs = () => {
         </svg>
       ),
       link: "https://www.behance.net/ahmed_saber_",
-      color: "hover:bg-[#1769FF]",
     },
     {
       name: "Facebook",
@@ -115,7 +112,6 @@ const ContactUs = () => {
         </svg>
       ),
       link: "https://www.facebook.com/sabergroupeg",
-      color: "hover:bg-blue-600",
     },
 
   ];
@@ -124,6 +120,15 @@ const ContactUs = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const toggleService = (serviceId) => {
+    setFormData((prev) => ({
+      ...prev,
+      services: prev.services.includes(serviceId)
+        ? prev.services.filter((s) => s !== serviceId)
+        : [...prev.services, serviceId],
+    }));
   };
 
   useEffect(() => {
@@ -260,7 +265,7 @@ const ContactUs = () => {
         country: formData.country || "",
         ...(formData.government ? { government: formData.government } : {}),
         ...(formData.city ? { city: formData.city } : {}),
-        subCategories: [],
+        subCategories: formData.services,
         campaigns: [],
         channels: [],
         // no projects field — projectInterest removed
@@ -283,7 +288,7 @@ const ContactUs = () => {
         const nm = formatLocationName(c).toString().trim().toLowerCase();
         return nm === "egypt" || nm === "مصر";
       });
-      setFormData({ name: "", email: "", phone: "", message: "", country: egypt?._id || "", government: "", city: "" });
+      setFormData({ name: "", email: "", phone: "", message: "", country: egypt?._id || "", government: "", city: "", services: [] });
       if (egypt) fetchGovernorates(egypt._id);
       setErrors({});
       setTimeout(() => setSubmitSuccess(false), 3000);
@@ -344,7 +349,7 @@ const ContactUs = () => {
         showClass: { popup: "animate-fade-in-down" },
       });
       setSubmitSuccess(true);
-      setFormData({ name: "", email: "", phone: "", message: "", country: "", government: "", city: "" });
+      setFormData({ name: "", email: "", phone: "", message: "", country: "", government: "", city: "", services: [] });
       setErrors({});
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (err) {
@@ -368,397 +373,478 @@ const ContactUs = () => {
   return (
     <section
       id="contact-section"
-      className="min-h-screen bg-linear-to-br from-light-50 via-white to-light-100 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 relative overflow-hidden"
+      dir={isArabic ? 'rtl' : 'ltr'}
+      className="pt-16 min-h-screen bg-[#090b0e] text-white selection:bg-[#E5192D] selection:text-white relative overflow-hidden"
+      style={{
+        fontFamily: isArabic
+          ? "'Cairo', system-ui, sans-serif"
+          : "'Montserrat', system-ui, sans-serif",
+      }}
     >
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl" />
+      <Helmet>
+        {!isArabic && (
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap"
+          />
+        )}
+        {isArabic && (
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap"
+          />
+        )}
+      </Helmet>
 
-        {/* Decorative grid (replacing inline SVG data-URL) */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(45deg, rgba(156,146,172,0.05) 0 1px, transparent 1px 12px)',
-          }}
-        />
-      </div>
+      {/* Ambient background glow */}
+      <div className="absolute top-1/2 start-1/4 -translate-y-1/2 w-[600px] h-[600px] bg-[#E5192D]/5 rounded-full blur-[180px] pointer-events-none" />
 
-      <div className="container relative mx-auto px-4 md:px-6 py-20">
-        {/* Header Section */}
-        <div
-          className={`max-w-4xl mx-auto text-center mb-16 ${isArabic ? 'rtl' : ''} animate-fade-in`}
-        >
-          <h1 className="text-5xl md:text-7xl font-bold mb-8">
-            <span className="bg-linear-to-r from-primary-500 via-secondary-500 to-primary-500 bg-clip-text text-transparent bg-size-[200%_auto] animate-gradient">
-              {t('contact:title') || 'Ready to Grow?'}
-            </span>
-          </h1>
-
-          <p className="text-xl text-light-600 dark:text-light-300 leading-relaxed max-w-3xl mx-auto">
-            {t('contact:subtitle') ||
-              "Tell us about your project and let's discuss how we can help your brand reach new heights."}
-          </p>
+      <div className="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 pt-16 sm:pt-20 pb-10">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E5192D]/15 text-[#FF6B76] text-[10px] font-extrabold uppercase ltr:tracking-widest rtl:tracking-normal mb-5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E5192D]" />
+          <span>{t('contact:badge')}</span>
         </div>
 
-        {/* Contact Form - First Priority */}
-        <div className="max-w-4xl mx-auto mb-20">
-          <div className="relative">
-            {/* Decorative Elements */}
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-primary-500/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-secondary-500/10 rounded-full blur-2xl" />
+        <h1 className="font-black text-4xl sm:text-5xl lg:text-6xl uppercase tracking-tight leading-[1.05] text-white">
+          <span className="block">{t('contact:title')}</span>
+          <span className="block text-[#E5192D]">{t('contact:tagline')}</span>
+        </h1>
 
-            <div className="relative bg-gray-100 dark:bg-dark-800/90 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-light-200/50 dark:border-dark-700/50">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
+        <p className="text-neutral-400 text-sm sm:text-base max-w-2xl mt-4 leading-relaxed">
+          {t('contact:subtitle')}
+        </p>
+
+        {/* Two-column body: form card + info card */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-stretch pt-12 pb-20 sm:pb-24">
+          {/* Form Card */}
+          <div id="contact-form" className="lg:col-span-7 lg:order-2 rounded-3xl bg-[#111418] border border-neutral-800 p-6 sm:p-8 lg:p-10 shadow-2xl flex flex-col">
+            {submitSuccess ? (
+              <div className="py-16 my-auto flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mb-6 animate-bounce motion-reduce:animate-none">
+                  <Check className="w-8 h-8" />
                 </div>
-                <div>
-                  <h2 className="text-3xl font-bold text-light-900 dark:text-white">
-                    {t('contact:formTitle') || 'Tell Us About Your Project'}
-                  </h2>
-                  <p className="text-light-600 dark:text-light-400">
-                    {t('contact:formSubtitle') ||
-                      "Fill out the form and we'll get back to you within 24 hours"}
-                  </p>
-                </div>
+                <h3 className="text-2xl font-black text-white mb-2">
+                  {t('contact:successTitle')}
+                </h3>
+                <p className="text-neutral-400 text-sm max-w-md mb-8">
+                  {t('contact:successMessage')}
+                </p>
+                <button
+                  onClick={() => setSubmitSuccess(false)}
+                  className="px-8 py-3.5 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418]"
+                >
+                  {t('contact:sendAnother')}
+                </button>
               </div>
-
-              {submitSuccess ? (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-success-500/20 flex items-center justify-center animate-bounce">
-                    <svg
-                      className="w-12 h-12 text-success-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+            ) : (
+              <form onSubmit={handleSubmitExtended} className="flex flex-col gap-5">
+                {/* Form Header */}
+                <div className="border-b border-neutral-800/80 pb-5 mb-5">
+                  <div className="text-[10px] font-extrabold text-neutral-400 ltr:tracking-[0.2em] rtl:tracking-normal uppercase mb-1.5">
+                    {t('contact:formEyebrow')}
                   </div>
-                  <h3 className="text-2xl font-bold text-success-500 mb-4">
-                    {t('contact:successTitle') || 'Message Sent Successfully!'}
-                  </h3>
-                  <p className="text-light-600 dark:text-light-400 mb-6">
-                    {t('contact:successMessage') ||
-                      'Thank you for reaching out. Our team will contact you within 24 hours.'}
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
+                    {t('contact:formTitle')}
+                  </h2>
+                  <p className="text-neutral-400 text-xs mt-1">
+                    {t('contact:formSubtitle')}
                   </p>
-                  <button
-                    onClick={() => setSubmitSuccess(false)}
-                    className="px-6 py-3 bg-linear-to-r from-primary-500 to-secondary-500 text-white rounded-lg hover:shadow-xl transition-all"
-                  >
-                    {t('contact:sendAnother') || 'Send another message'}
-                  </button>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmitExtended} className="space-y-6">
-                  {/* Name & Email */}
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="name" className={labelClass}>
-                        {t('contact:name') || 'Full Name'} *
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={enhancedHandleChange}
-                        placeholder={t('contact:namePlaceholder') || 'John Doe'}
-                        className={`${inputClass} ${errors.name ? 'border-danger-500' : ''}`}
-                      />
-                      {errors.name && (
-                        <p className="mt-2 text-sm text-danger-500">
-                          {errors.name}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label htmlFor="email" className={labelClass}>
-                        {t('contact:email') || 'Email'} *
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={enhancedHandleChange}
-                        placeholder={
-                          t('contact:emailPlaceholder') || 'john@company.com'
-                        }
-                        className={`${inputClass} ${errors.email ? 'border-danger-500' : ''}`}
-                      />
-                      {errors.email && (
-                        <p className="mt-2 text-sm text-danger-500">
-                          {errors.email}
-                        </p>
-                      )}
+
+                {/* Service Needed — multi-select from CRM subcategories */}
+                {(subCategories.length > 0 || isLoading) && (
+                  <div>
+                    <label id="service-label" className={labelClass}>
+                      {t('contact:serviceLabel')}
+                    </label>
+                    <div className="flex flex-wrap gap-2" role="group" aria-labelledby="service-label">
+                      {isLoading && subCategories.length === 0
+                        ? Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-11 w-28 rounded-xl bg-neutral-800/70 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
+                          ))
+                        : subCategories.map((sub) => {
+                            const isSelected = formData.services.includes(sub._id);
+                            return (
+                              <button
+                                key={sub._id}
+                                type="button"
+                                onClick={() => toggleService(sub._id)}
+                                aria-pressed={isSelected}
+                                className={`px-4 py-2 min-h-11 rounded-xl border text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418] ${
+                                  isSelected
+                                    ? 'bg-[#E5192D] text-white border-[#E5192D] shadow-sm'
+                                    : 'bg-neutral-900/90 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
+                                }`}
+                              >
+                                {sub.name}
+                              </button>
+                            );
+                          })}
                     </div>
                   </div>
+                )}
 
-                  {/* Phone */}
+                {/* Name & Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label htmlFor="phone" className={labelClass}>
-                      {t('contact:phone') || 'Phone Number'} *
+                    <label htmlFor="name" className={labelClass}>
+                      {t('contact:name') || 'Full Name'} *
                     </label>
                     <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
                       onChange={enhancedHandleChange}
-                      placeholder={
-                        t('contact:phonePlaceholder') ||
-                        'Enter your phone number'
-                      }
-                      className={`${inputClass} ${errors.phone ? 'border-danger-500' : ''}`}
+                      placeholder={t('contact:namePlaceholder') || 'John Doe'}
+                      aria-invalid={errors.name ? 'true' : undefined}
+                      aria-describedby={errors.name ? 'name-error' : undefined}
+                      className={`${inputClass} ${errors.name ? 'border-[#f87171]' : ''}`}
                     />
-                    {errors.phone && (
-                      <p className="mt-2 text-sm text-danger-500">
-                        {errors.phone}
+                    {errors.name && (
+                      <p id="name-error" className="flex items-center gap-1.5 text-[#f87171] text-xs mt-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{errors.name}</span>
                       </p>
                     )}
                   </div>
+                  <div>
+                    <label htmlFor="email" className={labelClass}>
+                      {t('contact:email') || 'Email'} *
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={enhancedHandleChange}
+                      placeholder={
+                        t('contact:emailPlaceholder') || 'john@company.com'
+                      }
+                      aria-invalid={errors.email ? 'true' : undefined}
+                      aria-describedby={errors.email ? 'email-error' : undefined}
+                      className={`${inputClass} ${errors.email ? 'border-[#f87171]' : ''}`}
+                    />
+                    {errors.email && (
+                      <p id="email-error" className="flex items-center gap-1.5 text-[#f87171] text-xs mt-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{errors.email}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-                  {/* Country & Governorate */}
-                  <div className="grid md:grid-cols-2 gap-6">
+                {/* Phone */}
+                <div>
+                  <label htmlFor="phone" className={labelClass}>
+                    {t('contact:phone') || 'Phone Number'} *
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={enhancedHandleChange}
+                    placeholder={
+                      t('contact:phonePlaceholder') ||
+                      'Enter your phone number'
+                    }
+                    aria-invalid={errors.phone ? 'true' : undefined}
+                    aria-describedby={errors.phone ? 'phone-error' : undefined}
+                    className={`${inputClass} ${errors.phone ? 'border-[#f87171]' : ''}`}
+                  />
+                  {errors.phone && (
+                    <p id="phone-error" className="flex items-center gap-1.5 text-[#f87171] text-xs mt-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errors.phone}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Country & Governorate */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label htmlFor="country" className={labelClass}>
+                      {t('contact:country') || 'Country'} *
+                    </label>
+                    <select
+                      id="country"
+                      name="country"
+                      value={formData.country}
+                      onChange={enhancedHandleChange}
+                      aria-invalid={errors.country ? 'true' : undefined}
+                      aria-describedby={errors.country ? 'country-error' : undefined}
+                      className={`${inputClass} ${errors.country ? 'border-[#f87171]' : ''}`}
+                    >
+                      <option value="">
+                        {t('contact:selectCountry') || 'Select a country'}
+                      </option>
+                      {filteredCountries.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {formatLocationName(c)}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.country && (
+                      <p id="country-error" className="flex items-center gap-1.5 text-[#f87171] text-xs mt-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{errors.country}</span>
+                      </p>
+                    )}
+                  </div>
+                  {isEgyptSelected ? (
                     <div>
-                      <label htmlFor="country" className={labelClass}>
-                        {t('contact:country') || 'Country'} *
+                      <label htmlFor="government" className={labelClass}>
+                        {t('contact:government') || 'Governorate'}
                       </label>
                       <select
-                        id="country"
-                        name="country"
-                        value={formData.country}
+                        id="government"
+                        name="government"
+                        value={formData.government}
                         onChange={enhancedHandleChange}
-                        className={`${inputClass} ${errors.country ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500' : ''}`}
+                        disabled={!formData.country}
+                        className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         <option value="">
-                          {t('contact:selectCountry') || 'Select a country'}
+                          {t('contact:selectGovernment') ||
+                            'Select a governorate'}
                         </option>
-                        {filteredCountries.map((c) => (
-                          <option key={c._id} value={c._id}>
-                            {formatLocationName(c)}
+                        {governorates.map((g) => (
+                          <option key={g._id} value={g._id}>
+                            {formatLocationName(g)}
                           </option>
                         ))}
                       </select>
-                      {errors.country && (
-                        <p className="mt-2 text-sm text-danger-500">
-                          {errors.country}
-                        </p>
-                      )}
                     </div>
-                    {isEgyptSelected ? (
-                      <div>
-                        <label htmlFor="government" className={labelClass}>
-                          {t('contact:government') || 'Governorate'}
-                        </label>
-                        <select
-                          id="government"
-                          name="government"
-                          value={formData.government}
-                          onChange={enhancedHandleChange}
-                          disabled={!formData.country}
-                          className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          <option value="">
-                            {t('contact:selectGovernment') ||
-                              'Select a governorate'}
-                          </option>
-                          {governorates.map((g) => (
-                            <option key={g._id} value={g._id}>
-                              {formatLocationName(g)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : null}
-                  </div>
+                  ) : null}
+                </div>
 
-                  {isEgyptSelected && (
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <label htmlFor="city" className={labelClass}>
-                          {t('contact:city') || 'City'}
-                        </label>
-                        <select
-                          id="city"
-                          name="city"
-                          value={formData.city}
-                          onChange={enhancedHandleChange}
-                          disabled={!formData.government}
-                          className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          <option value="">
-                            {t('contact:selectCity') || 'Select a city'}
-                          </option>
-                          {cities.map((c) => (
-                            <option key={c._id} value={c._id}>
-                              {formatLocationName(c)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Message */}
+                {isEgyptSelected && (
                   <div>
-                    <label htmlFor="message" className={labelClass}>
-                      {t('contact:message') || 'Message'}
+                    <label htmlFor="city" className={labelClass}>
+                      {t('contact:city') || 'City'}
                     </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
+                    <select
+                      id="city"
+                      name="city"
+                      value={formData.city}
                       onChange={enhancedHandleChange}
-                      rows="4"
-                      placeholder={
-                        t('contact:messagePlaceholder') ||
-                        'Tell us more about your inquiry...'
-                      }
-                      className={inputClass}
-                    />
+                      disabled={!formData.government}
+                      className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      <option value="">
+                        {t('contact:selectCity') || 'Select a city'}
+                      </option>
+                      {cities.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {formatLocationName(c)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                )}
 
-                  {/* Submit Error */}
-                  {errors.submit && (
-                    <div className="p-4 rounded-lg bg-danger-500/10 border border-danger-500/20">
-                      <p className="text-danger-500 text-sm">{errors.submit}</p>
-                    </div>
-                  )}
+                {/* Message */}
+                <div>
+                  <label htmlFor="message" className={labelClass}>
+                    {t('contact:message') || 'Message'}
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    value={formData.message}
+                    onChange={enhancedHandleChange}
+                    rows="4"
+                    placeholder={
+                      t('contact:messagePlaceholder') ||
+                      'Tell us more about your inquiry...'
+                    }
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
 
-                  {/* Submit Button */}
+                {/* Submit Error */}
+                {errors.submit && (
+                  <div className="p-4 rounded-xl bg-[#f87171]/10 border border-[#f87171]/20">
+                    <p className="flex items-center gap-1.5 text-[#f87171] text-sm">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{errors.submit}</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <div className="pt-1 flex items-center justify-end">
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full relative overflow-hidden group bg-linear-to-r from-primary-500 to-secondary-500 text-white py-4 rounded-2xl font-semibold text-lg hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300 disabled:opacity-70"
+                    className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase shadow-md shadow-red-600/30 active:scale-95 disabled:opacity-60 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418]"
                   >
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {isSubmitting ? (
-                        <>
-                          <svg
-                            className="animate-spin h-5 w-5 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                            />
-                          </svg>
-                          {t('contact:sending') || 'Sending...'}
-                        </>
-                      ) : (
-                        <>
-                          {t('contact:sendMessage') || 'Send Message'}
-                          <svg
-                            className="w-5 h-5 transform group-hover:translate-x-1 transition-transform"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 7l5 5m0 0l-5 5m5-5H6"
-                            />
-                          </svg>
-                        </>
-                      )}
-                    </span>
-                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                        <span>{t('contact:sending') || 'Sending...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{t('contact:sendMessage') || "Let's Talk"}</span>
+                        <Send className={`w-4 h-4 ${isArabic ? '-scale-x-100' : ''}`} />
+                      </>
+                    )}
                   </button>
+                </div>
 
-                  <p className="text-xs text-light-500 dark:text-light-400 text-center">
-                    {t('contact:privacyNote') ||
-                      'By submitting, you agree to our Privacy Policy and Terms of Service.'}
-                  </p>
-                </form>
-              )}
+                <p className="text-[11px] text-neutral-500 text-center">
+                  {t('contact:privacyNote')}
+                </p>
+              </form>
+            )}
+          </div>
+
+          {/* Info Card */}
+          <div className="lg:col-span-5 lg:order-1 rounded-3xl bg-[#111418] border border-neutral-800 p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E5192D]/15 text-[#FF6B76] text-[10px] font-extrabold uppercase ltr:tracking-widest rtl:tracking-normal mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E5192D]" />
+                <span>{t('contact:badge')}</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-white uppercase tracking-tight leading-[1.08]">
+                <span className="block">{t('contact:title')}</span>
+                <span className="text-[#E5192D] block">{t('contact:tagline')}</span>
+              </h2>
+
+              <p className="text-neutral-400 text-xs sm:text-sm mt-4 leading-relaxed max-w-sm">
+                {t('contact:subtitle')}
+              </p>
             </div>
+
+            {/* Direct Contact Rows */}
+            <div className="relative z-10 mt-10 space-y-3 pt-6 border-t border-neutral-800/80">
+              <a
+                href={`mailto:${t('contact:emailAddress')}`}
+                className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-[#E5192D] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] group-hover:bg-[#E5192D] group-hover:text-white transition-colors flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:emailTitle')}
+                  </div>
+                  <div className="text-xs font-semibold text-white group-hover:text-[#E5192D] transition-colors" dir="ltr" style={{ unicodeBidi: 'isolate-override' }}>
+                    {t('contact:emailAddress')}
+                  </div>
+                </div>
+              </a>
+
+              <a
+                href="tel:+201080099757"
+                className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-[#E5192D] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] group-hover:bg-[#E5192D] group-hover:text-white transition-colors flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:phoneTitle')}
+                  </div>
+                  <div className="text-xs font-semibold text-white group-hover:text-[#E5192D] transition-colors" dir="ltr" style={{ unicodeBidi: 'isolate-override' }}>
+                    {t('contact:phoneNumber')}
+                  </div>
+                </div>
+              </a>
+
+              <a
+                href="https://wa.me/201080099757"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-[#E5192D] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] group-hover:bg-[#E5192D] group-hover:text-white transition-colors flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:whatsapp')}
+                  </div>
+                  <div className="text-xs font-semibold text-white group-hover:text-[#E5192D] transition-colors" dir="ltr" style={{ unicodeBidi: 'isolate-override' }}>
+                    {t('contact:phoneNumber')}
+                  </div>
+                </div>
+              </a>
+
+              <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800">
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:addressTitle')}
+                  </div>
+                  <div className="text-xs font-semibold text-white">
+                    {t('contact:address')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800">
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:officeHoursTitle')}
+                  </div>
+                  <div className="text-xs font-semibold text-white" dir="ltr" style={{ unicodeBidi: 'isolate-override' }}>
+                    {t('contact:officeHours')}
+                  </div>
+                  <div className="text-[10px] text-neutral-500 mt-0.5">
+                    {t('contact:weekend')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Subtle decorative glow */}
+            <div className="absolute -bottom-10 -end-10 w-44 h-44 bg-[#E5192D]/10 rounded-full blur-3xl pointer-events-none" />
           </div>
         </div>
 
-        {/* Contact Methods - Second Priority */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
+        {/* Contact Methods strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-16">
           {contactMethods.map((method, index) => (
             <a
               key={index}
               href={method.link}
               target={method.link.startsWith('http') ? '_blank' : '_self'}
               rel="noopener noreferrer"
-              className="group relative block"
+              className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-[#E5192D] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#090b0e]"
             >
-              <div
-                className={`absolute inset-0 bg-linear-to-r ${method.bg} rounded-2xl opacity-0 group-hover:opacity-10 transition-opacity duration-500`}
-              />
-
-              <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-light-200/50 dark:border-dark-700/50 hover:border-primary-500/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl bg-linear-to-r ${method.bg} flex items-center justify-center text-white group-hover:scale-110 transition-transform`}
-                  >
-                    {method.icon}
-                  </div>
-                  <div>
-                    <p className="text-sm text-light-500 dark:text-light-400 mb-1">
-                      {method.title}
-                    </p>
-                    <p className="text-lg font-semibold text-light-900 dark:text-white">
-                      <span
-                        dir="ltr"
-                        className="inline-block"
-                        style={{ unicodeBidi: 'isolate-override' }}
-                      >
-                        {method.value}
-                      </span>
-                    </p>
-                  </div>
+              <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] group-hover:bg-[#E5192D] group-hover:text-white transition-colors flex items-center justify-center shrink-0">
+                {method.icon}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                  {method.title}
+                </div>
+                <div className="text-xs font-semibold text-white group-hover:text-[#E5192D] transition-colors" dir="ltr" style={{ unicodeBidi: 'isolate-override' }}>
+                  {method.value}
                 </div>
               </div>
             </a>
           ))}
         </div>
 
-        {/* Social Media Links - Third Priority */}
-        <div className="mb-20">
+        {/* Social Media Links */}
+        <div className="pb-16">
           <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-light-900 dark:text-white mb-2">
-              {t('contact:followUs') || 'Follow Our Journey'}
-            </h3>
-            <p className="text-light-600 dark:text-light-400">
-              {t('contact:socialSubtitle') ||
-                'Stay updated with our latest work and insights'}
+            <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-2">
+              {t('contact:followUs')}
+            </h2>
+            <p className="text-neutral-400 text-sm">
+              {t('contact:socialSubtitle')}
             </p>
           </div>
 
@@ -769,193 +855,120 @@ const ContactUs = () => {
                 href={social.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`group relative w-14 h-14 rounded-xl bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm border border-light-200/50 dark:border-dark-700/50 flex items-center justify-center ${social.color} hover:text-white transition-all duration-300 hover:scale-110 hover:shadow-xl`}
+                aria-label={social.name}
+                className="w-11 h-11 rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-[#E5192D] hover:text-white transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#090b0e]"
               >
-                <div className="absolute inset-0 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span className="relative text-light-700 dark:text-light-300 group-hover:text-white transition-colors">
-                  {social.icon}
-                </span>
+                {social.icon}
               </a>
             ))}
           </div>
         </div>
 
-        {/* Map Section - Fourth Priority */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-linear-to-r from-primary-500/10 to-secondary-500/10 rounded-3xl blur-3xl" />
+        {/* Map / Visit */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
+          <div className="lg:col-span-5 rounded-3xl bg-[#111418] border border-neutral-800 p-8 sm:p-10">
+            <h3 className="text-xl font-black uppercase tracking-tight text-white mb-4">
+              {t('contact:visitOurStudio')}
+            </h3>
+            <p className="text-neutral-400 text-sm mb-6">
+              {t('contact:officeAddress')}
+            </p>
 
-          <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm rounded-3xl overflow-hidden border border-light-200/50 dark:border-dark-700/50">
-            <div className="grid md:grid-cols-3">
-              {/* Map Info */}
-              <div className="p-8 md:p-10 border-b md:border-b-0 md:border-r border-light-200 dark:border-dark-700">
-                <h3 className="text-2xl font-bold text-light-900 dark:text-white mb-4">
-                  {t('contact:visitOurStudio') || 'Visit Our Studio'}
-                </h3>
-                <p className="text-light-600 dark:text-light-400 mb-6">
-                  {t('contact:officeAddress') ||
-                    "Stop by for a coffee and let's discuss your project creatively."}
-                </p>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm text-light-500 dark:text-light-400">
-                        Address
-                      </p>
-                      <p className="font-semibold text-light-900 dark:text-white">
-                        {' '}
-                        {t('contact:address') || 'El-Stad St - Tanta - Egypt'}
-                      </p>
-                    </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800">
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:addressTitle')}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-500">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm text-light-500 dark:text-light-400">
-                        Hours
-                      </p>
-                      <p className="font-semibold text-light-900 dark:text-white">
-                        {t('contact:officeHours') ||
-                          'Sat - Thu, 9:00 AM - 5:00 PM'}
-                      </p>
-                    </div>
+                  <div className="text-xs font-semibold text-white">
+                    {t('contact:address')}
                   </div>
-
-                  <a
-                    href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-primary-500 to-secondary-500 text-white rounded-lg hover:shadow-xl transition-all w-full justify-center group"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    {t('contact:getDirections') || 'Get Directions'}
-                    <svg
-                      className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </a>
                 </div>
               </div>
 
-              {/* Map Embed */}
-              <div className="md:col-span-2 h-96 relative">
-                <iframe
-                  title="Saber Group Office - Tanta"
-                  src="https://www.google.com/maps?q=30.810011,30.998228&z=17&output=embed"
-                  className="w-full h-full border-0"
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-
-                <div className="absolute top-4 right-4">
-                  <a
-                    href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 text-white rounded-lg border border-white/10 hover:bg-white/20 transition-colors text-sm"
-                  >
-                    {t('contact:openInMaps') || 'Open Maps'}
-                  </a>
+              <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-neutral-900/80 border border-neutral-800">
+                <div className="w-10 h-10 rounded-xl bg-[#E5192D]/10 text-[#E5192D] flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold text-neutral-400 uppercase ltr:tracking-wider rtl:tracking-normal">
+                    {t('contact:officeHoursTitle')}
+                  </div>
+                  <div className="text-xs font-semibold text-white" dir="ltr" style={{ unicodeBidi: 'isolate-override' }}>
+                    {t('contact:officeHours')}
+                  </div>
                 </div>
               </div>
+
+              <a
+                href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase shadow-md shadow-red-600/30 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111418]"
+              >
+                <MapPin className="w-4 h-4" />
+                <span>{t('contact:getDirections')}</span>
+                <ArrowRight className={`w-4 h-4 ${isArabic ? '-scale-x-100' : ''}`} />
+              </a>
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 rounded-3xl overflow-hidden border border-neutral-800 h-80 lg:h-[420px] relative">
+            <iframe
+              title="Saber Group Office - Tanta"
+              src="https://www.google.com/maps?q=30.810011,30.998228&z=17&output=embed"
+              className="w-full h-full border-0"
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+
+            <div className="absolute top-4 end-4">
+              <a
+                href="https://maps.app.goo.gl/U8b1DJxKdUVosnwV8"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/50 backdrop-blur border border-white/15 text-white text-xs font-bold uppercase tracking-wider hover:bg-black/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                {t('contact:openInMaps')}
+              </a>
             </div>
           </div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes fade-in-down {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 1s ease-out;
-        }
-        
-        .animate-fade-in-down {
-          animation: fade-in-down 0.5s ease-out;
-        }
-        
-        .animate-gradient {
-          animation: gradient 3s ease infinite;
-        }
-      `}</style>
+      {/* Pre-footer CTA band */}
+      <section className="py-20 bg-[#0e1114] border-t border-neutral-900 text-white">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-6">
+              <h2 className="font-black text-3xl sm:text-4xl lg:text-5xl uppercase tracking-tight leading-[1.1] text-white">
+                {t('contact:ctaHeading')}
+              </h2>
+            </div>
+
+            <div className="hidden lg:block lg:col-span-1 h-20 w-[1px] bg-neutral-800 mx-auto" />
+
+            <div className="lg:col-span-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <p className="text-neutral-400 text-sm leading-relaxed max-w-xs">
+                {t('contact:ctaText')}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#E5192D] hover:bg-[#c81424] text-white font-bold text-xs tracking-wider uppercase transition-all duration-150 shadow-md shadow-red-600/30 active:scale-95 cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5192D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0e1114]"
+              >
+                <span>{t('contact:ctaButton')}</span>
+                <ArrowRight className="w-4 h-4 ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
   );
 };
