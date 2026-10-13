@@ -155,19 +155,26 @@ const Portfolio = () => {
     ? publishedProjects
     : publishedProjects.filter((p) => p.sectorId?.trim().toLowerCase() === sectorId);
 
-  const allTagsRaw = Array.from(
-    new Set(sectorProjects.flatMap((p) => (p.subcategories || []).map((sub) => (typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '')).filter(Boolean)))
-  );
+  const tagDisplayByKey = sectorProjects.flatMap((p) => (p.subcategories || [])).reduce((acc, sub) => {
+    const raw = typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '';
+    const key = raw.trim().toLowerCase();
+    if (key && !acc.has(key)) acc.set(key, raw);
+    return acc;
+  }, new Map());
 
-  const activeTags = selectedTags.filter((tag) => allTagsRaw.includes(tag));
+  const allTagsRaw = Array.from(tagDisplayByKey.values());
 
-  const allTagNames = allTagsRaw.reduce((acc, key) => {
+  const activeTags = selectedTags
+    .map((tag) => allTagsRaw.find((t) => t.trim().toLowerCase() === tag.trim().toLowerCase()))
+    .filter(Boolean);
+
+  const allTagNames = Array.from(tagDisplayByKey.entries()).reduce((acc, [key, display]) => {
     const sample = sectorProjects.flatMap((p) => (p.subcategories || [])).find((sub) => {
       const k = typeof sub === 'string' ? sub : sub.name?.en || sub.name?.ar || '';
-      return k === key;
+      return k.trim().toLowerCase() === key;
     });
     const nameObj = typeof sample === 'object' && sample !== null ? sample.name : null;
-    acc[key] = isArabic ? (nameObj?.ar || nameObj?.en || key) : (nameObj?.en || nameObj?.ar || key);
+    acc[key] = isArabic ? (nameObj?.ar || nameObj?.en || display) : (nameObj?.en || nameObj?.ar || display);
     return acc;
   }, {});
 
@@ -649,7 +656,7 @@ const Portfolio = () => {
                 const isActive = activeTags.includes(tag);
                 return (
                   <button key={tag} onClick={() => handleTagChange(tag)} className={`whitespace-nowrap px-3 sm:px-3.5 py-1.5 text-xs font-medium rounded-[3px] border transition-all cursor-pointer ${isActive ? 'bg-neutral-950 text-white border-neutral-950 font-bold' : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'}`}>
-                    {allTagNames[tag] || tag}
+                    {allTagNames[tag.trim().toLowerCase()] || tag}
                   </button>
                 );
               })}
