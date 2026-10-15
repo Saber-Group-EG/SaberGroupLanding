@@ -60,7 +60,7 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
   const { containerRef, canScrollStart, canScrollEnd, scrollByStep, setAutoScrollPaused } =
     useHorizontalScroll({
       itemCount: clients.length,
-      gap: 28,
+      gap: 40,
       autoScroll: true,
       autoScrollSpeed: 35,
     });
@@ -119,10 +119,10 @@ export const ClientsSection = ({ clients = [], loading = false }) => {
             aria-roledescription="carousel"
             aria-label={copy.clients.label}
             aria-busy={loading}
-            className="flex items-center gap-2.5 sm:gap-4 lg:gap-5 overflow-x-auto no-scrollbar scroll-smooth w-full py-4 px-2"
+            className="flex items-center gap-5 sm:gap-8 lg:gap-10 overflow-x-auto no-scrollbar scroll-smooth w-full py-4 px-2"
           >
             {showSkeletons ? (
-              <div role="status" className="flex items-center gap-8 shrink-0">
+              <div role="status" className="flex items-center gap-5 sm:gap-8 lg:gap-10 shrink-0">
                 {SKELETON_IDS.map((id) => (
                   <div
                     key={id}
