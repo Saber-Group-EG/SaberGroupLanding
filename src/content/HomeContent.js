@@ -45,6 +45,18 @@ const homeContent = {
       scrollNext: 'Scroll stories right',
     },
 
+    storyGroups: {
+      heading: ['STORY', 'REELS'],
+      intro: 'Instagram-style reels from our latest campaigns — tap a card to watch.',
+      createdBy: 'Created by · Saber Group',
+      reelLabel: 'Reel',
+      videosLabel: 'videos',
+      viewAll: 'WATCH ALL REELS',
+      scrollNext: 'Scroll reels right',
+      openStory: 'Open story reel',
+      error: 'Story reels are unavailable right now.',
+    },
+
     latestProjects: {
       eyebrow: 'RECENT PRODUCTIONS & RELEASES',
       heading: ['Our Latest', 'Project'],
@@ -566,6 +578,18 @@ const homeContent = {
       intro: 'لمحة سريعة عن أحدث مشاريعنا ووراء الكواليس.',
       viewAll: 'عرض كل القصص',
       scrollNext: 'عرض المزيد من القصص',
+    },
+
+    storyGroups: {
+      heading: ['قصصنا', 'ريلز'],
+      intro: 'ريلز بأسلوب إنستجرام من أحدث حملاتنا — اضغط على البطاقة للمشاهدة.',
+      createdBy: 'بواسطة سابر جروب',
+      reelLabel: 'ريل',
+      videosLabel: 'فيديو',
+      viewAll: 'شاهد كل الريلز',
+      scrollNext: 'عرض المزيد من الريلز',
+      openStory: 'افتح ريل القصة',
+      error: 'ريلز القصص غير متاحة حالياً.',
     },
 
     latestProjects: {

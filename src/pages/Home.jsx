@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 
 import { Hero } from '../components/home/Hero';
 import { StoriesSection } from '../components/home/StoriesSection';
+import { StoryGroupsSection } from '../components/home/StoryGroupsSection';
 import { LatestProjectsSection } from '../components/home/LatestProjectsSection';
 import { SelectedProjects } from '../components/home/SelectedProjects';
 import { WhatWeDoSection } from '../components/home/WhatWeDoSection';
@@ -22,6 +23,7 @@ import { ContactModal } from '../components/home/ContactModal';
 
 import { SELECTED_PROJECTS } from '../content/home/saberData';
 import { useProjectStories } from '../components/home/useProjectStories';
+import { useStoryGroups } from '../components/home/useStoryGroups';
 import { useHomeProjects } from '../components/home/useHomeProjects';
 import { useCastMembers } from '../components/home/useCastMembers';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -33,10 +35,13 @@ const Home = () => {
 
   const [isShowreelOpen, setIsShowreelOpen] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
+  const [selectedStoryGroup, setSelectedStoryGroup] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isContactOpen, setIsContactOpen] = useState(false);
 
   const { stories, loading: storiesLoading } = useProjectStories();
+  const { groups: storyGroups, loading: storyGroupsLoading, error: storyGroupsError } =
+    useStoryGroups();
   const { clients, loading: projectsLoading } = useHomeProjects();
   const { members: teamMembers, loading: castLoading } = useCastMembers();
 
@@ -118,11 +123,19 @@ const Home = () => {
         onSelectProject={handleSelectProjectById}
       />
 
-      <StoriesSection
-        stories={stories}
-        loading={storiesLoading}
-        onSelectStory={handleSelectStory}
-        onViewAllStories={handleViewAllStories}
+      <StoryGroupsSection
+        groups={storyGroups}
+        loading={storyGroupsLoading}
+        error={storyGroupsError}
+        onSelectGroup={(group) => setSelectedStoryGroup(group)}
+        fallback={
+          <StoriesSection
+            stories={stories}
+            loading={storiesLoading}
+            onSelectStory={handleSelectStory}
+            onViewAllStories={handleViewAllStories}
+          />
+        }
       />
 
       <LatestProjectsSection onSelectProject={handleSelectProject} />
@@ -155,6 +168,13 @@ const Home = () => {
         stories={stories}
         initialStory={selectedStory}
         onClose={() => setSelectedStory(null)}
+      />
+
+      <StoryViewerModal
+        key={selectedStoryGroup ? `story-group-${selectedStoryGroup.id}` : 'story-group-viewer-closed'}
+        stories={storyGroups}
+        initialStory={selectedStoryGroup}
+        onClose={() => setSelectedStoryGroup(null)}
       />
 
       <ProjectModal

@@ -109,6 +109,29 @@ export const StoryViewerModal = ({
     };
   }, [initialStory]);
 
+  // ESC closes the viewer and the page behind must not scroll while a story
+  // is open. onClose lives in a ref because the parent passes a fresh arrow on
+  // every render — depending on it directly would re-attach the listener and
+  // reset the body overflow on every progress tick.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!initialStory) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [initialStory]);
+
   // Prefetch deliberately targets the videos *beyond* the dual slots above so
   // the player and the service worker never download the same file twice.
   useEffect(() => {
@@ -268,6 +291,10 @@ export const StoryViewerModal = ({
   // active slot has no video; otherwise the <video> covers (its poster attr
   // shows during any buffering).
   const showPosterLayer = !started || !slots[activeSlot]?.url;
+  // The story groups ship without captions or subtitles, and a spotlight card
+  // with its label but no text under it reads as a bug — the card only mounts
+  // when there is something to show.
+  const captionText = currentMaterial?.description || currentStory.description || '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/90 backdrop-blur-md select-none animate-in fade-in duration-200">
@@ -430,7 +457,7 @@ export const StoryViewerModal = ({
                   {currentStory.title}
                 </h4>
                 <p className="text-white/70 text-xs font-medium">
-                  {currentStory.category} • Saber Studio
+                  {currentStory.category} • Saber Group
                 </p>
               </div>
             </div>
@@ -473,27 +500,29 @@ export const StoryViewerModal = ({
         </div>
 
         {/* Bottom Story Caption & Details */}
-        <div className="relative z-10 p-5">
-          <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-md border border-white/10">
-            <span className="text-[#E5192D] font-bold text-[10px] tracking-wider uppercase mb-1 block">
-              {copy.modals.storyViewer.spotlight}
-            </span>
-            <p className="text-white text-xs leading-relaxed font-normal">
-              {currentMaterial?.description || currentStory.description}
-            </p>
+        {captionText ? (
+          <div className="relative z-10 p-5">
+            <div className="p-4 rounded-2xl bg-black/75 backdrop-blur-md border border-white/10">
+              <span className="text-[#E5192D] font-bold text-[10px] tracking-wider uppercase mb-1 block">
+                {copy.modals.storyViewer.spotlight}
+              </span>
+              <p className="text-white text-xs leading-relaxed font-normal">
+                {captionText}
+              </p>
 
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10 text-[11px] text-white/60">
-              <span className="font-medium">{copy.modals.storyViewer.shotOn}</span>
-              <button
-                onClick={() => alert(copy.modals.storyViewer.shareAlert)}
-                className="flex items-center gap-1 text-white hover:text-[#E5192D] transition-colors cursor-pointer font-semibold"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>{copy.modals.storyViewer.share}</span>
-              </button>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10 text-[11px] text-white/60">
+                <span className="font-medium">{copy.modals.storyViewer.shotOn}</span>
+                <button
+                  onClick={() => alert(copy.modals.storyViewer.shareAlert)}
+                  className="flex items-center gap-1 text-white hover:text-[#E5192D] transition-colors cursor-pointer font-semibold"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>{copy.modals.storyViewer.share}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
 
       </div>
 

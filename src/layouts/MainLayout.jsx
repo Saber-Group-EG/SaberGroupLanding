@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useDispatch, useSelector } from 'react-redux';
+import { Toaster } from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/footer';
 import { getJobPositions } from '../store/slices/jobPositionsSlice';
@@ -153,6 +154,19 @@ const MainLayout = () => {
       </main>
 
       <Footer />
+
+      {/* Toasts mount here once: sections fire toast.error() with nothing to
+          render into otherwise. Neutral-900 card matches the site chrome. */}
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: '#171717',
+            color: '#ffffff',
+            borderRadius: '12px',
+          },
+        }}
+      />
     </div>
   );
 };
