@@ -24,7 +24,7 @@ import { ContactModal } from '../components/home/ContactModal';
 import { SELECTED_PROJECTS } from '../content/home/saberData';
 import { useProjectStories } from '../components/home/useProjectStories';
 import { useStoryGroups } from '../components/home/useStoryGroups';
-import { useHomeProjects } from '../components/home/useHomeProjects';
+import { useHomeClients } from '../components/home/useHomeClients';
 import { useCastMembers } from '../components/home/useCastMembers';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { startIdleVideoWarmup } from '../utils/storyVideoPrefetch';
@@ -42,7 +42,7 @@ const Home = () => {
   const { stories, loading: storiesLoading } = useProjectStories();
   const { groups: storyGroups, loading: storyGroupsLoading, error: storyGroupsError } =
     useStoryGroups();
-  const { clients, loading: projectsLoading } = useHomeProjects();
+  const { clients, loading: clientsLoading } = useHomeClients();
   const { members: teamMembers, loading: castLoading } = useCastMembers();
 
   // stories re-memoises on language change, so key on the URL list itself to
@@ -155,7 +155,7 @@ const Home = () => {
 
       <JoinTeamBlocksSection onOpenApply={handleOpenApply} onApply={handleApplyToPosition} />
 
-      <ClientsSection clients={clients} loading={projectsLoading} />
+      <ClientsSection clients={clients} loading={clientsLoading} />
 
       <CtaSection onOpenContact={() => setIsContactOpen(true)} />
 

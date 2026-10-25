@@ -72,7 +72,7 @@ export const useProjectStories = () => {
   const error = useSelector((state) => state.projects.error);
 
   // Cached data renders instantly; getProjects' thunk condition refetches at
-  // most once per page load and dedupes against useHomeProjects.
+  // most once per page load.
   useEffect(() => {
     dispatch(getProjects());
   }, [dispatch]);
