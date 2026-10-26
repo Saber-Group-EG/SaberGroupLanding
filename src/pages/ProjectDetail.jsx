@@ -12,6 +12,7 @@ import {
 } from '../store/slices/projectsSlice';
 import { getAbsoluteImageUrl, SITE_URL } from '../utils/ogMeta';
 import { getProxiedCoverUrl } from '../utils/imageProxy';
+import { getProjectLayout } from '../components/projectLayouts';
 import {
   Camera,
   LoaderCircle,
@@ -449,6 +450,12 @@ const ProjectDetail = () => {
       ogDescription = `${videoCaption} - ${projectName}`;
       ogUrl = `${SITE_URL}/portfolio/${slug}/video/${videoIndex}`;
     }
+  }
+
+  // Numbered layouts picked in the dashboard; no number (or an unknown one) keeps this default page
+  const CustomLayout = getProjectLayout(project.internalLayout);
+  if (CustomLayout) {
+    return <CustomLayout project={project} relatedProjects={relatedProjects} isArabic={isArabic} t={t} />;
   }
 
   return (
