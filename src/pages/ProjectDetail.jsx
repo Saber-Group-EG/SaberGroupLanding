@@ -455,7 +455,22 @@ const ProjectDetail = () => {
   // Numbered layouts picked in the dashboard; no number (or an unknown one) keeps this default page
   const CustomLayout = getProjectLayout(project.internalLayout);
   if (CustomLayout) {
-    return <CustomLayout project={project} relatedProjects={relatedProjects} isArabic={isArabic} t={t} />;
+    return (
+      <>
+        <Helmet>
+          <title>{ogTitle}</title>
+          <meta name="description" content={ogDescription} />
+          <link rel="canonical" href={ogUrl} />
+          <meta property="og:type" content="article" />
+          <meta property="og:title" content={ogTitle} />
+          <meta property="og:description" content={ogDescription} />
+          <meta property="og:image" content={ogImageUrl} />
+          <meta property="og:url" content={ogUrl} />
+          <meta name="twitter:card" content="summary_large_image" />
+        </Helmet>
+        <CustomLayout project={project} relatedProjects={relatedProjects} isArabic={isArabic} t={t} />
+      </>
+    );
   }
 
   return (
