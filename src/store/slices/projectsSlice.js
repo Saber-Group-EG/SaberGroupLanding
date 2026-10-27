@@ -121,6 +121,7 @@ const transformProject = (raw) => {
     clientNameAr: raw.company?.ar || raw.company?.name?.ar || resolveBilingual(raw.company),
     hideClientName: raw.hideClientName === true,
     internalLayout: raw.internalLayout ?? null,
+    insights: raw.insights || null,
     client: (raw.company && typeof raw.company === 'object' && raw.company._id)
       ? {
           id: raw.company._id,

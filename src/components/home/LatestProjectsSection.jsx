@@ -1,48 +1,70 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Play, Pause, ArrowRight, Sparkles, Clock, MapPin, X } from 'lucide-react';
 import { useHomeCopy } from '../../i18n/hooks/useHomeCopy';
+import { useTranslation } from '../../i18n/hooks/useTranslation';
+import { selectPublishedProjects } from '../../store/slices/projectsSlice';
 
 
-const LATEST_WORKS = [
-  {
-    id: 'latest-valora-film',
-    title: 'Valora Luxury Living',
-    industryKey: 'real-estate',
-    clientName: 'Valora Developments',
-    year: '2025',
-    videoDuration: '02:45',
-    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=980&q=60',
-  },
-  {
-    id: 'latest-asia-luxe',
-    title: 'Asia Skin & Radiance Serum',
-    industryKey: 'beauty',
-    clientName: 'Asia Beauty Care',
-    year: '2025',
-    videoDuration: '01:15',
-    coverImage: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=840&q=60',
-  },
-  {
-    id: 'latest-seashell-summer',
-    title: 'Seashell Bohemian Beach Club',
-    industryKey: 'hospitality',
-    clientName: 'Seashell Hospitality',
-    year: '2024 - 2025',
-    videoDuration: '03:10',
-    coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=840&q=60',
-  },
-  {
-    id: 'latest-swissotel-legacy',
-    title: 'Swissôtel Sanctuary & Heritage',
-    industryKey: 'hospitality',
-    clientName: 'Swissôtel Hotels & Resorts',
-    year: '2024',
-    videoDuration: '02:56',
-    video: 'https://upload.ats.sabergroup-eg.com/Markting/landing/video/resized.mp4',
-    coverImage: '/hero/2.jpg',
-  },
+// The spotlight film stays hand-written; the cards below it are real projects, looked up by slug.
+const SPOTLIGHT = {
+  id: 'latest-swissotel-legacy',
+  title: 'Swissôtel Sanctuary & Heritage',
+  industryKey: 'hospitality',
+  clientName: 'Swissôtel Hotels & Resorts',
+  year: '2024',
+  videoDuration: '02:56',
+  video: 'https://upload.ats.sabergroup-eg.com/Markting/landing/video/resized.mp4',
+  coverImage: '/hero/2.jpg',
+};
+
+const FEATURED_SLUGS = [
+  'iconic-jewelry-photography',
+  'unposed-dermatologist-photoshoot',
+  'signature-pastry-dessert-collection-photoshoot',
 ];
+
+const INSIGHT_LABELS = {
+  accountsReached: ['Accounts Reached', 'الوصول'],
+  engagementRate: ['Engagement Rate', 'معدل التفاعل'],
+  ordersAndMessages: ['Orders & Messages', 'الطلبات والرسائل'],
+  impressions: ['Impressions', 'مرات الظهور'],
+};
+
+// Shape a store project like the hand-written entries, so cards and the spotlight render it the same way.
+const toCard = (p, isArabic) => {
+  const t = (en, ar) => (isArabic ? ar || en : en || ar);
+  const services = (isArabic ? p.servicesAr : p.services) || [];
+  const year = p.createdAt ? String(new Date(p.createdAt).getFullYear()) : '';
+  const insights = Object.entries(INSIGHT_LABELS)
+    .filter(([key]) => p.insights?.[key])
+    .map(([key, [en, ar]]) => ({ value: p.insights[key], label: t(en, ar) }));
+  return {
+    id: p.id,
+    slug: p.slug,
+    title: t(p.titleEn, p.titleAr),
+    industryKey: `cat-${p.categoryId || p.categoryNameEn}`,
+    industryLabel: t(p.categoryNameEn, p.categoryNameAr),
+    year,
+    coverImage: p.coverImage,
+    copy: {
+      industry: t(p.categoryNameEn, p.categoryNameAr),
+      featuredBadge: p.hideClientName ? '' : t(p.clientName, p.clientNameAr),
+      location: t(p.locationEn, p.locationAr),
+      description: t(p.descriptionEn, p.descriptionAr),
+      role: services.join(', '),
+      metrics: insights.length
+        ? insights.slice(0, 3)
+        : [
+            { value: p.photosCount, label: t('Photos', 'صورة') },
+            { value: services.length, label: t('Services', 'خدمة') },
+            { value: year, label: t('Year', 'السنة') },
+          ],
+    },
+  };
+};
 
 // Thumbnail-first: the <video> element is only mounted after the visitor
 // presses play, so nothing of the (huge) video file loads before that.
@@ -144,7 +166,7 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
         alt={heroProject.title}
         loading="lazy"
         decoding="async"
-        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
+        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 filter brightness-90 group-hover:brightness-100"
       />
       {heroProject.video && (
         <div ref={inlineMediaRef} className="absolute inset-0">
@@ -173,10 +195,12 @@ const SpotlightMedia = ({ heroProject, heroCopy, copy }) => {
         <span className="px-3.5 py-1 rounded-full bg-[#E5192D] text-white text-[10px] font-extrabold uppercase tracking-widest shadow-lg">
           {heroCopy.featuredBadge || copy.latestProjects.featuredFallback}
         </span>
-        <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-neutral-300 text-[10px] font-bold uppercase tracking-wider border border-white/10 flex items-center gap-1">
-          <Clock className="w-3 h-3 text-[#E5192D]" />
-          <span>{heroProject.videoDuration}</span>
-        </span>
+        {heroProject.videoDuration && (
+          <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-neutral-300 text-[10px] font-bold uppercase tracking-wider border border-white/10 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-[#E5192D]" />
+            <span>{heroProject.videoDuration}</span>
+          </span>
+        )}
       </div>
 
       {/* Big Play Reel Button */}
@@ -248,21 +272,46 @@ export const LatestProjectsSection = ({
   onSelectProject,
 }) => {
   const copy = useHomeCopy();
+  const { isArabic } = useTranslation();
+  const navigate = useNavigate();
+  const published = useSelector(selectPublishedProjects);
   const [activeTab, setActiveTab] = useState('all');
+
+  const works = useMemo(() => {
+    const featured = FEATURED_SLUGS
+      .map((slug) => published.find((p) => p.slug === slug))
+      .filter(Boolean)
+      .map((p) => toCard(p, isArabic));
+    return [SPOTLIGHT, ...featured];
+  }, [published, isArabic]);
+
+  // Tabs follow the categories actually shown: "All", the spotlight's, then each project's.
+  const tabs = useMemo(() => {
+    const base = copy.latestProjects.filterTabs;
+    const list = [base.find((tab) => tab.id === 'all')];
+    works.forEach((w) => {
+      if (list.some((tab) => tab.id === w.industryKey)) return;
+      const label = w.industryLabel || base.find((tab) => tab.id === w.industryKey)?.label;
+      if (label) list.push({ id: w.industryKey, label });
+    });
+    return list;
+  }, [works, copy]);
 
   const filteredList =
     activeTab === 'all'
-      ? LATEST_WORKS
-      : LATEST_WORKS.filter((item) => item.industryKey === activeTab);
+      ? works
+      : works.filter((item) => item.industryKey === activeTab);
+
+  const open = (proj) => (proj.slug ? navigate(`/portfolio/${proj.slug}`) : onSelectProject(proj));
 
   // Prefer the project that has an actual film for the spotlight card, so
   // the video is always featured when the section renders.
   const heroProject =
     filteredList.find((item) => item.video) ||
     filteredList[0] ||
-    LATEST_WORKS[0];
+    works[0];
   const gridProjects = filteredList.filter((item) => item !== heroProject);
-  const heroCopy = copy.shared.projects[heroProject.id];
+  const heroCopy = heroProject.copy || copy.shared.projects[heroProject.id];
 
   return (
     <section
@@ -295,7 +344,7 @@ export const LatestProjectsSection = ({
 
           {/* Filter Pills */}
           <div className="flex flex-wrap items-center gap-2 bg-neutral-900/80 p-1.5 rounded-2xl border border-neutral-800">
-            {copy.latestProjects.filterTabs.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -316,7 +365,7 @@ export const LatestProjectsSection = ({
           <div
             onClick={() => {
               // Projects with their own film play it in place — no modal.
-              if (!heroProject.video) onSelectProject(heroProject);
+              if (!heroProject.video) open(heroProject);
             }}
             className={`group relative rounded-3xl overflow-hidden border border-neutral-800 hover:border-neutral-700 bg-neutral-900 mb-10 transition-all duration-300 shadow-2xl ${
               heroProject.video ? 'cursor-default' : 'cursor-pointer'
@@ -391,11 +440,11 @@ export const LatestProjectsSection = ({
         {/* Secondary Latest Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {gridProjects.map((proj) => {
-            const projCopy = copy.shared.projects[proj.id];
+            const projCopy = proj.copy || copy.shared.projects[proj.id];
             return (
               <div
                 key={proj.id}
-                onClick={() => onSelectProject(proj)}
+                onClick={() => open(proj)}
                 className="group bg-neutral-900/90 rounded-2xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 flex flex-col justify-between shadow-xl cursor-pointer hover:-translate-y-1"
               >
                 <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
@@ -414,9 +463,11 @@ export const LatestProjectsSection = ({
                     </span>
                   </div>
 
-                  <div className="absolute bottom-3 end-3 w-8 h-8 rounded-full bg-[#E5192D] text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <Play className="w-3.5 h-3.5 fill-current ltr:ml-0.5 rtl:mr-0.5" />
-                  </div>
+                  {!proj.slug && (
+                    <div className="absolute bottom-3 end-3 w-8 h-8 rounded-full bg-[#E5192D] text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <Play className="w-3.5 h-3.5 fill-current ltr:ml-0.5 rtl:mr-0.5" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-5 flex flex-col flex-1 justify-between">
