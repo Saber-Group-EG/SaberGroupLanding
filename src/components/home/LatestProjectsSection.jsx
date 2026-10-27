@@ -51,7 +51,7 @@ const toCard = (p, isArabic) => {
     coverImage: p.coverImage,
     copy: {
       industry: t(p.categoryNameEn, p.categoryNameAr),
-      featuredBadge: p.hideClientName ? '' : t(p.clientName, p.clientNameAr),
+      client: p.hideClientName ? '' : t(p.clientName, p.clientNameAr),
       location: t(p.locationEn, p.locationAr),
       description: t(p.descriptionEn, p.descriptionAr),
       role: services.join(', '),
@@ -447,13 +447,14 @@ export const LatestProjectsSection = ({
                 onClick={() => open(proj)}
                 className="group bg-neutral-900/90 rounded-2xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 flex flex-col justify-between shadow-xl cursor-pointer hover:-translate-y-1"
               >
-                <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-950">
+                  {/* Covers are mostly 4:5 portraits; bias the crop up so faces and jewelry stay in frame. */}
                   <img
                     src={proj.coverImage}
                     alt={proj.title}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100"
+                    className="w-full h-full object-cover object-[50%_20%] group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
@@ -473,7 +474,7 @@ export const LatestProjectsSection = ({
                 <div className="p-5 flex flex-col flex-1 justify-between">
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">
-                      {projCopy.industry} • {proj.year}
+                      {projCopy.client || projCopy.industry} • {proj.year}
                     </div>
                     <h4 className="text-lg font-bold text-white tracking-tight group-hover:text-[#E5192D] transition-colors line-clamp-1">
                       {proj.title}
