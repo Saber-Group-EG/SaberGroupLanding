@@ -447,7 +447,7 @@ export const LatestProjectsSection = ({
                 onClick={() => open(proj)}
                 className="group bg-neutral-900/90 rounded-2xl overflow-hidden border border-neutral-800 hover:border-neutral-600 transition-all duration-300 flex flex-col justify-between shadow-xl cursor-pointer hover:-translate-y-1"
               >
-                <div className="relative aspect-[5/4] w-full overflow-hidden bg-neutral-950">
+                <div className="relative isolate aspect-[5/4] w-full overflow-hidden bg-neutral-950 [transform:translateZ(0)]">
                   {/* Portrait covers (faces, jewelry) crop from near the top; square or wide ones stay centred. */}
                   <img
                     src={proj.coverImage}
@@ -458,9 +458,10 @@ export const LatestProjectsSection = ({
                       const img = e.currentTarget;
                       if (img.naturalHeight > img.naturalWidth * 1.1) img.style.objectPosition = '50% 20%';
                     }}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100"
+                    className="w-full h-full object-cover object-center [backface-visibility:hidden] will-change-transform group-hover:scale-105 transition-transform duration-500 filter brightness-90 group-hover:brightness-100"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  {/* Overhangs by 1px so the scaled light image never peeks out at a sub-pixel edge. */}
+                  <div className="absolute -inset-px bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
                   <div className="absolute top-3 start-3">
                     <span className="px-2.5 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-white text-[9px] font-extrabold uppercase tracking-wider border border-white/10">
