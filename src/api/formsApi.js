@@ -79,6 +79,12 @@ export async function submitApplicant(payload) {
   return res.data;
 }
 
+// Reads an uploaded CV with the company's AI and returns a draft of answers.
+export async function parseCv(payload) {
+  const { data } = await formClient.post('/public/applicants/cv-parse', payload);
+  return data?.data ?? data;
+}
+
 export async function checkExistingApplicant(params) {
   const res = await formClient.get('/public/applicants', { params });
   return res.data;

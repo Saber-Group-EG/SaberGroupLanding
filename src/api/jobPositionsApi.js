@@ -10,7 +10,10 @@ const COMPANY_ID = import.meta.env.VITE_FORM_COMPANY_ID || 'saber-group';
  */
 export const fetchJobPositions = async () => {
   try {
-    const response = await axios.get(`${FORM_API_URL}/public/jobs/company/saber-group`);
+    const response = await axios.get(`${FORM_API_URL}/public/jobs/company/saber-group`, {
+      // The endpoint pages at 10 by default; the careers page needs every job.
+      params: { PageCount: 'all' },
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching job positions:', error);

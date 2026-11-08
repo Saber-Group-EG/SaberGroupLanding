@@ -8,6 +8,7 @@ import * as Yup from 'yup';
 import {
   submitApplicant,
   checkExistingApplicant,
+  parseCv,
   getApiErrorMessage,
 } from '../api/formsApi';
 import Swal from 'sweetalert2';
@@ -47,6 +48,9 @@ const JobApplicationForm = () => {
   const [repeatableGroups, setRepeatableGroups] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState({});
+  const [isParsingCv, setIsParsingCv] = useState(false);
+  // The CV uploaded for autofill, reused on submit so it isn't sent twice.
+  const cvUploadedUrlRef = useRef(null);
 
   const maxExpectedSalaryValue = 100000;
 
@@ -1505,7 +1509,15 @@ const JobApplicationForm = () => {
             Swal.showLoading();
           },
         });
-        cvUrl = await uploadToR2(values.cvFile, 'JobApplications');
+        if (
+          cvUploadedUrlRef.current?.file === values.cvFile &&
+          cvUploadedUrlRef.current?.url
+        ) {
+          cvUrl = cvUploadedUrlRef.current.url;
+        } else {
+          cvUrl = await uploadToR2(values.cvFile, 'JobApplications');
+          cvUploadedUrlRef.current = { file: values.cvFile, url: cvUrl };
+        }
         Swal.close();
       }
 
@@ -1771,6 +1783,110 @@ const JobApplicationForm = () => {
     } finally {
       setIsSubmitting(false);
       setSubmitting(false);
+    }
+  };
+
+  // Fill the form from the uploaded CV (same flow as the ATS apply form).
+  const hasValue = (v) =>
+    Array.isArray(v) ? v.length > 0 : v != null && String(v).trim() !== '';
+  const reservedFieldNames = [
+    'fullName',
+    'email',
+    'phone',
+    'address',
+    'birthDate',
+    'gender',
+    'expectedSalary',
+  ];
+
+  const applyCvDraft = (draft, setFieldValue) => {
+    Object.entries(draft.reservedFields || {}).forEach(([key, value]) => {
+      if (reservedFieldNames.includes(key) && value != null && isBaseFieldVisible(key)) {
+        setFieldValue(key, String(value));
+      }
+    });
+    Object.entries(draft.customFieldAnswers || {}).forEach(([key, value]) => {
+      const field = orderedCustomFields.find((f) => getFieldKey(f) === key);
+      if (!field) return;
+      if (field.inputType === 'repeatable_group' || field.inputType === 'groupField') {
+        const groups = Array.isArray(value) ? value : value ? [value] : [];
+        setRepeatableGroups((prev) => ({ ...prev, [key]: groups }));
+        setFieldValue(`customResponses.${key}`, groups);
+      } else {
+        setFieldValue(`customResponses.${key}`, value);
+      }
+    });
+  };
+
+  const handleCvAutofill = async (values, setFieldValue) => {
+    if (!values.cvFile || !jobPosition) return;
+    setIsParsingCv(true);
+    try {
+      let cvUrl = cvUploadedUrlRef.current?.url || '';
+      if (!cvUrl || cvUploadedUrlRef.current?.file !== values.cvFile) {
+        cvUrl = await uploadToR2(values.cvFile, 'JobApplications');
+        cvUploadedUrlRef.current = { file: values.cvFile, url: cvUrl };
+      }
+      const rawCompanyId = jobPosition.companyId?._id || jobPosition.companyId;
+      const draft = await parseCv({
+        companyId: typeof rawCompanyId === 'string' ? rawCompanyId : '',
+        jobPositionId: jobPosition._id,
+        cvUrl,
+      });
+
+      const hasReserved = Object.values(draft?.reservedFields || {}).some(hasValue);
+      const hasCustom = Object.values(draft?.customFieldAnswers || {}).some(hasValue);
+      if (!hasReserved && !hasCustom) {
+        await Swal.fire({
+          icon: 'info',
+          title: t('joinUs:cvNothingFoundTitle') || 'Nothing found',
+          text:
+            t('joinUs:cvNothingFoundText') ||
+            'We could not pull anything usable from this CV. Please fill the form manually.',
+          confirmButtonText: isArabic ? 'حسناً' : 'OK',
+          confirmButtonColor: '#f59e0b',
+        });
+        return;
+      }
+
+      const conflicts =
+        Object.keys(draft.reservedFields || {}).some(
+          (key) =>
+            reservedFieldNames.includes(key) && isBaseFieldVisible(key) && hasValue(values[key])
+        ) ||
+        Object.keys(draft.customFieldAnswers || {}).some((key) =>
+          hasValue(values.customResponses?.[key])
+        );
+      if (conflicts) {
+        const result = await Swal.fire({
+          icon: 'question',
+          title: t('joinUs:cvOverwriteTitle') || 'Overwrite existing answers?',
+          text:
+            t('joinUs:cvOverwriteText') ||
+            'Some fields already have values. Replace them with what we found in your CV?',
+          showCancelButton: true,
+          confirmButtonText: isArabic ? 'نعم' : 'Yes',
+          cancelButtonText: isArabic ? 'لا' : 'No',
+          confirmButtonColor: '#f59e0b',
+          cancelButtonColor: '#6b7280',
+        });
+        if (!result.isConfirmed) return;
+      }
+
+      applyCvDraft(draft, setFieldValue);
+    } catch (err) {
+      await Swal.fire({
+        icon: 'error',
+        title: isArabic ? 'خطأ' : 'Error',
+        text: getApiErrorMessage(
+          err,
+          t('joinUs:cvParseFailed') || 'Failed to read CV. Please fill the form manually.'
+        ),
+        confirmButtonText: isArabic ? 'حسناً' : 'OK',
+        confirmButtonColor: '#ef4444',
+      });
+    } finally {
+      setIsParsingCv(false);
     }
   };
 
@@ -2724,6 +2840,37 @@ const JobApplicationForm = () => {
                       }
                     />
                   )}
+
+                  {/* CV Autofill: reads the uploaded CV with the company's AI */}
+                  {isBaseFieldVisible('cvFilePath') &&
+                    values.cvFile &&
+                    jobPosition?.companyId?.settings?.aiSettings?.enabled === true &&
+                    jobPosition?.companyId?.settings?.aiSettings?.featureToggles
+                      ?.cvParse !== false && (
+                      <div className="flex justify-center mb-8">
+                        <button
+                          type="button"
+                          disabled={isParsingCv}
+                          onClick={() => handleCvAutofill(values, setFieldValue)}
+                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-700 font-semibold hover:bg-amber-100 hover:border-amber-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isParsingCv ? (
+                            <>
+                              <span className="inline-block w-5 h-5 animate-spin rounded-full border-2 border-amber-300 border-t-amber-700" />
+                              {t('joinUs:parsingCv') || 'Reading CV...'}
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z" />
+                                <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />
+                              </svg>
+                              {t('joinUs:autofillFromCv') || 'Autofill from CV'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
                   {/* Dynamic Custom Fields */}
                   {orderedCustomFields.length > 0 && (
