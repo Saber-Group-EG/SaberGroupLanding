@@ -1978,8 +1978,9 @@ const JobApplicationForm = () => {
 
   const pageUrl = getFullUrl(`/join-us/${slug}`);
   const ogImage = getDefaultOgImage();
+  // title is { en, ar } — plain text for the tab title and share previews.
   const jobTitle = jobPosition
-    ? jobPosition.title || jobPosition.name
+    ? getLocalizedText(jobPosition.title || jobPosition.name) || 'Position'
     : 'Position';
 
   return (
