@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
@@ -22,6 +22,17 @@ import CvUpload from '../components/CvUpload';
 import { getTrafficSource } from '../utils/trafficSource';
 import { uploadToR2 } from '../utils/r2Upload';
 import {
+  DEFAULT_PHONE_COUNTRY,
+  cleanPhoneInput,
+  isValidEmail,
+  isValidPhone,
+  phoneCountryOptions,
+  phonePlaceholder,
+  splitPhone,
+  suggestEmail,
+  toStoredPhone,
+} from '../utils/contactValidation';
+import {
   ALLOWED_PHOTO_TYPES,
   ALLOWED_PHOTO_EXTENSIONS,
   ALLOWED_CV_TYPES,
@@ -41,6 +52,10 @@ const JobApplicationForm = () => {
   const dispatch = useDispatch();
   const { t, isArabic, mapEmploymentType, mapWorkArrangement } =
     useTranslation();
+  const phoneCountries = useMemo(
+    () => phoneCountryOptions(isArabic ? 'ar' : 'en'),
+    [isArabic]
+  );
   const { positions, loading, company } = useSelector(
     (state) => state.jobPositions
   );
@@ -980,8 +995,11 @@ const JobApplicationForm = () => {
     }
 
     if (isBaseFieldVisible('email')) {
-      let emailSchema = createTrimmedStringSchema().email(
-        t('joinUs:invalidEmail') || 'Invalid email'
+      let emailSchema = createTrimmedStringSchema().test(
+        'email-format',
+        t('joinUs:fixHintEmail') ||
+          'Enter a valid email address, for example name@example.com.',
+        (value) => !value || isValidEmail(value)
       );
       if (isBaseFieldRequired('email')) {
         emailSchema = emailSchema.required(
@@ -992,10 +1010,25 @@ const JobApplicationForm = () => {
     }
 
     if (isBaseFieldVisible('phone')) {
-      let phoneSchema = createTrimmedStringSchema().matches(/^01[0125]\d{8}$/, {
-        message: t('joinUs:invalidPhone') || 'Invalid phone number',
-        excludeEmptyString: true,
-      });
+      let phoneSchema = createTrimmedStringSchema().test(
+        'phone-format',
+        '',
+        function (value) {
+          if (!value) return true;
+          const country = this.parent?.phoneCountry || DEFAULT_PHONE_COUNTRY;
+          if (isValidPhone(value, country)) return true;
+          const countryName =
+            phoneCountries.find((c) => c.code === country)?.name || country;
+          return this.createError({
+            message:
+              country === 'EG'
+                ? t('joinUs:fixHintPhone') ||
+                  'Enter an 11-digit Egyptian number starting with 010, 011, 012, or 015.'
+                : t('joinUs:phoneInvalidForCountry', { country: countryName }) ||
+                  `This number isn't a valid phone number in ${countryName}.`,
+          });
+        }
+      );
 
       if (isBaseFieldRequired('phone')) {
         phoneSchema = phoneSchema.required(
@@ -1384,8 +1417,9 @@ const JobApplicationForm = () => {
       const applicantEmail = isBaseFieldVisible('email')
         ? (values.email || '').trim()
         : '';
+      // Egypt: 01XXXXXXXXX as before; other countries: +<code><number>.
       const applicantPhone = isBaseFieldVisible('phone')
-        ? (values.phone || '').trim()
+        ? toStoredPhone(values.phone || '', values.phoneCountry || DEFAULT_PHONE_COUNTRY)
         : '';
       const rawCompanyId =
         jobPosition?.companyId?._id ||
@@ -1802,6 +1836,12 @@ const JobApplicationForm = () => {
   const applyCvDraft = (draft, setFieldValue) => {
     Object.entries(draft.reservedFields || {}).forEach(([key, value]) => {
       if (reservedFieldNames.includes(key) && value != null && isBaseFieldVisible(key)) {
+        if (key === 'phone') {
+          const { country, phone } = splitPhone(String(value));
+          setFieldValue('phoneCountry', country);
+          setFieldValue('phone', phone);
+          return;
+        }
         setFieldValue(key, String(value));
       }
     });
@@ -1947,6 +1987,7 @@ const JobApplicationForm = () => {
     fullName: '',
     email: '',
     phone: '',
+    phoneCountry: DEFAULT_PHONE_COUNTRY,
     address: '',
     birthDate: '',
     gender: '',
@@ -2560,7 +2601,10 @@ const JobApplicationForm = () => {
                         <Field
                           name="email"
                           type="email"
-                          placeholder={t('joinUs:email') || 'Email'}
+                          inputMode="email"
+                          autoComplete="email"
+                          dir="ltr"
+                          placeholder="name@example.com"
                           className="w-full px-4 py-3 rounded-xl bg-white dark:bg-dark-800 border-2 border-light-200 dark:border-dark-600 text-light-900 dark:text-white placeholder-light-400 dark:placeholder-dark-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all duration-200"
                         />
                         {errors.email && touched.email && (
@@ -2568,6 +2612,23 @@ const JobApplicationForm = () => {
                             {errors.email}
                           </p>
                         )}
+                        {(() => {
+                          const suggestion = suggestEmail(values.email);
+                          if (!suggestion) return null;
+                          return (
+                            <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+                              {t('joinUs:emailSuggestion', { email: suggestion }) ||
+                                `Did you mean ${suggestion}?`}{' '}
+                              <button
+                                type="button"
+                                onClick={() => setFieldValue('email', suggestion)}
+                                className="font-semibold underline underline-offset-2"
+                              >
+                                {t('joinUs:useSuggestion') || 'Use it'}
+                              </button>
+                            </p>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -2595,33 +2656,71 @@ const JobApplicationForm = () => {
                             )}
                           </div>
                         </label>
-                        <Field
-                          name="phone"
-                          type="tel"
-                          inputMode="numeric"
-                          pattern="01[0125]\d{8}"
-                          minLength={11}
-                          maxLength={11}
-                          placeholder={t('joinUs:phone') || 'Phone'}
-                          onChange={(e) => {
-                            const digitsOnly = e.target.value
-                              .replace(/\D+/g, '')
-                              .slice(0, 11);
-                            setFieldValue('phone', digitsOnly);
-                          }}
-                          onPaste={(e) => {
-                            e.preventDefault();
-                            const paste =
-                              (e.clipboardData || window.clipboardData).getData(
-                                'text'
-                              ) || '';
-                            const digitsOnly = paste
-                              .replace(/\D+/g, '')
-                              .slice(0, 11);
-                            setFieldValue('phone', digitsOnly);
-                          }}
-                          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-dark-800 border-2 border-light-200 dark:border-dark-600 text-light-900 dark:text-white placeholder-light-400 dark:placeholder-dark-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all duration-200"
-                        />
+                        <div className="flex gap-2" dir="ltr">
+                          {(() => {
+                            const selected =
+                              phoneCountries.find((c) => c.code === values.phoneCountry) ||
+                              phoneCountries[0];
+                            return (
+                              <div className="relative shrink-0">
+                                <div
+                                  aria-hidden="true"
+                                  className="flex h-full items-center gap-1.5 rounded-xl border-2 border-light-200 bg-white px-3 py-3 text-light-900 dark:border-dark-600 dark:bg-dark-800 dark:text-white"
+                                >
+                                  <span className="text-xs font-semibold text-light-500 dark:text-dark-300">
+                                    {selected?.code}
+                                  </span>
+                                  <span className="font-medium">{selected?.dial}</span>
+                                  <svg className="h-4 w-4 text-light-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                                <select
+                                  aria-label={t('joinUs:phoneCountry') || 'Country code'}
+                                  value={values.phoneCountry}
+                                  onChange={(e) => setFieldValue('phoneCountry', e.target.value)}
+                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                >
+                                  {phoneCountries.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                      {c.name} ({c.dial})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            );
+                          })()}
+                          <Field
+                            name="phone"
+                            type="tel"
+                            inputMode="numeric"
+                            autoComplete="tel-national"
+                            maxLength={15}
+                            placeholder={phonePlaceholder(values.phoneCountry) || t('joinUs:phone') || 'Phone'}
+                            onChange={(e) => {
+                              setFieldValue('phone', cleanPhoneInput(e.target.value));
+                            }}
+                            onPaste={(e) => {
+                              e.preventDefault();
+                              const paste = (
+                                (e.clipboardData || window.clipboardData).getData('text') || ''
+                              ).trim();
+                              // A pasted +966… / 00966… number also picks its country.
+                              if (/^(\+|00)/.test(paste)) {
+                                const { country, phone } = splitPhone(paste);
+                                setFieldValue('phoneCountry', country);
+                                setFieldValue('phone', phone);
+                                return;
+                              }
+                              setFieldValue('phone', cleanPhoneInput(paste));
+                            }}
+                            className="min-w-0 flex-1 px-4 py-3 rounded-xl bg-white dark:bg-dark-800 border-2 border-light-200 dark:border-dark-600 text-light-900 dark:text-white placeholder-light-400 dark:placeholder-dark-400 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all duration-200"
+                          />
+                        </div>
                         {errors.phone && touched.phone && (
                           <p className="mt-1 text-sm text-red-500">
                             {errors.phone}

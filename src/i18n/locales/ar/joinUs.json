@@ -131,5 +131,9 @@
   "cvOverwriteTitle": "استبدال البيانات الحالية؟",
   "cvOverwriteText": "بعض الحقول معبأة بالفعل. هل تريد استبدالها بالبيانات المستخرجة من السيرة الذاتية؟",
   "cvNothingFoundTitle": "لم يتم العثور على بيانات",
-  "cvNothingFoundText": "لم نتمكن من استخراج بيانات مفيدة من هذه السيرة الذاتية."
+  "cvNothingFoundText": "لم نتمكن من استخراج بيانات مفيدة من هذه السيرة الذاتية.",
+  "phoneCountry": "رمز الدولة",
+  "phoneInvalidForCountry": "هذا الرقم ليس رقم هاتف صحيحاً في {{country}}.",
+  "emailSuggestion": "هل تقصد {{email}}؟",
+  "useSuggestion": "استخدمه"
 }

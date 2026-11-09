@@ -131,5 +131,9 @@
   "cvOverwriteTitle": "Overwrite existing answers?",
   "cvOverwriteText": "Some fields already have values. Replace them with what we found in your CV?",
   "cvNothingFoundTitle": "Nothing found",
-  "cvNothingFoundText": "We couldn't pull anything usable from this CV — please fill the form manually."
+  "cvNothingFoundText": "We couldn't pull anything usable from this CV — please fill the form manually.",
+  "phoneCountry": "Country code",
+  "phoneInvalidForCountry": "This number isn't a valid phone number in {{country}}.",
+  "emailSuggestion": "Did you mean {{email}}?",
+  "useSuggestion": "Use it"
 }
