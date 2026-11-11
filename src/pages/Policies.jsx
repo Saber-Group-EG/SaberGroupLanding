@@ -243,7 +243,7 @@ const BulletCard = ({ title, items }) => (
 
 const DataDeletionPanel = ({ isArabic, code }) => {
   const lang = isArabic ? 'ar' : 'en';
-  const { intro, storedTitle, stored, notStoredTitle, notStored, steps, status } =
+  const { intro, storedTitle, stored, notStoredTitle, notStored, steps, hiring, status } =
     dataDeletionContent[lang];
   return (
     <div className="space-y-6">
@@ -263,6 +263,22 @@ const DataDeletionPanel = ({ isArabic, code }) => {
       {steps.map((step, i) => (
         <SectionCard
           key={i}
+          index={i + 1}
+          title={step.title}
+          content={step.content}
+        />
+      ))}
+
+      <h2 className="pt-6 text-2xl font-bold text-light-900 dark:text-white">
+        {hiring.title}
+      </h2>
+      <div className="bg-primary-500/5 border border-primary-500/20 rounded-2xl p-6 text-light-700 dark:text-light-300 leading-relaxed">
+        {hiring.intro}
+      </div>
+      <BulletCard title={hiring.storedTitle} items={hiring.stored} />
+      {hiring.steps.map((step, i) => (
+        <SectionCard
+          key={`hiring-${i}`}
           index={i + 1}
           title={step.title}
           content={step.content}
@@ -303,7 +319,7 @@ const PoliciesPage = () => {
               : 'Everything you need to know about how we operate and protect your data.'}
           </p>
           <p className="text-light-400 dark:text-light-500 text-xs">
-            {isArabic ? 'آخر تحديث: أكتوبر 2026' : 'Last updated: October 2026'}
+            {isArabic ? 'آخر تحديث: نوفمبر 2026' : 'Last updated: November 2026'}
           </p>
         </div>
 
