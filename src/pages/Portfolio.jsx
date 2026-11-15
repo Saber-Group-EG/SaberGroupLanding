@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getProjects, selectAllProjects, selectProjectsLoading } from '../store/slices/projectsSlice';
@@ -77,14 +77,32 @@ const Portfolio = () => {
     return acc;
   }, {});
 
-  // Portfolio list state
+  // Portfolio list state. Filters live in the URL so a copied link opens the
+  // same view: `industry` is the top filter (sectorId) and `sector` repeats for
+  // each selected subcategory tag.
+  const [searchParams, setSearchParams] = useSearchParams();
   const [savedFilters] = useState(loadFilters);
-  const [selectedSectorId, setSelectedSectorId] = useState(() =>
-    typeof savedFilters.sectorId === 'string' && savedFilters.sectorId ? savedFilters.sectorId : 'all'
-  );
-  const [selectedTags, setSelectedTags] = useState(() =>
-    Array.isArray(savedFilters.tags) ? savedFilters.tags.filter((tag) => typeof tag === 'string') : []
-  );
+  const [selectedSectorId, setSelectedSectorId] = useState(() => {
+    const fromUrl = searchParams.get('industry');
+    if (typeof fromUrl === 'string' && fromUrl.trim()) return fromUrl.trim().toLowerCase();
+    // A link that carries only sector tags means the URL is the source of truth.
+    if (searchParams.has('sector')) return 'all';
+    return typeof savedFilters.sectorId === 'string' && savedFilters.sectorId ? savedFilters.sectorId : 'all';
+  });
+  const [selectedTags, setSelectedTags] = useState(() => {
+    const fromUrl = Array.from(
+      new Set(
+        searchParams
+          .getAll('sector')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      )
+    );
+    if (fromUrl.length > 0) return fromUrl;
+    // A link that carries only an industry means no sector tags were selected.
+    if (searchParams.has('industry')) return [];
+    return Array.isArray(savedFilters.tags) ? savedFilters.tags.filter((tag) => typeof tag === 'string') : [];
+  });
   const [sortBy, setSortBy] = useState(() =>
     ['newest', 'featured', 'photos', 'reels'].includes(savedFilters.sortBy) ? savedFilters.sortBy : 'newest'
   );
@@ -196,6 +214,26 @@ const Portfolio = () => {
   useEffect(() => {
     saveFilters({ sectorId: selectedSectorId, tags: selectedTags, sortBy });
   }, [selectedSectorId, selectedTags, sortBy]);
+
+  // Mirror the filters into the URL so the page can be copied and shared.
+  useEffect(() => {
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (selectedSectorId && selectedSectorId !== 'all') {
+          next.set('industry', selectedSectorId);
+        } else {
+          next.delete('industry');
+        }
+        next.delete('sector');
+        selectedTags.forEach((tag) => next.append('sector', tag));
+        const nextQuery = next.toString();
+        if (nextQuery === previous.toString()) return previous;
+        return next;
+      },
+      { replace: true }
+    );
+  }, [selectedSectorId, selectedTags, setSearchParams]);
 
   const handleSectorChange = (sector) => {
     if (sector === sectorId) {
