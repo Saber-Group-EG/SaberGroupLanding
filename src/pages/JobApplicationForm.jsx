@@ -151,20 +151,41 @@ const JobApplicationForm = () => {
     }
   }, [jobPosition]);
 
-  // Helper function to get the field key (convert label to readable key)
+  // Formik and Yup read `customResponses.<key>` as a nested path, so "." and
+  // "[]" inside a fieldId split the key and the typed value never lands on the
+  // path the schema validates. Duplicate-generated ids (e.g.
+  // `dup_1783807232490_0.7480112396818376`) contain a dot, which is why a
+  // filled field was still reported as empty.
+  const sanitizeFormKey = (value) =>
+    String(value)
+      .trim()
+      .replace(/[.[\]]/g, '_');
+
+  // Raw fieldId exactly as the backend stores it — needed for submission payloads
+  const getSubmissionFieldKey = (field) => {
+    if (!field) return '';
+    if (typeof field === 'string') return field.trim();
+    if (typeof field.fieldId === 'string' && field.fieldId.trim()) {
+      return field.fieldId.trim();
+    }
+    return getFieldKey(field);
+  };
+
+  // Helper function to get the field key used in form paths (convert label to readable key)
   const getFieldKey = (field) => {
     if (!field) return '';
     if (typeof field === 'string') {
-      return String(field)
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s\u0600-\u06FF]/g, '')
-        .replace(/\s+/g, '_');
+      return sanitizeFormKey(
+        String(field)
+          .toLowerCase()
+          .replace(/[^\w\s\u0600-\u06FF]/g, '')
+          .replace(/\s+/g, '_')
+      );
     }
 
-    // fieldId is the real, stable identifier — use it verbatim, never mutate it
+    // fieldId is the real, stable identifier — sanitize only path-breaking chars
     if (typeof field.fieldId === 'string' && field.fieldId.trim()) {
-      return field.fieldId.trim();
+      return sanitizeFormKey(field.fieldId);
     }
 
     // Only reached if a field genuinely has no fieldId (shouldn't happen for a
@@ -172,17 +193,12 @@ const JobApplicationForm = () => {
     const stableCandidate =
       field.fieldId || field.name || field.id || field._id;
     const keySource = stableCandidate || getLocalizedText(field.label);
-    return String(keySource)
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s\u0600-\u06FF]/g, '')
-      .replace(/\s+/g, '_');
-  };
-
-  // Helper to always derive the English key (use `en` label when present)
-  const getFieldKeyEn = (field) => {
-    if (!field) return '';
-    return getFieldKey(field);
+    return sanitizeFormKey(
+      String(keySource)
+        .toLowerCase()
+        .replace(/[^\w\s\u0600-\u06FF]/g, '')
+        .replace(/\s+/g, '_')
+    );
   };
 
   const extractStringFromRich = (val) => {
@@ -1174,7 +1190,9 @@ const JobApplicationForm = () => {
             const subKey = getFieldKey(sub);
             const subLabel = getLocalizedText(sub.label) || subKey;
             const subFieldId =
-              typeof sub?.fieldId === 'string' ? sub.fieldId.trim() : '';
+              typeof sub?.fieldId === 'string'
+                ? sanitizeFormKey(sub.fieldId)
+                : '';
             const keyCandidates = Array.from(
               new Set([subKey, subFieldId].filter(Boolean))
             );
@@ -1238,7 +1256,9 @@ const JobApplicationForm = () => {
             const subKey = getFieldKey(sub);
             const subLabel = getLocalizedText(sub.label) || subKey;
             const subFieldId =
-              typeof sub?.fieldId === 'string' ? sub.fieldId.trim() : '';
+              typeof sub?.fieldId === 'string'
+                ? sanitizeFormKey(sub.fieldId)
+                : '';
             const keyCandidates = Array.from(
               new Set([subKey, subFieldId].filter(Boolean))
             );
@@ -1619,7 +1639,7 @@ const JobApplicationForm = () => {
       const remappedCustomResponses = {};
       orderedCustomFields.forEach((field) => {
         const locKey = getFieldKey(field);
-        const enKey = getFieldKeyEn(field) || locKey;
+        const enKey = getSubmissionFieldKey(field) || locKey;
         if (
           !Object.prototype.hasOwnProperty.call(englishCustomResponses, locKey)
         )
@@ -1641,7 +1661,7 @@ const JobApplicationForm = () => {
           const mapped = {};
           (field.groupFields || []).forEach((sub) => {
             const subLoc = getFieldKey(sub);
-            const subEn = getFieldKeyEn(sub) || subLoc;
+            const subEn = getSubmissionFieldKey(sub) || subLoc;
             if (Object.prototype.hasOwnProperty.call(val, subLoc))
               mapped[subEn] = wrap(sub.inputType, val[subLoc]);
           });
@@ -1656,7 +1676,7 @@ const JobApplicationForm = () => {
             const mappedItem = {};
             (field.groupFields || []).forEach((sub) => {
               const subLoc = getFieldKey(sub);
-              const subEn = getFieldKeyEn(sub) || subLoc;
+              const subEn = getSubmissionFieldKey(sub) || subLoc;
               if (Object.prototype.hasOwnProperty.call(item, subLoc))
                 mappedItem[subEn] = wrap(sub.inputType, item[subLoc]);
             });
