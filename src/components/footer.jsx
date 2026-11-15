@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
-const footerLogo = '/FOOTER.png';
+const footerLogo = '/saber-group-logo-white.png';
 
 // The footer is shared by every route (MainLayout), so it inherits each page's
 // content container — match the classes the page itself uses.

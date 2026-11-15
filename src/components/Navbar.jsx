@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import LanguageSwitcher from '../i18n/components/LanguageSwitcher';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import logo from '/auth-logo.png';
+import logo from '/saber-group-logo.png';
 
 const Navbar = () => {
   const { t, isArabic } = useTranslation();
