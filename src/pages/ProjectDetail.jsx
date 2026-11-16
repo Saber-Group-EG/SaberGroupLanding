@@ -28,7 +28,33 @@ import {
   MessageSquare,
   Check,
   MapPin,
+  Plus,
+  Minus,
 } from 'lucide-react';
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const ZOOM_STEP = 0.5;
+const TAP_ZOOM = 2.5;
+
+/* Pan is a translate percentage inside the scaled box, so (level - 1) / 2 of
+   the width per axis is exactly the range needed to reach every edge. */
+const panLimitFor = (level) => ((level - MIN_ZOOM) * 100) / 2;
+
+const touchDistance = (touches) =>
+  Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+
+/* Largest box that keeps the whole photo inside the viewport. */
+const fitBoxToViewport = (natural, viewport) => {
+  if (!viewport.width || !viewport.height) return { width: 240, height: 300 };
+  const maxWidth = Math.max(120, viewport.width - (viewport.width >= 640 ? 32 : 8));
+  const maxHeight = Math.max(160, viewport.height - (viewport.height >= 640 ? 144 : 128));
+  if (!natural || !natural.width || !natural.height) {
+    return { width: Math.min(240, maxWidth), height: Math.min(300, maxHeight) };
+  }
+  const scale = Math.min(maxWidth / natural.width, maxHeight / natural.height, 1);
+  return { width: Math.round(natural.width * scale), height: Math.round(natural.height * scale) };
+};
 
 const ProjectDetail = () => {
   const { slug, photoIndex, videoIndex, cover } = useParams();
@@ -65,12 +91,15 @@ const ProjectDetail = () => {
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', brand: '', notes: '' });
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(MIN_ZOOM);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, zoomX: 0, zoomY: 0 });
-  const lastTouchDistRef = useRef(0);
-  const lightboxImgRef = useRef(null);
+  const zoomLevelRef = useRef(MIN_ZOOM);
+  const zoomPositionRef = useRef({ x: 0, y: 0 });
+  const commitZoomRef = useRef(() => {});
+  const lightboxStageRef = useRef(null);
+  const pinchStartRef = useRef(null);
+  const suppressImageClickRef = useRef(false);
   const swipeStartRef = useRef({ x: 0, y: 0, time: 0 });
   const lastZoomTimeRef = useRef(0);
   const [aspectRatios, setAspectRatios] = useState({});
@@ -164,83 +193,116 @@ const ProjectDetail = () => {
     return caption || fallback;
   };
 
-  const resetZoom = () => { setZoomLevel(1); setZoomPosition({ x: 0, y: 0 }); };
+  const commitZoom = (level, origin) => {
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(level * 100) / 100));
+    zoomLevelRef.current = next;
+    setZoomLevel(next);
+    if (next <= MIN_ZOOM) {
+      zoomPositionRef.current = { x: 0, y: 0 };
+      setZoomPosition({ x: 0, y: 0 });
+      return;
+    }
+    const limit = panLimitFor(next);
+    const clampAxis = (value) => Math.max(-limit, Math.min(limit, value));
+    const base = origin
+      ? { x: -origin.x * (next - MIN_ZOOM) * 100, y: -origin.y * (next - MIN_ZOOM) * 100 }
+      : zoomPositionRef.current;
+    const position = { x: clampAxis(base.x), y: clampAxis(base.y) };
+    zoomPositionRef.current = position;
+    setZoomPosition(position);
+  };
 
-  const handleWheelZoom = (e) => {
-    e.preventDefault();
-    const now = Date.now();
-    if (now - lastZoomTimeRef.current < 80) return;
-    lastZoomTimeRef.current = now;
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoomLevel((prev) => {
-      const next = Math.max(1, Math.min(4, prev + delta));
-      if (next === 1) setZoomPosition({ x: 0, y: 0 });
-      return next;
+  commitZoomRef.current = commitZoom;
+
+  const resetZoom = () => commitZoom(MIN_ZOOM);
+  const zoomIn = () => commitZoom(zoomLevelRef.current + ZOOM_STEP);
+  const zoomOut = () => commitZoom(zoomLevelRef.current - ZOOM_STEP);
+
+  /* Tap / click the photo: zoom in on that point, or zoom back out. */
+  const handleImageClick = (e) => {
+    e.stopPropagation();
+    if (suppressImageClickRef.current) {
+      suppressImageClickRef.current = false;
+      return;
+    }
+    if (zoomLevelRef.current > MIN_ZOOM) {
+      resetZoom();
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    commitZoom(TAP_ZOOM, {
+      x: (e.clientX - rect.left) / rect.width - 0.5,
+      y: (e.clientY - rect.top) / rect.height - 0.5,
     });
   };
 
-  const handleDoubleClick = (e) => {
-    e.stopPropagation();
-    if (zoomLevel > 1) {
-      resetZoom();
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width - 0.5) * -100;
-      const y = ((e.clientY - rect.top) / rect.height - 0.5) * -100;
-      setZoomLevel(2.5);
-      setZoomPosition({ x, y });
-    }
-  };
-
-  const handleZoomMouseDown = (e) => {
-    if (zoomLevel <= 1) return;
+  /* Drag to pan while zoomed. */
+  const handlePanStart = (e) => {
+    suppressImageClickRef.current = false;
+    if (zoomLevelRef.current <= MIN_ZOOM) return;
+    if (e.pointerType === 'touch' && pinchStartRef.current) return;
     e.preventDefault();
-    setIsDragging(true);
-    dragStartRef.current = { x: e.clientX, y: e.clientY, zoomX: zoomPosition.x, zoomY: zoomPosition.y };
-    const onMove = (ev) => {
-      const dx = ev.clientX - dragStartRef.current.x;
-      const dy = ev.clientY - dragStartRef.current.y;
-      const newX = Math.max(-100, Math.min(100, dragStartRef.current.zoomX + (dx / window.innerWidth) * 100));
-      const newY = Math.max(-100, Math.min(100, dragStartRef.current.zoomY + (dy / window.innerHeight) * 100));
-      setZoomPosition({ x: newX, y: newY });
+    const rect = e.currentTarget.getBoundingClientRect();
+    const start = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      position: { ...zoomPositionRef.current },
+      width: rect.width / zoomLevelRef.current,
+      height: rect.height / zoomLevelRef.current,
+      moved: false,
     };
-    const onUp = () => { setIsDragging(false); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    setIsDragging(true);
+
+    const onMove = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const dx = ev.clientX - start.clientX;
+      const dy = ev.clientY - start.clientY;
+      if (!start.moved && Math.abs(dx) + Math.abs(dy) > 4) {
+        start.moved = true;
+        suppressImageClickRef.current = true;
+      }
+      if (!start.moved) return;
+      const limit = panLimitFor(zoomLevelRef.current);
+      const position = {
+        x: Math.max(-limit, Math.min(limit, start.position.x + (dx / start.width) * 100)),
+        y: Math.max(-limit, Math.min(limit, start.position.y + (dy / start.height) * 100)),
+      };
+      zoomPositionRef.current = position;
+      setZoomPosition(position);
+    };
+
+    const onUp = () => {
+      setIsDragging(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
-  };
-
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      lastTouchDistRef.current = Math.sqrt(dx * dx + dy * dy);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const scale = dist / lastTouchDistRef.current;
-      lastTouchDistRef.current = dist;
-      setZoomLevel((prev) => Math.max(1, Math.min(4, prev * scale)));
-    }
+    window.addEventListener('pointercancel', onUp);
   };
 
   const handleLightboxSwipeStart = (e) => {
-    if (zoomLevel > 1 || e.touches.length !== 1) return;
+    if (zoomLevelRef.current > MIN_ZOOM || e.touches.length !== 1) {
+      swipeStartRef.current = { x: 0, y: 0, time: 0 };
+      suppressImageClickRef.current = e.touches.length > 1;
+      return;
+    }
+    suppressImageClickRef.current = false;
     swipeStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
   };
 
   const handleLightboxSwipeEnd = (e) => {
-    if (zoomLevel > 1 || swipeStartRef.current.time === 0) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - swipeStartRef.current.x;
-    const dy = touch.clientY - swipeStartRef.current.y;
-    const dt = Date.now() - swipeStartRef.current.time;
+    const swipe = swipeStartRef.current;
     swipeStartRef.current = { x: 0, y: 0, time: 0 };
+    if (zoomLevelRef.current > MIN_ZOOM || swipe.time === 0 || e.changedTouches.length !== 1) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - swipe.x;
+    const dy = touch.clientY - swipe.y;
+    const dt = Date.now() - swipe.time;
+    /* A finger that travelled is a drag, not a tap, even if it did not navigate. */
+    if (Math.abs(dx) + Math.abs(dy) > 12) suppressImageClickRef.current = true;
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 400) {
       if (dx > 0) {
         isRtl ? handleNextLightbox() : handlePrevLightbox();
@@ -278,10 +340,10 @@ const ProjectDetail = () => {
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowRight') { isRtl ? handlePrevLightbox() : handleNextLightbox(); }
       else if (e.key === 'ArrowLeft') { isRtl ? handleNextLightbox() : handlePrevLightbox(); }
-      else if (e.key === 'Escape') { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }
-      else if (e.key === '+' || e.key === '=') { setZoomLevel((prev) => Math.min(4, prev + 0.25)); }
-      else if (e.key === '-') { setZoomLevel((prev) => { const next = Math.max(1, prev - 0.25); if (next === 1) resetZoom(); return next; }); }
-      else if (e.key === '0') { resetZoom(); }
+      else if (e.key === 'Escape') { setLightboxPhoto(null); commitZoomRef.current(MIN_ZOOM); navigate(`/portfolio/${slug}`, { replace: true }); }
+      else if (e.key === '+' || e.key === '=') { e.preventDefault(); commitZoomRef.current(zoomLevelRef.current + ZOOM_STEP); }
+      else if (e.key === '-') { e.preventDefault(); commitZoomRef.current(zoomLevelRef.current - ZOOM_STEP); }
+      else if (e.key === '0') { commitZoomRef.current(MIN_ZOOM); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -320,12 +382,59 @@ const ProjectDetail = () => {
     }
   }, [project, photoIndex, videoIndex]);
 
+  /* Gestures that browsers only honour on non-passive listeners: wheel zoom and
+     two-finger pinch. Both are bound to the lightbox root so they also work
+     when the pointer is on the backdrop. */
   useEffect(() => {
-    const img = lightboxImgRef.current;
-    if (!img || !lightboxPhoto) return;
-    const onWheel = (e) => { e.preventDefault(); handleWheelZoom(e); };
-    img.addEventListener('wheel', onWheel, { passive: false });
-    return () => img.removeEventListener('wheel', onWheel);
+    const stage = lightboxStageRef.current;
+    if (!stage || !lightboxPhoto) return;
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastZoomTimeRef.current < 110) return;
+      lastZoomTimeRef.current = now;
+      commitZoomRef.current(zoomLevelRef.current + (e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP));
+    };
+
+    const onTouchStart = (e) => {
+      if (e.touches.length !== 2) return;
+      e.preventDefault();
+      suppressImageClickRef.current = true;
+      pinchStartRef.current = { distance: touchDistance(e.touches), level: zoomLevelRef.current };
+    };
+
+    const onTouchMove = (e) => {
+      const pinch = pinchStartRef.current;
+      if (e.touches.length !== 2 || !pinch || pinch.distance <= 0) return;
+      e.preventDefault();
+      commitZoomRef.current(pinch.level * (touchDistance(e.touches) / pinch.distance));
+    };
+
+    const onTouchEnd = (e) => {
+      if (e.touches.length < 2) pinchStartRef.current = null;
+    };
+
+    stage.addEventListener('wheel', onWheel, { passive: false });
+    stage.addEventListener('touchstart', onTouchStart, { passive: false });
+    stage.addEventListener('touchmove', onTouchMove, { passive: false });
+    stage.addEventListener('touchend', onTouchEnd);
+    stage.addEventListener('touchcancel', onTouchEnd);
+    return () => {
+      stage.removeEventListener('wheel', onWheel);
+      stage.removeEventListener('touchstart', onTouchStart);
+      stage.removeEventListener('touchmove', onTouchMove);
+      stage.removeEventListener('touchend', onTouchEnd);
+      stage.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [lightboxPhoto]);
+
+  /* Keep the page behind the lightbox from scrolling while it is open. */
+  useEffect(() => {
+    if (!lightboxPhoto) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
   }, [lightboxPhoto]);
 
   if (loading && !project) {
@@ -783,7 +892,7 @@ const ProjectDetail = () => {
 
       {/* LIGHTBOX */}
       {lightboxPhoto && (
-        <div onClick={() => { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }} className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center sm:p-4 select-none safe-area-inset" style={{ overflow: zoomLevel > 1 ? 'visible' : 'hidden' }}>
+        <div ref={lightboxStageRef} onClick={() => { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }} className="fixed inset-0 z-60 overflow-hidden bg-black/95 backdrop-blur-xl flex items-center justify-center sm:p-4 select-none safe-area-inset" style={{ touchAction: 'none' }}>
           <button onClick={() => { setLightboxPhoto(null); resetZoom(); navigate(`/portfolio/${slug}`, { replace: true }); }} className="absolute top-3 right-3 sm:top-5 sm:right-5 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]"><X className="w-5 h-5 sm:w-6 sm:h-6" /></button>
           <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-70 bg-neutral-900/90 text-white text-xs font-extrabold px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl backdrop-blur-md border border-neutral-700 flex items-center gap-2 sm:gap-3 max-w-[calc(100vw-8rem)]">
             <span className="shrink-0">{`${currentFlatIndex}/${totalLightboxPhotos}`}</span>
@@ -798,33 +907,53 @@ const ProjectDetail = () => {
             onTouchEnd={handleLightboxSwipeEnd}
             onClick={(e) => e.stopPropagation()}
             className="relative flex items-center justify-center"
-            style={{ maxWidth: '100%', maxHeight: zoomLevel > 1 ? 'none' : '88vh', overflow: zoomLevel > 1 ? 'visible' : 'hidden' }}
           >
             <LightboxImage
               key={lightboxPhoto.url}
-              ref={lightboxImgRef}
               photo={lightboxPhoto}
-              className="object-contain rounded-lg sm:rounded-2xl shadow-2xl border border-white/10 max-w-full max-h-[88vh]"
+              onClick={handleImageClick}
+              onPointerDown={handlePanStart}
               style={{
-                transform: `scale(${zoomLevel}) translate(${zoomPosition.x}%, ${zoomPosition.y}%)`,
-                transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                transform: `translate(${zoomPosition.x}%, ${zoomPosition.y}%) scale(${zoomLevel})`,
+                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                cursor: zoomLevel > MIN_ZOOM ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
               }}
-              onWheel={handleWheelZoom}
-              onDoubleClick={handleDoubleClick}
-              onMouseDown={handleZoomMouseDown}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
             />
           </div>
           <button onClick={handleNextLightbox} className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-70 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-action-manipulation min-h-[44px] min-w-[44px]">
             {isRtl ? <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" /> : <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
-          {zoomLevel > 1 && (
-            <button onClick={(e) => { e.stopPropagation(); resetZoom(); }} className="absolute bottom-6 left-1/2 -translate-x-1/2 z-70 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors cursor-pointer backdrop-blur-md border border-white/10 touch-action-manipulation">
-              Reset Zoom
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-70 flex items-center gap-0.5 rounded-full bg-neutral-900/90 backdrop-blur-md border border-white/15 p-1 shadow-lg"
+          >
+            <button
+              type="button"
+              onClick={zoomOut}
+              disabled={zoomLevel <= MIN_ZOOM}
+              aria-label={t('zoomOut', 'Zoom out')}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white hover:bg-white/15 disabled:text-white/25 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-default touch-action-manipulation"
+            >
+              <Minus className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={resetZoom}
+              aria-label={t('resetZoom', 'Reset zoom')}
+              className="min-w-[54px] h-9 sm:h-10 px-1.5 rounded-full text-[11px] sm:text-xs font-extrabold text-white tabular-nums hover:bg-white/15 transition-colors cursor-pointer touch-action-manipulation"
+            >
+              {`${Math.round(zoomLevel * 100)}%`}
+            </button>
+            <button
+              type="button"
+              onClick={zoomIn}
+              disabled={zoomLevel >= MAX_ZOOM}
+              aria-label={t('zoomIn', 'Zoom in')}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white hover:bg-white/15 disabled:text-white/25 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-default touch-action-manipulation"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -880,12 +1009,45 @@ const GridPhoto = ({ item, onMediaLoad }) => {
 
 /* Lightbox photo: a small proxied preview paints instantly (spinner covers it
    on a cache miss), then the full-quality original crossfades on top once it
-   finishes loading — normally already cached by the grid's hidden preload. */
-const LightboxImage = ({ photo, className, style, onWheel, onDoubleClick, onMouseDown, onTouchStart, onTouchMove, ref }) => {
+   finishes loading — normally already cached by the grid's hidden preload.
+   The box is fitted to the viewport, so a photo larger than the screen is
+   always shown whole and scaled down instead of being cropped. */
+const LightboxImage = ({ photo, style, onClick, onPointerDown }) => {
   const [previewLoaded, setPreviewLoaded] = useState(false);
   const [fullReady, setFullReady] = useState(false);
+  const [natural, setNatural] = useState(null);
+  const [viewport, setViewport] = useState(() => (
+    typeof window === 'undefined' ? { width: 0, height: 0 } : { width: window.innerWidth, height: window.innerHeight }
+  ));
+
+  useEffect(() => {
+    const readViewport = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
+    readViewport();
+    window.addEventListener('resize', readViewport);
+    window.addEventListener('orientationchange', readViewport);
+    return () => {
+      window.removeEventListener('resize', readViewport);
+      window.removeEventListener('orientationchange', readViewport);
+    };
+  }, []);
+
+  const box = fitBoxToViewport(natural, viewport);
+  const imageClass =
+    'absolute inset-0 w-full h-full object-contain rounded-lg sm:rounded-2xl transition-opacity duration-200';
+
   return (
-    <div className={`relative inline-flex ${fullReady ? '' : 'min-w-[240px] min-h-[300px]'}`}>
+    <div
+      className="relative shrink-0 overflow-hidden rounded-lg sm:rounded-2xl shadow-2xl border border-white/10 select-none"
+      style={{
+        ...style,
+        width: box.width,
+        height: box.height,
+        transformOrigin: 'center center',
+        willChange: 'transform',
+      }}
+      onClick={onClick}
+      onPointerDown={onPointerDown}
+    >
       {!previewLoaded && (
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
           <LoaderCircle className="w-10 h-10 text-white/70 animate-spin" aria-hidden="true" />
@@ -895,25 +1057,25 @@ const LightboxImage = ({ photo, className, style, onWheel, onDoubleClick, onMous
         src={getProxiedCoverUrl(photo.url, { width: 1600, quality: 70 })}
         alt=""
         aria-hidden="true"
-        onLoad={() => setPreviewLoaded(true)}
+        onLoad={(e) => {
+          const { naturalWidth, naturalHeight } = e.currentTarget;
+          setPreviewLoaded(true);
+          setNatural((prev) => prev || { width: naturalWidth, height: naturalHeight });
+        }}
         onError={() => setPreviewLoaded(true)}
-        className={`${className} absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${fullReady ? 'opacity-0' : 'opacity-100'}`}
-        style={style}
+        className={`${imageClass} pointer-events-none ${fullReady ? 'opacity-0' : 'opacity-100'}`}
         draggable={false}
       />
       <img
-        ref={ref}
         src={photo.url}
         alt={photo.title}
-        className={`${className} relative z-10 transition-opacity duration-200 ${fullReady ? 'opacity-100' : 'opacity-0'}`}
-        style={style}
-        onLoad={() => setFullReady(true)}
+        className={`${imageClass} z-10 ${fullReady ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={(e) => {
+          const { naturalWidth, naturalHeight } = e.currentTarget;
+          setNatural({ width: naturalWidth, height: naturalHeight });
+          setFullReady(true);
+        }}
         onError={() => setFullReady(true)}
-        onWheel={onWheel}
-        onDoubleClick={onDoubleClick}
-        onMouseDown={onMouseDown}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
         draggable={false}
       />
     </div>
