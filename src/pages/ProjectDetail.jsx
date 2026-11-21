@@ -56,6 +56,25 @@ const fitBoxToViewport = (natural, viewport) => {
   return { width: Math.round(natural.width * scale), height: Math.round(natural.height * scale) };
 };
 
+/* Project tags, rendered once per breakpoint: under the media sections on
+   desktop, last on the page on mobile. */
+const MetaTags = ({ tags, slug }) => (
+  <div className="bg-white rounded-[3px] border border-neutral-50 p-0.5 sm:p-1 shadow-2xs">
+    <h3 className="text-[4px] sm:text-[4.5px] font-extrabold uppercase tracking-widest text-neutral-200 font-sans-en mb-0.5">Meta tags</h3>
+    <div className="flex flex-wrap gap-[1px]">
+      {tags.map((tag, i) => (
+        <a
+          key={i}
+          href={`/portfolio/${slug}`}
+          className="inline-flex items-center px-[3px] py-px bg-neutral-50 hover:bg-red-50 hover:border-red-300 border border-neutral-50 rounded-full text-[4.5px] sm:text-[5px] font-bold text-neutral-300 hover:text-red-600 transition-all leading-[1.4]"
+        >
+          {tag}
+        </a>
+      ))}
+    </div>
+  </div>
+);
+
 const ProjectDetail = () => {
   const { slug, photoIndex, videoIndex, cover } = useParams();
   const navigate = useNavigate();
@@ -729,7 +748,7 @@ const ProjectDetail = () => {
       {/* MEDIA SECTORS */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-neutral-200 pt-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 space-y-6 order-2 lg:order-1">
+          <div className="lg:col-span-8 space-y-6 order-1 lg:order-1">
             {/* Dynamic Photo/Video Groups */}
             {renderableGroups.map((group, groupIdx) => {
               const num = nextSectionNum();
@@ -784,29 +803,18 @@ const ProjectDetail = () => {
               );
             })}
 
-            {/* META TAGS */}
+            {/* META TAGS (desktop: under the media sections) */}
             {(project.tags || []).length > 0 && (
-              <div className="bg-white rounded-[3px] border border-neutral-50 p-0.5 sm:p-1 shadow-2xs">
-                <h3 className="text-[4px] sm:text-[4.5px] font-extrabold uppercase tracking-widest text-neutral-200 font-sans-en mb-0.5">Meta tags</h3>
-                <div className="flex flex-wrap gap-[1px]">
-                  {project.tags.map((tag, i) => (
-                    <a
-                      key={i}
-                      href={`/portfolio/${slug}`}
-                      className="inline-flex items-center px-[3px] py-px bg-neutral-50 hover:bg-red-50 hover:border-red-300 border border-neutral-50 rounded-full text-[4.5px] sm:text-[5px] font-bold text-neutral-300 hover:text-red-600 transition-all leading-[1.4]"
-                    >
-                      {tag}
-                    </a>
-                  ))}
-                </div>
+              <div className="hidden lg:block">
+                <MetaTags tags={project.tags} slug={slug} />
               </div>
             )}
           </div>
 
           {/* SIDEBAR */}
-          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-20 order-1 lg:order-2">
+          <div className="lg:col-span-4 flex flex-col gap-6 lg:sticky lg:top-20 order-2 lg:order-2">
             {/* Inquiry Form */}
-            <div className="bg-white rounded-[3px] border border-neutral-200 p-5 space-y-4 shadow-2xs">
+            <div className="order-2 lg:order-1 bg-white rounded-[3px] border border-neutral-200 p-5 space-y-4 shadow-2xs">
               <div className="flex items-center gap-3 border-b border-neutral-100 pb-3">
                 <div className="w-8 h-8 rounded-[2px] bg-red-600 text-white flex items-center justify-center font-bold shrink-0"><MessageSquare className="w-4 h-4" /></div>
                 <div>
@@ -843,7 +851,7 @@ const ProjectDetail = () => {
             </div>
 
             {/* Credits */}
-            <div className="bg-white rounded-[3px] border border-neutral-200 p-4 space-y-3 shadow-2xs">
+            <div className="order-1 lg:order-2 bg-white rounded-[3px] border border-neutral-200 p-4 space-y-3 shadow-2xs">
               <div className="flex items-center gap-2 border-b border-neutral-100 pb-2">
                 <Users className="w-3.5 h-3.5 text-red-600" />
                 <h3 className="text-xs font-extrabold text-neutral-950">{t('projectCredits', 'Project Credits & Crew')}</h3>
@@ -871,7 +879,7 @@ const ProjectDetail = () => {
 
             {/* Related Projects */}
             {relatedProjects.length > 0 && (
-              <div className="bg-white rounded-[3px] border border-neutral-200 p-4 space-y-3 shadow-2xs">
+              <div className="order-3 lg:order-3 bg-white rounded-[3px] border border-neutral-200 p-4 space-y-3 shadow-2xs">
                 <h4 className="text-xs font-extrabold text-neutral-950 flex items-center gap-2"><Building2 className="w-3.5 h-3.5 text-red-600" /><span>{t('moreInSector', 'More in this Sector')}</span></h4>
                 <div className="space-y-2">
                   {relatedProjects.slice(0, 3).map((rel) => (
@@ -884,6 +892,13 @@ const ProjectDetail = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* META TAGS (mobile: last block, under everything) */}
+            {(project.tags || []).length > 0 && (
+              <div className="lg:hidden order-4">
+                <MetaTags tags={project.tags} slug={slug} />
               </div>
             )}
           </div>

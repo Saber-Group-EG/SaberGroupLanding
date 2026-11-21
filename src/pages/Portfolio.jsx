@@ -459,21 +459,23 @@ const Portfolio = () => {
     ? publishedProjects.find((p) => p.featured) || publishedProjects[0]
     : null;
 
-  const renderIconCircle = (proj) => {
+  const renderIconCircle = (proj, compact = false) => {
     const rawIcon = (proj.icon || '').trim();
     const isUrlIcon = /^(https?:\/\/|\/|data:)/i.test(rawIcon);
     const iconKey = isUrlIcon ? '' : toLucideKey(rawIcon);
     const hasLucideIcon = iconKey && iconNames.includes(iconKey);
+    const boxCls = compact ? 'w-6 h-6' : 'w-7 h-7 sm:w-10 sm:h-10';
+    const iconCls = compact ? 'w-3 h-3' : 'w-3.5 h-3.5 sm:w-5 sm:h-5';
     return (
-      <div className="relative w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-sm">
+      <div className={`relative ${boxCls} rounded-full bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center text-white shadow-sm`}>
         {proj.isFeatured || (!isUrlIcon && !hasLucideIcon) ? (
-          <BadgeCheck className="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[1.5]" />
+          <BadgeCheck className={`${iconCls} stroke-[1.5]`} />
         ) : isUrlIcon ? (
-          <img src={rawIcon} alt="" className="w-3.5 h-3.5 sm:w-5 sm:h-5 object-contain" />
+          <img src={rawIcon} alt="" className={`${iconCls} object-contain`} />
         ) : (
           <DynamicIcon
             name={iconKey}
-            className="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[1.5]"
+            className={`${iconCls} stroke-[1.5]`}
           />
         )}
       </div>
@@ -486,14 +488,24 @@ const Portfolio = () => {
     </div>
   );
 
-  const renderCounts = (proj, stagger, big) => {
+  // Mobile has no hover, so the sector icon is always visible in the top corner.
+  const renderMobileIcon = (proj, inset = 'top-1.5') => (
+    <div className={`sm:hidden absolute ${inset} z-10 ${isRtl ? 'right-1.5' : 'left-1.5'}`}>
+      {renderIconCircle(proj, true)}
+    </div>
+  );
+
+  // `compact` is the tiny three-column mobile card, where every pixel counts.
+  const renderCounts = (proj, stagger, big, compact) => {
     const photosCount = proj.photosCount || 0;
     const videosCount = proj.videosCount || 0;
     const viewsCount = proj.viewsCount || 0;
     const staggerCls = stagger ? 'transition-all duration-300 ease-out opacity-100 translate-y-0 lg:opacity-0 lg:translate-y-5 lg:delay-300 lg:group-hover:opacity-100 lg:group-hover:translate-y-0' : '';
-    const wrapCls = `flex items-center min-w-0 uppercase tracking-wide text-white/80 ${big ? 'gap-3 text-[10.5px]' : 'gap-1.5 sm:gap-3 text-[8.5px] sm:text-[10.5px]'} ${staggerCls}`;
-    const itemGap = big ? 'gap-1.5' : 'gap-1 sm:gap-1.5';
-    const iconCls = `shrink-0 text-white/90 ${big ? 'w-3.5 h-3.5' : 'w-3 h-3 sm:w-3.5 sm:h-3.5'}`;
+    const wrapCls = `flex items-center min-w-0 uppercase tracking-wide text-white/80 ${
+      big ? 'gap-3 text-[10.5px]' : compact ? 'gap-1 text-[7.5px]' : 'gap-1.5 sm:gap-3 text-[8.5px] sm:text-[10.5px]'
+    } ${staggerCls}`;
+    const itemGap = big ? 'gap-1.5' : compact ? 'gap-0.5' : 'gap-1 sm:gap-1.5';
+    const iconCls = `shrink-0 text-white/90 ${big ? 'w-3.5 h-3.5' : compact ? 'w-2.5 h-2.5' : 'w-3 h-3 sm:w-3.5 sm:h-3.5'}`;
     return (
       <div className={wrapCls}>
         {photosCount > 0 && (
@@ -766,7 +778,22 @@ const Portfolio = () => {
                         loading="lazy"
                       />
                       <div className={`absolute inset-0 ${isRtl ? 'bg-gradient-to-l from-black/90 via-black/45 to-black/10' : 'bg-gradient-to-r from-black/90 via-black/45 to-black/10'}`} />
+                      {renderMobileIcon(proj, 'top-2')}
                       {renderProjectIcon(proj)}
+                      {/* Mobile: title + counts (details live in the tap popup) */}
+                      <div className={`sm:hidden absolute inset-x-0 bottom-0 z-10 p-2 flex items-end justify-between gap-2 ${isArabic ? 'text-right' : 'text-left'}`}>
+                        <div className="min-w-0">
+                          <h3 className={`text-[13px] font-semibold uppercase text-white leading-[1.1] tracking-tight line-clamp-2 drop-shadow-sm ${!isArabic ? 'font-sans-en' : ''}`}>
+                            {firstWord}
+                          </h3>
+                          {restTitle && (
+                            <p className={`mt-0.5 text-[7.5px] font-medium uppercase tracking-[0.12em] text-white/70 line-clamp-1 ${!isArabic ? 'font-sans-en' : ''}`}>
+                              {restTitle}
+                            </p>
+                          )}
+                        </div>
+                        {renderCounts(proj, false, false, true)}
+                      </div>
                       <div className="hidden sm:flex absolute inset-0 flex-col justify-between p-3 sm:p-5 lg:p-7">
                         <div className="h-7 sm:h-10 shrink-0" />
                         <div className={`flex flex-col mt-auto mb-2 sm:mb-3 ${isArabic ? 'text-right' : 'text-left'}`}>
@@ -811,7 +838,24 @@ const Portfolio = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
 
+                    {renderMobileIcon(proj)}
+
                     {renderProjectIcon(proj)}
+
+                    {/* Mobile: title + counts (details live in the tap popup) */}
+                    <div className={`sm:hidden absolute inset-x-0 bottom-0 z-10 p-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
+                      <h3 className={`text-[10px] font-semibold uppercase text-white leading-[1.15] tracking-tight line-clamp-2 drop-shadow-sm ${!isArabic ? 'font-sans-en' : ''}`}>
+                        {firstWord}
+                      </h3>
+                      {restTitle && (
+                        <p className={`mt-0.5 text-[7px] font-medium uppercase tracking-[0.12em] text-white/70 line-clamp-1 ${!isArabic ? 'font-sans-en' : ''}`}>
+                          {restTitle}
+                        </p>
+                      )}
+                      <div className="mt-1">
+                        {renderCounts(proj, false, false, true)}
+                      </div>
+                    </div>
 
                     <div className="hidden sm:block absolute inset-x-0 bottom-0 p-3 sm:p-5 lg:p-6">
                       <div className={isArabic ? 'text-right' : 'text-left'}>
